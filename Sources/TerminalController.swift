@@ -1847,14 +1847,43 @@ class TerminalController {
             return v2Error(id: id, code: "invalid_request", message: "Missing method")
         }
 
-        v2MainSync { self.v2RefreshKnownRefs() }
-
-
         #if DEBUG
         let startedAt = ProcessInfo.processInfo.systemUptime
         #endif
 
-        let response = withSocketCommandPolicy(commandKey: method, isV2: true) {
+        let response = dispatchV2(method: method, id: id, params: params)
+
+        #if DEBUG
+        if method == "workspace.create" || method == "surface.send_text" {
+            let elapsedMs = (ProcessInfo.processInfo.systemUptime - startedAt) * 1000.0
+            let status = response.contains("\"ok\":true") ? "ok" : "err"
+            dlog(
+                "socket.v2 method=\(method) status=\(status) ms=\(String(format: "%.2f", elapsedMs)) main=\(Thread.isMainThread ? 1 : 0)"
+            )
+        }
+        #endif
+
+        return response
+    }
+
+    // MARK: - V2 Dispatch (shared by socket and bridge)
+
+    /// Dispatches a parsed V2 JSON-RPC call and returns the JSON response string.
+    ///
+    /// Called by both the Unix socket handler (`processV2Command`) and the WebSocket
+    /// bridge (`BridgeConnection`). The caller is responsible for parsing JSON and
+    /// extracting `method`, `id`, and `params` before calling this method.
+    ///
+    /// Includes `withSocketCommandPolicy` wrapping for focus-mutation gating and
+    /// `v2RefreshKnownRefs` for handle resolution.
+    ///
+    /// **Auth note:** This method does NOT enforce the Unix socket `accessMode` password
+    /// check. Bridge connections authenticate via pairing tokens in `BridgeAuth`,
+    /// which is a separate auth layer. The socket password is for local CLI tools only.
+    func dispatchV2(method: String, id: Any?, params: [String: Any]) -> String {
+        v2MainSync { self.v2RefreshKnownRefs() }
+
+        return withSocketCommandPolicy(commandKey: method, isV2: true) {
             switch method {
         case "system.ping":
             return v2Ok(id: id, result: ["pong": true])
@@ -1911,6 +1940,8 @@ class TerminalController {
             return v2Result(id: id, self.v2WorkspacePrevious(params: params))
         case "workspace.last":
             return v2Result(id: id, self.v2WorkspaceLast(params: params))
+        case "workspace.layout":
+            return v2Result(id: id, self.v2WorkspaceLayout(params: params))
 
         // Settings
         case "settings.open":
@@ -2243,18 +2274,6 @@ class TerminalController {
             return v2Error(id: id, code: "method_not_found", message: "Unknown method")
         }
         }
-
-        #if DEBUG
-        if method == "workspace.create" || method == "surface.send_text" {
-            let elapsedMs = (ProcessInfo.processInfo.systemUptime - startedAt) * 1000.0
-            let status = response.contains("\"ok\":true") ? "ok" : "err"
-            dlog(
-                "socket.v2 method=\(method) status=\(status) ms=\(String(format: "%.2f", elapsedMs)) main=\(Thread.isMainThread ? 1 : 0)"
-            )
-        }
-        #endif
-
-        return response
     }
 
     private func v2Capabilities() -> [String: Any] {
@@ -2281,6 +2300,7 @@ class TerminalController {
             "workspace.next",
             "workspace.previous",
             "workspace.last",
+            "workspace.layout",
             "settings.open",
             "feedback.open",
             "feedback.submit",
@@ -3370,6 +3390,72 @@ class TerminalController {
                 "workspace_ref": v2Ref(kind: .workspace, uuid: after),
                 "window_id": v2OrNull(windowId?.uuidString),
                 "window_ref": v2Ref(kind: .window, uuid: windowId)
+            ])
+        }
+        return result
+    }
+
+    /// Returns the spatial layout of panes in a workspace with normalized coordinates.
+    ///
+    /// Pane positions are returned as 0.0-1.0 fractions of the container frame,
+    /// making them resolution-independent for the mobile companion display.
+    private func v2WorkspaceLayout(params: [String: Any]) -> V2CallResult {
+        guard let tabManager = v2ResolveTabManager(params: params) else {
+            return .err(code: "unavailable", message: "TabManager not available", data: nil)
+        }
+
+        var result: V2CallResult = .err(code: "not_found", message: "Workspace not found", data: nil)
+        v2MainSync {
+            guard let workspace = v2ResolveWorkspace(params: params, tabManager: tabManager) else {
+                return
+            }
+
+            let snapshot = workspace.bonsplitController.layoutSnapshot()
+            let containerW = max(snapshot.containerFrame.width, 1)
+            let containerH = max(snapshot.containerFrame.height, 1)
+            let containerX = snapshot.containerFrame.x
+            let containerY = snapshot.containerFrame.y
+
+            let panes: [[String: Any]] = snapshot.panes.map { pane in
+                // Normalize pixel coordinates to 0.0-1.0 fractions relative to container.
+                let normX = (pane.frame.x - containerX) / containerW
+                let normY = (pane.frame.y - containerY) / containerH
+                let normW = pane.frame.width / containerW
+                let normH = pane.frame.height / containerH
+
+                // Build surface list for this pane with panel metadata.
+                let surfaces: [[String: Any]] = (pane.tabIds).map { tabIdStr in
+                    let tabId = UUID(uuidString: tabIdStr)
+                    let panelId = tabId.flatMap { workspace.panelIdFromSurfaceId(TabID(uuid: $0)) }
+                    var entry: [String: Any] = [
+                        "surface_id": tabIdStr,
+                    ]
+                    if let tabId {
+                        entry["surface_ref"] = v2Ref(kind: .surface, uuid: tabId)
+                    }
+                    if let panelId {
+                        entry["panel_id"] = panelId.uuidString
+                    }
+                    entry["is_selected"] = (tabIdStr == pane.selectedTabId)
+                    return entry
+                }
+
+                return [
+                    "pane_id": pane.paneId,
+                    "x": normX,
+                    "y": normY,
+                    "width": normW,
+                    "height": normH,
+                    "surfaces": surfaces,
+                    "selected_surface_id": v2OrNull(pane.selectedTabId),
+                ]
+            }
+
+            result = .ok([
+                "workspace_id": workspace.id.uuidString,
+                "workspace_ref": v2Ref(kind: .workspace, uuid: workspace.id),
+                "focused_pane_id": v2OrNull(snapshot.focusedPaneId),
+                "panes": panes,
             ])
         }
         return result

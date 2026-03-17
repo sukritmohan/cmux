@@ -100,6 +100,13 @@
 		DA7A10CA710E000000000003 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = DA7A10CA710E000000000001 /* Localizable.xcstrings */; };
 		DA7A10CA710E000000000004 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = DA7A10CA710E000000000002 /* InfoPlist.xcstrings */; };
 		A5001623 /* cmux.sdef in Resources */ = {isa = PBXBuildFile; fileRef = A5001622 /* cmux.sdef */; };
+		4AAF736E15356947D36442A3 /* BridgeAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ED2848AF6431B2558733CC5 /* BridgeAuth.swift */; };
+		724640505C9E50380FABA4F5 /* BridgeSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6569211F03DCF550BE6E92C7 /* BridgeSettings.swift */; };
+		7D39AB7D060661A97542EE14 /* BridgeServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B40931E651DF666BFEC8322 /* BridgeServer.swift */; };
+		966DAA605C4987BC04FD08DF /* BridgeConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EEDEC8E9F5F313E53454FD /* BridgeConnection.swift */; };
+		D14935162FD15E30CAECC96C /* BridgePTYStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ECBBA40A22FD9D3C68A7F3F /* BridgePTYStream.swift */; };
+		E1B1788D2832ADB3C3BA6EF9 /* BridgeEventRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D21AF61142A9ADAFB273DDAA /* BridgeEventRelay.swift */; };
+		F7188F96614616C3AA181C84 /* BridgeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E291031ACAC49FA67CE9914B /* BridgeSettingsView.swift */; };
 			/* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -247,6 +254,13 @@
 					DA7A10CA710E000000000001 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		DA7A10CA710E000000000002 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		A5001622 /* cmux.sdef */ = {isa = PBXFileReference; lastKnownFileType = text.sdef; path = cmux.sdef; sourceTree = "<group>"; };
+		1ED2848AF6431B2558733CC5 /* BridgeAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeAuth.swift; sourceTree = "<group>"; };
+		6569211F03DCF550BE6E92C7 /* BridgeSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeSettings.swift; sourceTree = "<group>"; };
+		7B40931E651DF666BFEC8322 /* BridgeServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeServer.swift; sourceTree = "<group>"; };
+		94EEDEC8E9F5F313E53454FD /* BridgeConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeConnection.swift; sourceTree = "<group>"; };
+		9ECBBA40A22FD9D3C68A7F3F /* BridgePTYStream.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgePTYStream.swift; sourceTree = "<group>"; };
+		D21AF61142A9ADAFB273DDAA /* BridgeEventRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeEventRelay.swift; sourceTree = "<group>"; };
+		E291031ACAC49FA67CE9914B /* BridgeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeSettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -410,6 +424,7 @@
 				A5001241 /* WindowDecorationsController.swift */,
 				A5001222 /* WindowAccessor.swift */,
 				A5001611 /* SessionPersistence.swift */,
+				B261E2BE8AC888910A3C45CF /* Bridge */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -484,6 +499,20 @@
 				path = cmuxTests;
 				sourceTree = "<group>";
 			};
+		B261E2BE8AC888910A3C45CF /* Bridge */ = {
+			isa = PBXGroup;
+			children = (
+				1ED2848AF6431B2558733CC5 /* BridgeAuth.swift */,
+				6569211F03DCF550BE6E92C7 /* BridgeSettings.swift */,
+				7B40931E651DF666BFEC8322 /* BridgeServer.swift */,
+				94EEDEC8E9F5F313E53454FD /* BridgeConnection.swift */,
+				9ECBBA40A22FD9D3C68A7F3F /* BridgePTYStream.swift */,
+				D21AF61142A9ADAFB273DDAA /* BridgeEventRelay.swift */,
+				E291031ACAC49FA67CE9914B /* BridgeSettingsView.swift */,
+			);
+			path = Bridge;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -683,6 +712,13 @@
 				A5001240 /* WindowDecorationsController.swift in Sources */,
 				A500120C /* WindowAccessor.swift in Sources */,
 				A5001610 /* SessionPersistence.swift in Sources */,
+				4AAF736E15356947D36442A3 /* BridgeAuth.swift in Sources */,
+				724640505C9E50380FABA4F5 /* BridgeSettings.swift in Sources */,
+				7D39AB7D060661A97542EE14 /* BridgeServer.swift in Sources */,
+				966DAA605C4987BC04FD08DF /* BridgeConnection.swift in Sources */,
+				D14935162FD15E30CAECC96C /* BridgePTYStream.swift in Sources */,
+				E1B1788D2832ADB3C3BA6EF9 /* BridgeEventRelay.swift in Sources */,
+				F7188F96614616C3AA181C84 /* BridgeSettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

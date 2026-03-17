@@ -2362,6 +2362,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         stopSessionAutosaveTimer()
         stopSocketListenerHealthMonitor()
         TerminalController.shared.stop()
+        BridgeEventRelay.shared.stop()
+        BridgeServer.shared.stop()
         VSCodeServeWebController.shared.stop()
         BrowserHistoryStore.shared.flushPendingSaves()
         if TelemetrySettings.enabledForCurrentLaunch {

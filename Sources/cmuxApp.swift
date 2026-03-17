@@ -679,6 +679,17 @@ struct cmuxApp: App {
         } else {
             TerminalController.shared.stop()
         }
+        updateBridgeServer()
+    }
+
+    private func updateBridgeServer() {
+        if BridgeSettings.isEnabled {
+            BridgeServer.shared.start()
+            BridgeEventRelay.shared.start()
+        } else {
+            BridgeEventRelay.shared.stop()
+            BridgeServer.shared.stop()
+        }
     }
 
     private var currentSocketMode: SocketControlMode {
@@ -4174,6 +4185,12 @@ struct SettingsView: View {
                         SettingsCardNote(String(localized: "settings.automation.port.note", defaultValue: "Each workspace gets CMUX_PORT and CMUX_PORT_END env vars with a dedicated port range. New terminals inherit these values."))
                     }
 
+                    SettingsSectionHeader(title: String(localized: "settings.section.mobileCompanion", defaultValue: "Mobile Companion"))
+                    SettingsCard {
+                        BridgeSettingsView(controlWidth: pickerColumnWidth)
+                            .withPairingSheet()
+                    }
+
                     SettingsSectionHeader(title: String(localized: "settings.section.browser", defaultValue: "Browser"))
                     SettingsCard {
                         SettingsPickerRow(
@@ -4736,7 +4753,7 @@ private struct SettingsSectionHeader: View {
     }
 }
 
-private struct SettingsCard<Content: View>: View {
+struct SettingsCard<Content: View>: View {
     @ViewBuilder let content: Content
 
     init(@ViewBuilder content: () -> Content) {
@@ -4758,7 +4775,7 @@ private struct SettingsCard<Content: View>: View {
     }
 }
 
-private struct SettingsCardRow<Trailing: View>: View {
+struct SettingsCardRow<Trailing: View>: View {
     let title: String
     let subtitle: String?
     let controlWidth: CGFloat?
@@ -4874,7 +4891,7 @@ private extension View {
     }
 }
 
-private struct SettingsCardDivider: View {
+struct SettingsCardDivider: View {
     var body: some View {
         Rectangle()
             .fill(Color(nsColor: NSColor.separatorColor).opacity(0.5))
