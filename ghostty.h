@@ -1122,6 +1122,9 @@ bool ghostty_surface_read_text(ghostty_surface_t,
                                ghostty_text_s*);
 void ghostty_surface_free_text(ghostty_surface_t, ghostty_text_s*);
 
+typedef void (*ghostty_io_output_observer_cb)(void* userdata, const uint8_t* data, size_t len);
+void ghostty_surface_set_output_observer(ghostty_surface_t, ghostty_io_output_observer_cb, void*);
+
 #ifdef __APPLE__
 void ghostty_surface_set_display_id(ghostty_surface_t, uint32_t);
 void* ghostty_surface_quicklook_font(ghostty_surface_t);

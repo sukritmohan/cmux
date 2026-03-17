@@ -278,11 +278,9 @@ final class BridgeConnection {
         case "surface.pty.unsubscribe":
             handlePTYUnsubscribe(id: id, params: params)
         case "surface.pty.write":
-            sendText(encodeError(id: id, code: "not_implemented",
-                                 message: "surface.pty.write is not yet implemented (Phase 2)"))
+            handlePTYWrite(id: id, params: params)
         case "surface.pty.resize":
-            sendText(encodeError(id: id, code: "not_implemented",
-                                 message: "surface.pty.resize is not yet implemented (Phase 2)"))
+            handlePTYResize(id: id, params: params)
         case "system.subscribe_events":
             subscribedToEvents = true
             sendText(encodeOk(id: id, result: ["subscribed": true]))
@@ -332,6 +330,10 @@ final class BridgeConnection {
 
     /// Subscribes this connection to PTY output for a terminal surface.
     ///
+    /// Verifies the surface exists before subscribing. Dispatches to main to resolve
+    /// the surface, then adds the subscription and returns the channel ID for binary
+    /// frame demultiplexing.
+    ///
     /// - Parameters:
     ///   - id: The JSON-RPC request ID.
     ///   - params: Must contain `"surface_id"` as a UUID string.
@@ -342,8 +344,25 @@ final class BridgeConnection {
             return
         }
 
-        BridgePTYStream.shared.addSubscriber(connectionId: self.id, surfaceId: surfaceId)
-        sendText(encodeOk(id: id, result: ["subscribed": true, "surface_id": surfaceId.uuidString]))
+        // Verify the surface exists before subscribing (must dispatch to main for resolution).
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            guard let panel = resolveTerminalPanel(surfaceId: surfaceId),
+                  panel.surface.surface != nil else {
+                self.sendText(self.encodeError(id: id, code: "not_found",
+                                               message: "Surface not found: \(surfaceId.uuidString)"))
+                return
+            }
+
+            BridgePTYStream.shared.addSubscriber(connectionId: self.id, surfaceId: surfaceId)
+
+            // Include channel ID for binary frame demultiplexing.
+            self.sendText(self.encodeOk(id: id, result: [
+                "subscribed": true,
+                "surface_id": surfaceId.uuidString,
+                "channel": surfaceId.channelId,
+            ]))
+        }
     }
 
     /// Unsubscribes this connection from PTY output for a terminal surface.
@@ -360,6 +379,116 @@ final class BridgeConnection {
 
         BridgePTYStream.shared.removeSubscriber(connectionId: self.id, surfaceId: surfaceId)
         sendText(encodeOk(id: id, result: ["unsubscribed": true, "surface_id": surfaceId.uuidString]))
+    }
+
+    // MARK: - PTY Write / Resize
+
+    /// Injects input into a terminal surface's PTY.
+    ///
+    /// Accepts either plain text via `"data"` or base64-encoded bytes via `"data_base64"`
+    /// for arbitrary binary input. Dispatches to the main thread where Ghostty surface
+    /// writes are safe to call.
+    ///
+    /// - Parameters:
+    ///   - id: The JSON-RPC request ID.
+    ///   - params: Must contain `"surface_id"` (UUID string) and either `"data"` (plain text)
+    ///     or `"data_base64"` (base64-encoded binary).
+    private func handlePTYWrite(id: Any?, params: [String: Any]) {
+        guard let surfaceIdString = params["surface_id"] as? String,
+              let surfaceId = UUID(uuidString: surfaceIdString) else {
+            sendText(encodeError(id: id, code: "invalid_params", message: "Missing or invalid surface_id"))
+            return
+        }
+
+        // Accept either plain text via "data" or base64-encoded bytes via "data_base64".
+        let writeData: Data
+        if let base64 = params["data_base64"] as? String,
+           let decoded = Data(base64Encoded: base64), !decoded.isEmpty {
+            writeData = decoded
+        } else if let text = params["data"] as? String, !text.isEmpty,
+                  let textData = text.data(using: .utf8) {
+            writeData = textData
+        } else {
+            sendText(encodeError(id: id, code: "invalid_params",
+                                 message: "Missing or empty data/data_base64"))
+            return
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            guard let panel = resolveTerminalPanel(surfaceId: surfaceId) else {
+                self.sendText(self.encodeError(id: id, code: "not_found",
+                                               message: "Surface not found: \(surfaceId.uuidString)"))
+                return
+            }
+            // Write raw bytes to the terminal surface.
+            writeData.withUnsafeBytes { rawBuffer in
+                guard let baseAddress = rawBuffer.baseAddress?.assumingMemoryBound(to: CChar.self) else { return }
+                if let surface = panel.surface.surface {
+                    ghostty_surface_text(surface, baseAddress, UInt(rawBuffer.count))
+                }
+            }
+            self.sendText(self.encodeOk(id: id, result: [
+                "written": true,
+                "surface_id": surfaceId.uuidString,
+            ]))
+        }
+    }
+
+    /// Records the mobile client's desired terminal dimensions without resizing
+    /// the desktop PTY.
+    ///
+    /// The mobile client adapts to the desktop's dimensions. The mobile dimensions
+    /// are stored per-subscription for future mobile-specific rendering hints (Phase 3).
+    /// The response includes the desktop's actual dimensions so the mobile client can adapt.
+    ///
+    /// - Parameters:
+    ///   - id: The JSON-RPC request ID.
+    ///   - params: Must contain `"surface_id"` (UUID string), `"cols"` (Int), and `"rows"` (Int).
+    private func handlePTYResize(id: Any?, params: [String: Any]) {
+        guard let surfaceIdString = params["surface_id"] as? String,
+              let surfaceId = UUID(uuidString: surfaceIdString) else {
+            sendText(encodeError(id: id, code: "invalid_params", message: "Missing or invalid surface_id"))
+            return
+        }
+
+        guard let cols = params["cols"] as? Int, cols > 0,
+              let rows = params["rows"] as? Int, rows > 0 else {
+            sendText(encodeError(id: id, code: "invalid_params", message: "Missing or invalid cols/rows"))
+            return
+        }
+
+        // Store mobile dimensions per-subscription for future mobile-specific rendering hints.
+        // The desktop PTY is NOT resized — the mobile client adapts to the desktop's dimensions.
+        BridgePTYStream.shared.setMobileDimensions(
+            connectionId: self.id,
+            surfaceId: surfaceId,
+            cols: cols,
+            rows: rows
+        )
+
+        // Return the desktop's actual dimensions so the mobile client can adapt.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+
+            var desktopCols = 0
+            var desktopRows = 0
+            if let panel = resolveTerminalPanel(surfaceId: surfaceId),
+               let surface = panel.surface.surface {
+                let size = ghostty_surface_size(surface)
+                desktopCols = Int(size.columns)
+                desktopRows = Int(size.rows)
+            }
+
+            self.sendText(self.encodeOk(id: id, result: [
+                "stored": true,
+                "surface_id": surfaceId.uuidString,
+                "mobile_cols": cols,
+                "mobile_rows": rows,
+                "desktop_cols": desktopCols,
+                "desktop_rows": desktopRows,
+            ]))
+        }
     }
 
     // MARK: - Terminal Controller Dispatch
@@ -429,4 +558,24 @@ final class BridgeConnection {
         }
         return string
     }
+}
+
+// MARK: - Surface Resolution Helper
+
+/// Resolves a surface UUID to its `TerminalPanel` by searching all workspaces
+/// across all windows via `AppDelegate.locateSurface`.
+///
+/// This is a module-internal free function (not a method on `BridgeConnection`) so
+/// it can be reused by `BridgePTYStream` and other bridge components.
+///
+/// Must be called on the main thread since `TabManager` and `Workspace` are
+/// `@MainActor`-isolated.
+///
+/// - Parameter surfaceId: The UUID of the terminal panel to find.
+/// - Returns: The matching `TerminalPanel`, or `nil` if not found.
+@MainActor
+func resolveTerminalPanel(surfaceId: UUID) -> TerminalPanel? {
+    guard let location = AppDelegate.shared?.locateSurface(surfaceId: surfaceId) else { return nil }
+    let workspace = location.tabManager.tabs.first(where: { $0.id == location.workspaceId })
+    return workspace?.panels[surfaceId] as? TerminalPanel
 }

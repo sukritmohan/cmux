@@ -14,8 +14,9 @@ The mobile companion feature enables a Flutter Android app to connect to a runni
 | `Sources/Bridge/BridgeSettings.swift` | UserDefaults-backed config: enabled flag, port (default 17377). |
 | `Sources/Bridge/BridgeServer.swift` | Network.framework WebSocket server (NWListener on 0.0.0.0:port). Heartbeat timer (15s ping, 3 missed pong disconnect). Broadcast methods for events and PTY data. |
 | `Sources/Bridge/BridgeConnection.swift` | Per-connection state machine: auth -> dispatch. Routes bridge-specific methods (PTY, events), falls back to `TerminalController.dispatchV2` for V2 commands. |
-| `Sources/Bridge/BridgePTYStream.swift` | Thread-safe subscription registry tracking which connections want PTY output from which surfaces. Phase 1 stub. |
-| `Sources/Bridge/BridgeEventRelay.swift` | Event push to bridge clients. `emit(event:data:)` serializes to JSON and broadcasts. Phase 1 stub (no observers wired). |
+| `Sources/Bridge/BridgePTYStream.swift` | Thread-safe subscription registry + Ghostty PTY observer lifecycle. Registers C callback on first subscriber, unregisters on last disconnect. Observes surface destruction for cleanup. |
+| `Sources/Bridge/BridgePTYObserverContext.swift` | Simple context class holding `surfaceId: UUID`, passed as `Unmanaged` userdata to the Ghostty C callback. |
+| `Sources/Bridge/BridgeEventRelay.swift` | Event push to bridge clients. Registers 11 NotificationCenter observers in `start()`, removes in `stop()`. `emit(event:data:)` serializes to JSON and broadcasts. |
 | `Sources/Bridge/BridgeSettingsView.swift` | SwiftUI settings pane: enable toggle, port config, QR pairing, device management. |
 
 ### Key Design Decisions
@@ -52,9 +53,58 @@ The mobile companion feature enables a Flutter Android app to connect to a runni
 - Unauthenticated connections immediately disconnected on non-auth messages
 - Bridge auth is independent of Unix socket password auth (separate security domains)
 
-## Phase 2 (Planned)
+## Phase 2 Architecture (Current)
 
-- Wire `BridgePTYStream` to actual PTY fd tee for real-time terminal output
-- Wire `BridgeEventRelay` to NotificationCenter observers for workspace/surface/pane events
-- Implement `surface.pty.write` and `surface.pty.resize` (currently stubs)
+### Ghostty Fork — PTY Output Observer C API
+
+Added `ghostty_surface_set_output_observer(surface, callback, userdata)` to the Ghostty C API. The callback fires on Ghostty's IO reader thread with raw PTY bytes before terminal processing.
+
+| File | Change |
+|---|---|
+| `ghostty/include/ghostty.h` | `ghostty_io_output_observer_cb` typedef, `ghostty_surface_set_output_observer` declaration |
+| `ghostty/src/apprt/embedded.zig` | `IoOutputObserverCallback` type alias, C export that routes through `surface.core_surface.io.setOutputObserver` |
+| `ghostty/src/termio/Termio.zig` | Observer callback/userdata fields with atomic load/store, hook in `processOutput()` before mutex lock |
+
+Thread safety: `setOutputObserver` uses `@atomicStore` with release ordering (userdata before callback). `processOutput` uses `@atomicLoad` with acquire ordering. This ensures the IO reader thread always sees consistent callback+userdata.
+
+### PTY Output Observer Swift Wiring
+
+| File | Purpose |
+|---|---|
+| `Sources/Bridge/BridgePTYObserverContext.swift` | Simple class holding `surfaceId: UUID`, passed as `Unmanaged` userdata to the C callback |
+| `Sources/Bridge/BridgePTYStream.swift` | Observer lifecycle: registers Ghostty callback on first subscriber, unregisters on last disconnect |
+
+The C callback trampoline (`ptyOutputCallback`) runs on Ghostty's IO reader thread. It only copies bytes to `Data` and dispatches to `BridgeServer.shared.broadcastPTYData()`. Memory management uses `Unmanaged.passRetained` on registration, `takeUnretainedValue` in the callback (no retain churn on hot path), and `.release()` on unregistration.
+
+Surface cleanup: BridgePTYStream observes `.bridgeSurfaceClosed` to proactively remove subscriptions and release observer contexts when terminals are destroyed.
+
+### PTY Write and Resize
+
+- `surface.pty.write`: Accepts `data_base64` (base64 binary) or `data` (plain text). Dispatches to main thread, resolves surface via `resolveTerminalPanel`, writes raw bytes via `ghostty_surface_text`.
+- `surface.pty.resize`: Stores mobile dimensions per-subscription (does NOT resize the desktop PTY). Returns desktop dimensions so the mobile client can adapt.
+
+### Event Relay (11 Events)
+
+BridgeEventRelay registers NotificationCenter observers in `start()` for 11 event types:
+
+| Event | Source | Notification |
+|---|---|---|
+| `workspace.selected` | TabManager selectedTabId | `.ghosttyDidFocusTab` (existing) |
+| `workspace.created` | TabManager addWorkspace | `.bridgeWorkspaceCreated` (new) |
+| `workspace.closed` | TabManager closeWorkspace | `.bridgeWorkspaceClosed` (new) |
+| `workspace.title_changed` | Workspace title mutations | `.bridgeWorkspaceTitleChanged` (new) |
+| `pane.split` | Workspace didSplitPane | `.bridgePaneSplit` (new) |
+| `pane.closed` | Workspace didClosePane | `.bridgePaneClosed` (new) |
+| `pane.focused` | Workspace didFocusPane | `.bridgePaneFocused` (new) |
+| `surface.focused` | Workspace applyTabSelection | `.ghosttyDidFocusSurface` (existing) |
+| `surface.closed` | Workspace didCloseTab | `.bridgeSurfaceClosed` (new) |
+| `surface.moved` | Workspace didMoveTab | `.bridgeSurfaceMoved` (new) |
+| `surface.title_changed` | GhosttyTerminalView | `.ghosttyDidSetTitle` (existing) |
+
+`surface.reordered` is not wired — no BonsplitDelegate callback exists for tab reorder yet.
+
+## Phase 3 (Planned)
+
+- Backpressure for high-frequency PTY data (prevent `cat /dev/urandom` from flooding WebSocket)
+- Mobile-specific rendering hints using stored mobile dimensions
 - Add `ports.list` if needed (PortScanner callback model makes aggregation non-trivial)

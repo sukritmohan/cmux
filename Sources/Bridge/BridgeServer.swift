@@ -309,7 +309,7 @@ final class BridgeServer: @unchecked Sendable {
 
 // MARK: - UUID Channel ID Extension
 
-private extension UUID {
+extension UUID {
     /// Derives a 4-byte channel ID from the first 4 bytes of the UUID.
     ///
     /// Used to tag binary PTY frames so clients can demultiplex output from
