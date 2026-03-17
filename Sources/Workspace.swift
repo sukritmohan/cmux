@@ -5607,7 +5607,11 @@ final class Workspace: Identifiable, ObservableObject {
     func applyProcessTitle(_ title: String) {
         processTitle = title
         guard customTitle == nil else { return }
+        let oldTitle = self.title
         self.title = title
+        if oldTitle != title {
+            postBridgeTitleChanged()
+        }
     }
 
     func setCustomColor(_ hex: String?) {
@@ -5620,6 +5624,7 @@ final class Workspace: Identifiable, ObservableObject {
 
     func setCustomTitle(_ title: String?) {
         let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let oldTitle = self.title
         if trimmed.isEmpty {
             customTitle = nil
             self.title = processTitle
@@ -5627,6 +5632,24 @@ final class Workspace: Identifiable, ObservableObject {
             customTitle = trimmed
             self.title = trimmed
         }
+        if oldTitle != self.title {
+            postBridgeTitleChanged()
+        }
+    }
+
+    // MARK: - Bridge Notifications
+
+    /// Posts a bridge notification that the workspace title changed.
+    /// Called from all title mutation sites (applyProcessTitle, setCustomTitle, panel title updates).
+    private func postBridgeTitleChanged() {
+        NotificationCenter.default.post(
+            name: .bridgeWorkspaceTitleChanged,
+            object: nil,
+            userInfo: [
+                GhosttyNotificationKey.tabId: self.id,
+                GhosttyNotificationKey.title: self.title,
+            ]
+        )
     }
 
     // MARK: - Directory Updates
@@ -5786,6 +5809,7 @@ final class Workspace: Identifiable, ObservableObject {
             if self.title != trimmed {
                 self.title = trimmed
                 didMutate = true
+                postBridgeTitleChanged()
             }
             if processTitle != trimmed {
                 processTitle = trimmed
@@ -9103,6 +9127,17 @@ extension Workspace: BonsplitDelegate {
         NSLog("[Workspace] didCloseTab panelId=\(panelId) remainingPanels=\(panels.count - 1) remainingPanes=\(controller.allPaneIds.count)")
         #endif
 
+        // Notify bridge clients that a surface was closed. Posted before cleanup so the
+        // panelId is still valid and observers see consistent state.
+        NotificationCenter.default.post(
+            name: .bridgeSurfaceClosed,
+            object: nil,
+            userInfo: [
+                GhosttyNotificationKey.tabId: self.id,
+                GhosttyNotificationKey.surfaceId: panelId,
+            ]
+        )
+
         let panel = panels[panelId]
 
         if isDetaching, let panel {
@@ -9254,6 +9289,20 @@ extension Workspace: BonsplitDelegate {
         if !isDetachingCloseTransaction {
             scheduleFocusReconcile()
         }
+
+        // Notify bridge clients that a surface was moved between panes.
+        if let movedSurfaceId = panelIdFromSurfaceId(tab.id) {
+            NotificationCenter.default.post(
+                name: .bridgeSurfaceMoved,
+                object: nil,
+                userInfo: [
+                    GhosttyNotificationKey.tabId: self.id,
+                    GhosttyNotificationKey.surfaceId: movedSurfaceId,
+                    BridgeNotificationKey.fromPane: source.id.uuidString,
+                    BridgeNotificationKey.toPane: destination.id.uuidString,
+                ]
+            )
+        }
     }
 
     func splitTabBar(_ controller: BonsplitController, didFocusPane pane: PaneID) {
@@ -9271,6 +9320,16 @@ extension Workspace: BonsplitDelegate {
            let terminalPanel = panels[panelId] as? TerminalPanel {
             terminalPanel.applyWindowBackgroundIfActive()
         }
+
+        // Notify bridge clients that a pane received focus.
+        NotificationCenter.default.post(
+            name: .bridgePaneFocused,
+            object: nil,
+            userInfo: [
+                GhosttyNotificationKey.tabId: self.id,
+                BridgeNotificationKey.paneId: pane.id.uuidString,
+            ]
+        )
     }
 
     func splitTabBar(_ controller: BonsplitController, didClosePane paneId: PaneID) {
@@ -9314,6 +9373,22 @@ extension Workspace: BonsplitDelegate {
         if shouldScheduleFocusReconcile {
             scheduleFocusReconcile()
         }
+#if DEBUG
+        dlog(
+            "surface.didClosePane.end pane=\(paneId.id.uuidString.prefix(5)) " +
+            "remainingPanels=\(panels.count) remainingPanes=\(bonsplitController.allPaneIds.count)"
+        )
+#endif
+
+        // Notify bridge clients that a pane was closed.
+        NotificationCenter.default.post(
+            name: .bridgePaneClosed,
+            object: nil,
+            userInfo: [
+                GhosttyNotificationKey.tabId: self.id,
+                BridgeNotificationKey.paneId: paneId.id.uuidString,
+            ]
+        )
     }
 
     func splitTabBar(_ controller: BonsplitController, shouldClosePane pane: PaneID) -> Bool {
@@ -9358,6 +9433,18 @@ extension Workspace: BonsplitDelegate {
             "originalKinds=[\(paneKindSummary(originalPane))] newKinds=[\(paneKindSummary(newPane))]"
         )
 #endif
+        // Notify bridge clients that a pane was split. Posted before subsequent panel
+        // creation / placeholder repair so observers see the split event promptly.
+        NotificationCenter.default.post(
+            name: .bridgePaneSplit,
+            object: nil,
+            userInfo: [
+                GhosttyNotificationKey.tabId: self.id,
+                BridgeNotificationKey.originalPane: originalPane.id.uuidString,
+                BridgeNotificationKey.newPane: newPane.id.uuidString,
+            ]
+        )
+
         let rearmBrowserPortalHostReplacement: (PaneID, String) -> Void = { paneId, reason in
             for tab in controller.tabs(inPane: paneId) {
                 guard let panelId = self.panelIdFromSurfaceId(tab.id),

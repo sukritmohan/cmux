@@ -1,0 +1,15 @@
+=== Command ===
+sed -n '3656,3660p' /Users/sm/code/cmux/Sources/TerminalController.swift
+
+=== Timestamp ===
+2026-03-17 14:34:12
+
+=== Exit Code ===
+0
+
+=== Output ===
+    }
+
+<<<<<<< HEAD
+    private func v2WorkspaceRemoteConfigure(params: [String: Any]) -> V2CallResult {
+        let requestedWorkspaceId = v2UUID(params, "workspace_id")

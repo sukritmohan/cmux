@@ -1,0 +1,1931 @@
+<style>
+  /* ── Reset & base ── */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-page: #0A0F1C;
+    --bg-card: #1E293B;
+    --bg-inset: #0F172A;
+    --cyan: #22D3EE;
+    --text-primary: #FFFFFF;
+    --text-secondary: #94A3B8;
+    --text-tertiary: #64748B;
+    --text-muted: #475569;
+    --text-inverted: #0A0F1C;
+    --divider: #0F172A;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-pill: 100px;
+    --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+    --font-sans: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  body {
+    background: #060a14;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    padding: 40px 24px 80px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ── Page header ── */
+  .page-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+  .page-subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 48px;
+    max-width: 680px;
+    line-height: 1.6;
+  }
+
+  /* ── Question banner ── */
+  .question-banner {
+    background: linear-gradient(135deg, rgba(34,211,238,0.12) 0%, rgba(34,211,238,0.04) 100%);
+    border: 1px solid rgba(34,211,238,0.25);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    margin-bottom: 48px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cyan);
+    letter-spacing: 0.5px;
+  }
+  .question-banner .q-icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--cyan);
+    color: var(--text-inverted);
+    text-align: center;
+    line-height: 24px;
+    font-size: 14px;
+    font-weight: 700;
+    margin-right: 12px;
+    vertical-align: middle;
+  }
+
+  /* ── Options (clickable choices) ── */
+  .options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 56px;
+  }
+  .option {
+    flex: 1;
+    min-width: 280px;
+    background: var(--bg-card);
+    border: 2px solid transparent;
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+    position: relative;
+  }
+  .option:hover {
+    border-color: rgba(34,211,238,0.3);
+    transform: translateY(-2px);
+  }
+  .option.selected {
+    border-color: var(--cyan);
+    background: rgba(34,211,238,0.06);
+  }
+  .option .option-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 8px;
+  }
+  .option .option-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .option .option-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .option .check-indicator {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--text-muted);
+    transition: all 0.2s ease;
+  }
+  .option.selected .check-indicator {
+    border-color: var(--cyan);
+    background: var(--cyan);
+  }
+  .option.selected .check-indicator::after {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 10px;
+    border: solid var(--text-inverted);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin: 3px 0 0 6px;
+  }
+
+  /* ── Approach section ── */
+  .approach {
+    margin-bottom: 72px;
+    padding-bottom: 72px;
+    border-bottom: 1px solid var(--divider);
+  }
+  .approach:last-child {
+    border-bottom: none;
+  }
+  .approach-header {
+    margin-bottom: 32px;
+  }
+  .approach-number {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 8px;
+  }
+  .approach-name {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+  .approach-insight {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: 700px;
+  }
+  .approach-insight strong {
+    color: var(--cyan);
+    font-weight: 600;
+  }
+
+  .pros-cons {
+    display: flex;
+    gap: 16px;
+    margin-top: 24px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .pros, .cons {
+    flex: 1;
+    min-width: 240px;
+    background: var(--bg-inset);
+    border-radius: var(--radius-md);
+    padding: 16px;
+  }
+  .pros-label, .cons-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .pros-label { color: #34d399; }
+  .cons-label { color: #f87171; }
+  .pros li, .cons li {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    list-style: none;
+    padding-left: 16px;
+    position: relative;
+  }
+  .pros li::before { content: '+'; position: absolute; left: 0; color: #34d399; font-family: var(--font-mono); font-weight: 700; }
+  .cons li::before { content: '-'; position: absolute; left: 0; color: #f87171; font-family: var(--font-mono); font-weight: 700; }
+
+  /* ── Phone mockup container ── */
+  .phones-row {
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+    padding-bottom: 16px;
+    scroll-snap-type: x mandatory;
+  }
+  .phone-wrapper {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+  .phone-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .phone {
+    width: 320px;
+    height: 640px;
+    background: var(--bg-page);
+    border-radius: 32px;
+    border: 3px solid #2a3350;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  /* ── Phone internals ── */
+  .phone .status-bar {
+    height: 44px;
+    padding: 14px 24px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .phone .status-bar .notch {
+    width: 80px;
+    height: 22px;
+    background: #000;
+    border-radius: 0 0 14px 14px;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .phone .screen-header {
+    padding: 8px 20px 12px;
+    flex-shrink: 0;
+  }
+  .phone .screen-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+  }
+  .phone .screen-subtitle {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-tertiary);
+    margin-top: 2px;
+  }
+  .phone .screen-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px 16px;
+  }
+
+  /* ── Mock nav bars ── */
+  .mock-nav {
+    height: 56px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--divider);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    flex-shrink: 0;
+    padding: 0 8px;
+  }
+  .mock-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    cursor: default;
+  }
+  .mock-nav-icon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .mock-nav-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+  }
+  .mock-nav-item.active .mock-nav-icon { color: var(--cyan); }
+  .mock-nav-item.active .mock-nav-label { color: var(--cyan); font-weight: 600; }
+  .mock-nav-item:not(.active) .mock-nav-icon { color: var(--text-muted); }
+
+  /* ── Mock sidebar ── */
+  .mock-sidebar {
+    background: var(--bg-inset);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .mock-sidebar-item {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(15,23,42,0.6);
+    position: relative;
+  }
+  .mock-sidebar-item:last-child { border-bottom: none; }
+  .mock-sidebar-item.active {
+    background: rgba(34,211,238,0.1);
+    border-left: 3px solid var(--cyan);
+    padding-left: 13px;
+  }
+  .mock-sidebar-item .ws-color {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .mock-sidebar-item .ws-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .mock-sidebar-item .ws-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mock-sidebar-item .ws-meta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mock-sidebar-item .ws-badge {
+    background: var(--cyan);
+    color: var(--text-inverted);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: var(--radius-pill);
+    flex-shrink: 0;
+  }
+  .mock-sidebar-item .ws-badge.warn {
+    background: #f59e0b;
+  }
+
+  /* ── Mock content cards ── */
+  .mock-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    margin-bottom: 8px;
+  }
+  .mock-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .mock-card-meta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-tertiary);
+  }
+
+  /* ── Terminal mock ── */
+  .mock-terminal {
+    background: #000;
+    border-radius: var(--radius-md);
+    padding: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.6;
+    color: #a8d8a8;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .mock-terminal .prompt { color: var(--cyan); }
+  .mock-terminal .cmd { color: var(--text-primary); }
+  .mock-terminal .output { color: #6b8e6b; }
+  .mock-terminal .cursor {
+    display: inline-block;
+    width: 7px;
+    height: 14px;
+    background: var(--cyan);
+    animation: blink 1s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+  }
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  /* ── Terminal toolbar ── */
+  .mock-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border-bottom: 1px solid var(--divider);
+    flex-shrink: 0;
+  }
+  .mock-toolbar-btn {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+    cursor: default;
+  }
+  .mock-toolbar-btn.active {
+    background: rgba(34,211,238,0.15);
+    color: var(--cyan);
+  }
+  .mock-toolbar-title {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Floating pill tab bar ── */
+  .mock-pill-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--bg-card);
+    border-radius: var(--radius-pill);
+    margin: 8px 16px;
+    flex-shrink: 0;
+  }
+  .mock-pill-tab {
+    flex: 1;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 6px 8px;
+    border-radius: var(--radius-pill);
+    color: var(--text-muted);
+    cursor: default;
+    white-space: nowrap;
+  }
+  .mock-pill-tab.active {
+    background: var(--cyan);
+    color: var(--text-inverted);
+    font-weight: 600;
+  }
+
+  /* ── Surface strip (horizontal scrolling tabs) ── */
+  .surface-strip {
+    display: flex;
+    gap: 6px;
+    padding: 8px 16px;
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+  .surface-chip {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-card);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: default;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .surface-chip.active {
+    background: rgba(34,211,238,0.12);
+    color: var(--cyan);
+    border-color: rgba(34,211,238,0.3);
+    font-weight: 600;
+  }
+  .surface-chip .chip-icon {
+    font-size: 12px;
+  }
+  .surface-chip .chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Pane group headers ── */
+  .pane-group {
+    margin-bottom: 12px;
+  }
+  .pane-group-header {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 6px 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pane-group-header .pane-line {
+    flex: 1;
+    height: 1px;
+    background: var(--divider);
+  }
+
+  /* ── Notification toast ── */
+  .mock-toast {
+    position: absolute;
+    top: 52px;
+    left: 12px;
+    right: 12px;
+    background: var(--bg-card);
+    border: 1px solid rgba(34,211,238,0.25);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    z-index: 10;
+  }
+  .mock-toast .toast-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(34,211,238,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--cyan);
+    flex-shrink: 0;
+  }
+  .mock-toast .toast-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .mock-toast .toast-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .mock-toast .toast-desc {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mock-toast .toast-time {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  /* ── Drawer overlay ── */
+  .mock-drawer-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 5;
+    border-radius: 29px;
+  }
+  .mock-drawer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border-radius: 20px 20px 0 0;
+    z-index: 6;
+    overflow: hidden;
+  }
+  .mock-drawer-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--text-muted);
+    border-radius: 2px;
+    margin: 10px auto;
+  }
+  .mock-drawer .screen-body {
+    padding: 0 16px 16px;
+  }
+
+  /* ── Swipe indicator ── */
+  .swipe-hint {
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    padding: 6px 0;
+    flex-shrink: 0;
+  }
+  .swipe-hint .arrow {
+    display: inline-block;
+    animation: sway 2s ease-in-out infinite;
+  }
+  @keyframes sway {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(4px); }
+  }
+
+  /* ── Progress bar ── */
+  .mock-progress {
+    height: 3px;
+    background: var(--bg-inset);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .mock-progress-fill {
+    height: 100%;
+    background: var(--cyan);
+    border-radius: 2px;
+  }
+
+  /* ── Annotation arrows/labels ── */
+  .annotation {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--cyan);
+    font-weight: 500;
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .annotation::before {
+    content: '';
+    width: 12px;
+    height: 1px;
+    background: var(--cyan);
+    flex-shrink: 0;
+  }
+
+  /* ── Recommended badge ── */
+  .recommended {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-inverted);
+    background: var(--cyan);
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    margin-left: 12px;
+    vertical-align: middle;
+  }
+
+  /* ── Description blocks ── */
+  .desc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+    margin-bottom: 24px;
+  }
+  .desc-item {
+    background: var(--bg-inset);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+  }
+  .desc-item-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+  }
+  .desc-item-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* ── Utility ── */
+  .spacer { flex: 1; }
+  .flex-row { display: flex; align-items: center; gap: 8px; }
+  .flex-col { display: flex; flex-direction: column; }
+  .gap-4 { gap: 4px; }
+  .gap-8 { gap: 8px; }
+  .gap-12 { gap: 12px; }
+  .mt-8 { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; }
+  .mb-8 { margin-bottom: 8px; }
+  .text-cyan { color: var(--cyan); }
+  .text-dim { color: var(--text-muted); }
+  .text-center { text-align: center; }
+  .w-full { width: 100%; }
+
+  /* ── Segmented control (inside phone) ── */
+  .mock-segment {
+    display: flex;
+    background: var(--bg-inset);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    margin: 0 16px 8px;
+    flex-shrink: 0;
+  }
+  .mock-segment-item {
+    flex: 1;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 6px 4px;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    cursor: default;
+  }
+  .mock-segment-item.active {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  /* ── Notification dot ── */
+  .notif-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--cyan);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  /* ── File manager rows ── */
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--divider);
+  }
+  .file-row:last-child { border-bottom: none; }
+  .file-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .file-name {
+    font-size: 13px;
+    font-weight: 500;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .file-meta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  /* ── Scrollable phone body ── */
+  .phone .screen-body::-webkit-scrollbar { width: 0; }
+</style>
+
+<script>
+function toggleSelect(el) {
+  document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+</script>
+
+
+<!-- ════════════════════════════════════════════════════ -->
+<!--  PAGE CONTENT                                       -->
+<!-- ════════════════════════════════════════════════════ -->
+
+<div class="question-banner">
+  <span class="q-icon">?</span>
+  Which mobile navigation model works best for the cmux companion app?
+</div>
+
+<div class="page-title">cmux Mobile Companion -- Navigation Models</div>
+<p class="page-subtitle">
+  Three approaches for mapping the desktop hierarchy (Windows > Workspaces > Panes > Surfaces) onto a phone screen. Each approach solves the core tension differently: how do you give fast access to many surfaces across many workspaces on a 6-inch display?
+</p>
+
+<!-- ── Choices ── -->
+<div class="options">
+  <div class="option selected" data-choice="A" onclick="toggleSelect(this)">
+    <div class="check-indicator"></div>
+    <div class="option-label">Approach A</div>
+    <div class="option-title">Surface Strip + Bottom Nav</div>
+    <div class="option-desc">Horizontal scrolling chip strip shows all surfaces for the current workspace. Bottom nav switches between workspace list, terminal, browser, and files.</div>
+  </div>
+  <div class="option" data-choice="B" onclick="toggleSelect(this)">
+    <div class="check-indicator"></div>
+    <div class="option-label">Approach B</div>
+    <div class="option-title">Card Stack + Swipe Nav</div>
+    <div class="option-desc">Each surface is a full-screen card. Swipe left/right to move between surfaces. Pull down for workspace drawer. Minimal persistent chrome.</div>
+  </div>
+  <div class="option" data-choice="C" onclick="toggleSelect(this)">
+    <div class="check-indicator"></div>
+    <div class="option-label">Approach C</div>
+    <div class="option-title">Unified Feed + Quick Switcher</div>
+    <div class="option-desc">All workspace activity in a single scrollable feed. Double-tap home to invoke a quick switcher overlay that jumps to any surface.</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════ -->
+<!--  APPROACH A: SURFACE STRIP + BOTTOM NAV             -->
+<!-- ════════════════════════════════════════════════════ -->
+
+<div class="approach">
+  <div class="approach-header">
+    <div class="approach-number">Approach A <span class="recommended">Recommended</span></div>
+    <div class="approach-name">Surface Strip + Bottom Nav</div>
+    <div class="approach-insight">
+      <strong>Core insight:</strong> Flatten the Panes > Surfaces hierarchy into a single horizontal strip of chips grouped by pane. The strip acts as a "linearized split view" -- the same surfaces, just accessed sequentially instead of spatially. Bottom navigation handles the top-level mode switching (workspaces, terminal view, browser, files, shell).
+    </div>
+  </div>
+
+  <div class="desc-grid">
+    <div class="desc-item">
+      <div class="desc-item-label">Workspace Nav</div>
+      <div class="desc-item-text">Bottom tab "Workspaces" opens the full sidebar list mirroring desktop. Tap a workspace to enter it. Current workspace name persists in the header.</div>
+    </div>
+    <div class="desc-item">
+      <div class="desc-item-label">Surface Access</div>
+      <div class="desc-item-text">Horizontal chip strip below the header shows all surfaces grouped by pane with subtle dividers. Tap to switch. Pane labels (Left, Right, Bottom) provide spatial context.</div>
+    </div>
+    <div class="desc-item">
+      <div class="desc-item-label">View Switching</div>
+      <div class="desc-item-text">Bottom nav: Workspaces | Terminal | Browser | Files | Shell. Terminal and Browser views share the surface strip; Files and Shell are standalone.</div>
+    </div>
+    <div class="desc-item">
+      <div class="desc-item-label">Notifications</div>
+      <div class="desc-item-text">Toast banners slide in from top with workspace + surface context. Notification dots appear on workspace list items and on surface chips. Bell icon in header shows history.</div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <div class="pros-label">Strengths</div>
+      <ul>
+        <li>All surfaces visible and one-tap reachable</li>
+        <li>Pane grouping preserves desktop mental model</li>
+        <li>Familiar bottom-nav pattern (zero learning curve)</li>
+        <li>Notification dots on chips give at-a-glance status</li>
+        <li>Scales well from 2 to 12+ surfaces</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <div class="cons-label">Tradeoffs</div>
+      <ul>
+        <li>Two scrolling axes (strip horizontal, content vertical)</li>
+        <li>Chip strip consumes ~40px of vertical space</li>
+        <li>Many surfaces may require scrolling the strip</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Phone mockups -->
+  <div class="phones-row">
+
+    <!-- Phone A1: Workspace List -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Workspace List</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="notch"></div>
+          <span style="font-size:13px">...</span>
+        </div>
+        <div class="screen-header">
+          <div class="flex-row">
+            <div class="screen-title">Workspaces</div>
+            <div class="spacer"></div>
+            <div style="position:relative;width:22px;height:22px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:16px">
+              &#x1F514;
+              <div class="notif-dot" style="position:absolute;top:0;right:0"></div>
+            </div>
+          </div>
+          <div class="screen-subtitle">connected via Tailscale -- mac-studio</div>
+        </div>
+        <div class="screen-body">
+          <div class="mock-sidebar">
+            <div class="mock-sidebar-item active">
+              <div class="ws-color" style="background:#22D3EE"></div>
+              <div class="ws-info">
+                <div class="ws-name">cmux-mobile</div>
+                <div class="ws-meta">feat/mobile-app  ~/code/cmux-mobile</div>
+              </div>
+            </div>
+            <div class="mock-sidebar-item">
+              <div class="ws-color" style="background:#a78bfa"></div>
+              <div class="ws-info">
+                <div class="ws-name">api-server</div>
+                <div class="ws-meta">main  ~/code/api</div>
+              </div>
+              <div class="ws-badge">3</div>
+            </div>
+            <div class="mock-sidebar-item">
+              <div class="ws-color" style="background:#34d399"></div>
+              <div class="ws-info">
+                <div class="ws-name">claude-agent</div>
+                <div class="ws-meta">fix/auth-flow  ~/code/api</div>
+              </div>
+              <div class="ws-badge warn">!</div>
+            </div>
+            <div class="mock-sidebar-item">
+              <div class="ws-color" style="background:#f59e0b"></div>
+              <div class="ws-info">
+                <div class="ws-name">docs-site</div>
+                <div class="ws-meta">main  ~/code/docs</div>
+              </div>
+            </div>
+            <div class="mock-sidebar-item">
+              <div class="ws-color" style="background:#f87171"></div>
+              <div class="ws-info">
+                <div class="ws-name">infrastructure</div>
+                <div class="ws-meta">main  ~/infra</div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:16px">
+            <div class="pane-group-header">
+              <span>Pinned</span>
+              <div class="pane-line"></div>
+            </div>
+            <div class="mock-sidebar" style="margin-top:4px">
+              <div class="mock-sidebar-item">
+                <div class="ws-color" style="background:#94a3b8"></div>
+                <div class="ws-info">
+                  <div class="ws-name">monitoring</div>
+                  <div class="ws-meta">~/ops/monitoring</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mock-nav">
+          <div class="mock-nav-item active">
+            <div class="mock-nav-icon">&#x25A3;</div>
+            <div class="mock-nav-label">Spaces</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25B7;</div>
+            <div class="mock-nav-label">Terminal</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25CE;</div>
+            <div class="mock-nav-label">Browser</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x2630;</div>
+            <div class="mock-nav-label">Files</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25B8;</div>
+            <div class="mock-nav-label">Shell</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone A2: Terminal with Surface Strip -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Terminal + Surface Strip</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="notch"></div>
+          <span style="font-size:13px">...</span>
+        </div>
+        <div class="screen-header" style="padding-bottom:4px">
+          <div class="flex-row">
+            <div style="font-size:13px;font-weight:600;color:var(--text-secondary)">&#x25C0;</div>
+            <div class="screen-title" style="font-size:16px">cmux-mobile</div>
+            <div class="spacer"></div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">feat/mobile-app</div>
+          </div>
+        </div>
+
+        <!-- Surface strip -->
+        <div class="surface-strip">
+          <div class="surface-chip active">
+            <span class="chip-icon">&#x25B7;</span>
+            <span>claude</span>
+          </div>
+          <div class="surface-chip">
+            <span class="chip-icon">&#x25B7;</span>
+            <span>server</span>
+            <div class="chip-dot" style="background:#34d399"></div>
+          </div>
+          <div class="surface-chip" style="border-left:2px solid var(--text-muted);border-radius:0 100px 100px 0;padding-left:14px">
+            <span class="chip-icon">&#x25CE;</span>
+            <span>localhost</span>
+          </div>
+          <div class="surface-chip">
+            <span class="chip-icon">&#x25B7;</span>
+            <span>logs</span>
+          </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="mock-toolbar">
+          <div class="mock-toolbar-btn active">Ctrl</div>
+          <div class="mock-toolbar-btn">Tab</div>
+          <div class="mock-toolbar-btn">Esc</div>
+          <div class="mock-toolbar-title">~/code/cmux-mobile</div>
+          <div class="mock-toolbar-btn">&#x2630;</div>
+        </div>
+
+        <!-- Terminal -->
+        <div class="mock-terminal" style="border-radius:0 0 var(--radius-md) var(--radius-md);margin:0 0 0 0">
+          <div><span class="prompt">$</span> <span class="cmd">flutter run -d pixel</span></div>
+          <div class="output">Launching lib/main.dart...</div>
+          <div class="output">Running Gradle task 'assembleDebug'...</div>
+          <div class="output">Built build/app/outputs/flutter-apk/</div>
+          <div class="output">Installing build/app/outputs/apk...</div>
+          <div class="output">Syncing files to device Pixel 7...</div>
+          <div class="output" style="color:var(--cyan)">&#x2713; Built and installed (14.2s)</div>
+          <div>&nbsp;</div>
+          <div><span class="prompt">$</span> <span class="cursor"></span></div>
+        </div>
+
+        <div class="mock-nav">
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25A3;</div>
+            <div class="mock-nav-label">Spaces</div>
+          </div>
+          <div class="mock-nav-item active">
+            <div class="mock-nav-icon">&#x25B7;</div>
+            <div class="mock-nav-label">Terminal</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25CE;</div>
+            <div class="mock-nav-label">Browser</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x2630;</div>
+            <div class="mock-nav-label">Files</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25B8;</div>
+            <div class="mock-nav-label">Shell</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone A3: Notification Toast -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Notification Toast</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:42</span>
+          <div class="notch"></div>
+          <span style="font-size:13px">...</span>
+        </div>
+
+        <!-- Toast notification -->
+        <div class="mock-toast">
+          <div class="toast-icon">&#x2605;</div>
+          <div class="toast-body">
+            <div class="toast-title">claude-agent completed task</div>
+            <div class="toast-desc">fix/auth-flow -- All 47 tests passing</div>
+          </div>
+          <div class="toast-time">now</div>
+        </div>
+
+        <div class="screen-header" style="padding-bottom:4px">
+          <div class="flex-row">
+            <div style="font-size:13px;font-weight:600;color:var(--text-secondary)">&#x25C0;</div>
+            <div class="screen-title" style="font-size:16px">cmux-mobile</div>
+            <div class="spacer"></div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">feat/mobile-app</div>
+          </div>
+        </div>
+
+        <div class="surface-strip">
+          <div class="surface-chip active">
+            <span class="chip-icon">&#x25B7;</span>
+            <span>claude</span>
+          </div>
+          <div class="surface-chip">
+            <span class="chip-icon">&#x25B7;</span>
+            <span>server</span>
+            <div class="chip-dot" style="background:#34d399"></div>
+          </div>
+          <div class="surface-chip">
+            <span class="chip-icon">&#x25CE;</span>
+            <span>localhost</span>
+          </div>
+        </div>
+
+        <div class="mock-toolbar">
+          <div class="mock-toolbar-btn active">Ctrl</div>
+          <div class="mock-toolbar-btn">Tab</div>
+          <div class="mock-toolbar-btn">Esc</div>
+          <div class="mock-toolbar-title">~/code/cmux-mobile</div>
+          <div class="mock-toolbar-btn">&#x2630;</div>
+        </div>
+
+        <div class="mock-terminal" style="border-radius:0 0 var(--radius-md) var(--radius-md)">
+          <div><span class="prompt">$</span> <span class="cmd">dart analyze</span></div>
+          <div class="output">Analyzing cmux_mobile...</div>
+          <div class="output">No issues found!</div>
+          <div>&nbsp;</div>
+          <div><span class="prompt">$</span> <span class="cmd">flutter test</span></div>
+          <div class="output">00:12 +42: All tests passed!</div>
+          <div>&nbsp;</div>
+          <div><span class="prompt">$</span> <span class="cursor"></span></div>
+        </div>
+
+        <div class="mock-nav">
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25A3;</div>
+            <div class="mock-nav-label">Spaces</div>
+          </div>
+          <div class="mock-nav-item active">
+            <div class="mock-nav-icon">&#x25B7;</div>
+            <div class="mock-nav-label">Terminal</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25CE;</div>
+            <div class="mock-nav-label">Browser</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x2630;</div>
+            <div class="mock-nav-label">Files</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25B8;</div>
+            <div class="mock-nav-label">Shell</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone A4: File Manager -->
+    <div class="phone-wrapper">
+      <div class="phone-label">File Manager (SFTP)</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="notch"></div>
+          <span style="font-size:13px">...</span>
+        </div>
+        <div class="screen-header">
+          <div class="flex-row">
+            <div style="font-size:13px;font-weight:600;color:var(--text-secondary)">&#x25C0;</div>
+            <div class="screen-title" style="font-size:16px">Files</div>
+            <div class="spacer"></div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">~/code/cmux-mobile</div>
+          </div>
+        </div>
+
+        <!-- Breadcrumb -->
+        <div style="padding:0 16px 8px;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);display:flex;gap:4px;align-items:center">
+          <span style="color:var(--cyan)">~</span>
+          <span>/</span>
+          <span style="color:var(--cyan)">code</span>
+          <span>/</span>
+          <span style="color:var(--text-secondary)">cmux-mobile</span>
+        </div>
+
+        <div class="screen-body">
+          <div class="mock-sidebar">
+            <div class="file-row">
+              <div class="file-icon" style="color:#f59e0b">&#x1F4C1;</div>
+              <div class="file-name">lib/</div>
+              <div class="file-meta">12 items</div>
+            </div>
+            <div class="file-row">
+              <div class="file-icon" style="color:#f59e0b">&#x1F4C1;</div>
+              <div class="file-name">test/</div>
+              <div class="file-meta">8 items</div>
+            </div>
+            <div class="file-row">
+              <div class="file-icon" style="color:#f59e0b">&#x1F4C1;</div>
+              <div class="file-name">android/</div>
+              <div class="file-meta">6 items</div>
+            </div>
+            <div class="file-row">
+              <div class="file-icon" style="color:#64748B">&#x1F4C4;</div>
+              <div class="file-name">pubspec.yaml</div>
+              <div class="file-meta">2.1 KB</div>
+            </div>
+            <div class="file-row">
+              <div class="file-icon" style="color:#22D3EE">&#x1F4C4;</div>
+              <div class="file-name">main.dart</div>
+              <div class="file-meta">4.8 KB</div>
+            </div>
+            <div class="file-row">
+              <div class="file-icon" style="color:#64748B">&#x1F4C4;</div>
+              <div class="file-name">README.md</div>
+              <div class="file-meta">1.2 KB</div>
+            </div>
+            <div class="file-row">
+              <div class="file-icon" style="color:#64748B">&#x1F4C4;</div>
+              <div class="file-name">.gitignore</div>
+              <div class="file-meta">0.3 KB</div>
+            </div>
+            <div class="file-row">
+              <div class="file-icon" style="color:#f59e0b">&#x1F4C1;</div>
+              <div class="file-name">build/</div>
+              <div class="file-meta">24 items</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mock-nav">
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25A3;</div>
+            <div class="mock-nav-label">Spaces</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25B7;</div>
+            <div class="mock-nav-label">Terminal</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25CE;</div>
+            <div class="mock-nav-label">Browser</div>
+          </div>
+          <div class="mock-nav-item active">
+            <div class="mock-nav-icon">&#x2630;</div>
+            <div class="mock-nav-label">Files</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25B8;</div>
+            <div class="mock-nav-label">Shell</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /phones-row -->
+</div><!-- /approach A -->
+
+
+<!-- ════════════════════════════════════════════════════ -->
+<!--  APPROACH B: CARD STACK + SWIPE NAV                 -->
+<!-- ════════════════════════════════════════════════════ -->
+
+<div class="approach">
+  <div class="approach-header">
+    <div class="approach-number">Approach B</div>
+    <div class="approach-name">Card Stack + Swipe Navigation</div>
+    <div class="approach-insight">
+      <strong>Core insight:</strong> Treat each surface as a full-screen card. Swipe left/right to move between surfaces within a workspace (like swiping between pages). Pull down from the top to reveal a workspace drawer. No persistent bottom nav -- maximum screen real estate for terminal content. A floating action button provides quick access to browser, files, and shell.
+    </div>
+  </div>
+
+  <div class="desc-grid">
+    <div class="desc-item">
+      <div class="desc-item-label">Workspace Nav</div>
+      <div class="desc-item-text">Pull down gesture reveals a half-sheet drawer with workspace list. Current workspace shown as a compact pill at top of screen. Long-press the pill for quick workspace switching.</div>
+    </div>
+    <div class="desc-item">
+      <div class="desc-item-label">Surface Access</div>
+      <div class="desc-item-text">Horizontal swipe between surfaces. Page dots at bottom indicate position. Pane boundaries shown as a thicker dot gap. Feels like swiping between app pages on a home screen.</div>
+    </div>
+    <div class="desc-item">
+      <div class="desc-item-label">View Switching</div>
+      <div class="desc-item-text">Floating action button (bottom-right) expands into radial menu: Browser, Files, Shell. Terminal surfaces are the default card content -- no mode switching needed.</div>
+    </div>
+    <div class="desc-item">
+      <div class="desc-item-label">Notifications</div>
+      <div class="desc-item-text">Notification badge on workspace pill. Full toast banners. Tap toast to jump directly to the relevant workspace and surface.</div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <div class="pros-label">Strengths</div>
+      <ul>
+        <li>Maximum terminal real estate (no bottom nav or strip)</li>
+        <li>Gesture-first feels native and fluid</li>
+        <li>Immersive experience for focused terminal work</li>
+        <li>Elegant minimal chrome</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <div class="cons-label">Tradeoffs</div>
+      <ul>
+        <li>Swipe navigation is not discoverable for new users</li>
+        <li>Can not jump to a specific surface -- must swipe through</li>
+        <li>Pull-down gesture may conflict with system notifications</li>
+        <li>Harder to maintain spatial awareness of all surfaces</li>
+        <li>Gesture vocabulary requires learning</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="phones-row">
+
+    <!-- Phone B1: Full-screen terminal card -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Full-Screen Terminal Card</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="notch"></div>
+          <span style="font-size:13px">...</span>
+        </div>
+
+        <!-- Workspace pill -->
+        <div style="display:flex;justify-content:center;padding:4px 16px 8px">
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 14px;background:var(--bg-card);border-radius:var(--radius-pill);font-family:var(--font-mono);font-size:11px">
+            <div style="width:6px;height:6px;border-radius:50%;background:#22D3EE"></div>
+            <span style="font-weight:600;color:var(--text-primary)">cmux-mobile</span>
+            <span style="color:var(--text-muted);font-size:9px">&#x25BC;</span>
+          </div>
+        </div>
+
+        <!-- Terminal fills the card -->
+        <div class="mock-toolbar" style="margin:0 8px;border-radius:var(--radius-md) var(--radius-md) 0 0">
+          <div class="mock-toolbar-btn active">Ctrl</div>
+          <div class="mock-toolbar-btn">Tab</div>
+          <div class="mock-toolbar-btn">Esc</div>
+          <div class="mock-toolbar-title">claude -- ~/code</div>
+        </div>
+        <div class="mock-terminal" style="margin:0 8px;border-radius:0 0 var(--radius-md) var(--radius-md);flex:1">
+          <div><span class="prompt">claude</span> <span class="cmd">> Analyzing codebase...</span></div>
+          <div class="output">&nbsp;</div>
+          <div class="output">I'll implement the Surface</div>
+          <div class="output">Strip navigation pattern for</div>
+          <div class="output">the mobile companion app.</div>
+          <div class="output">&nbsp;</div>
+          <div class="output">Creating lib/widgets/</div>
+          <div class="output">&nbsp;&nbsp;surface_strip.dart</div>
+          <div class="output">&nbsp;&nbsp;workspace_list.dart</div>
+          <div class="output">&nbsp;&nbsp;terminal_view.dart</div>
+          <div class="output">&nbsp;</div>
+          <div><span class="prompt">$</span> <span class="cursor"></span></div>
+        </div>
+
+        <!-- Page dots -->
+        <div style="display:flex;justify-content:center;align-items:center;gap:6px;padding:10px 0 6px;flex-shrink:0">
+          <div style="width:7px;height:7px;border-radius:50%;background:var(--cyan)"></div>
+          <div style="width:5px;height:5px;border-radius:50%;background:var(--text-muted)"></div>
+          <div style="width:12px;height:1px;background:var(--text-muted);border-radius:1px"></div>
+          <div style="width:5px;height:5px;border-radius:50%;background:var(--text-muted)"></div>
+          <div style="width:5px;height:5px;border-radius:50%;background:var(--text-muted)"></div>
+        </div>
+
+        <!-- Swipe hint -->
+        <div class="swipe-hint">
+          <span class="arrow">&#x2190;</span> swipe to switch surfaces <span class="arrow">&#x2192;</span>
+        </div>
+
+        <!-- FAB -->
+        <div style="position:absolute;bottom:24px;right:20px;width:48px;height:48px;border-radius:50%;background:var(--cyan);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text-inverted);box-shadow:0 4px 16px rgba(34,211,238,0.3)">+</div>
+      </div>
+    </div>
+
+    <!-- Phone B2: Workspace Drawer -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Pull-Down Workspace Drawer</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="notch"></div>
+          <span style="font-size:13px">...</span>
+        </div>
+
+        <!-- Dimmed background terminal -->
+        <div class="mock-drawer-overlay"></div>
+
+        <!-- Drawer -->
+        <div class="mock-drawer" style="height:420px">
+          <div class="mock-drawer-handle"></div>
+          <div style="padding:4px 20px 12px">
+            <div style="font-size:16px;font-weight:700;color:var(--text-primary)">Workspaces</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);margin-top:2px">mac-studio via Tailscale</div>
+          </div>
+          <div style="padding:0 16px 16px;overflow-y:auto">
+            <div class="mock-sidebar">
+              <div class="mock-sidebar-item active">
+                <div class="ws-color" style="background:#22D3EE"></div>
+                <div class="ws-info">
+                  <div class="ws-name">cmux-mobile</div>
+                  <div class="ws-meta">feat/mobile-app  4 surfaces</div>
+                </div>
+              </div>
+              <div class="mock-sidebar-item">
+                <div class="ws-color" style="background:#a78bfa"></div>
+                <div class="ws-info">
+                  <div class="ws-name">api-server</div>
+                  <div class="ws-meta">main  3 surfaces</div>
+                </div>
+                <div class="ws-badge">3</div>
+              </div>
+              <div class="mock-sidebar-item">
+                <div class="ws-color" style="background:#34d399"></div>
+                <div class="ws-info">
+                  <div class="ws-name">claude-agent</div>
+                  <div class="ws-meta">fix/auth-flow  2 surfaces</div>
+                </div>
+                <div class="ws-badge warn">!</div>
+              </div>
+              <div class="mock-sidebar-item">
+                <div class="ws-color" style="background:#f59e0b"></div>
+                <div class="ws-info">
+                  <div class="ws-name">docs-site</div>
+                  <div class="ws-meta">main  2 surfaces</div>
+                </div>
+              </div>
+              <div class="mock-sidebar-item">
+                <div class="ws-color" style="background:#f87171"></div>
+                <div class="ws-info">
+                  <div class="ws-name">infrastructure</div>
+                  <div class="ws-meta">main  1 surface</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone B3: FAB expanded -->
+    <div class="phone-wrapper">
+      <div class="phone-label">FAB Expanded Menu</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="notch"></div>
+          <span style="font-size:13px">...</span>
+        </div>
+
+        <div style="display:flex;justify-content:center;padding:4px 16px 8px">
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 14px;background:var(--bg-card);border-radius:var(--radius-pill);font-family:var(--font-mono);font-size:11px">
+            <div style="width:6px;height:6px;border-radius:50%;background:#22D3EE"></div>
+            <span style="font-weight:600;color:var(--text-primary)">cmux-mobile</span>
+          </div>
+        </div>
+
+        <div class="mock-toolbar" style="margin:0 8px;border-radius:var(--radius-md) var(--radius-md) 0 0">
+          <div class="mock-toolbar-btn active">Ctrl</div>
+          <div class="mock-toolbar-btn">Tab</div>
+          <div class="mock-toolbar-btn">Esc</div>
+          <div class="mock-toolbar-title">server -- :3000</div>
+        </div>
+        <div class="mock-terminal" style="margin:0 8px;border-radius:0 0 var(--radius-md) var(--radius-md);flex:1;opacity:0.3">
+          <div><span class="prompt">$</span> <span class="cmd">npm start</span></div>
+          <div class="output">Server running on :3000</div>
+        </div>
+
+        <!-- FAB expanded overlay -->
+        <div style="position:absolute;bottom:16px;right:16px;display:flex;flex-direction:column;align-items:flex-end;gap:10px">
+          <!-- Menu items -->
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="background:var(--bg-card);border-radius:var(--radius-md);padding:6px 14px;font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--text-secondary)">Browser</div>
+            <div style="width:40px;height:40px;border-radius:50%;background:var(--bg-card);border:1px solid var(--divider);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-secondary)">&#x25CE;</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="background:var(--bg-card);border-radius:var(--radius-md);padding:6px 14px;font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--text-secondary)">Files</div>
+            <div style="width:40px;height:40px;border-radius:50%;background:var(--bg-card);border:1px solid var(--divider);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-secondary)">&#x2630;</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="background:var(--bg-card);border-radius:var(--radius-md);padding:6px 14px;font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--text-secondary)">Mosh Shell</div>
+            <div style="width:40px;height:40px;border-radius:50%;background:var(--bg-card);border:1px solid var(--divider);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-secondary)">&#x25B8;</div>
+          </div>
+          <!-- Close FAB -->
+          <div style="width:48px;height:48px;border-radius:50%;background:var(--cyan);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text-inverted);box-shadow:0 4px 16px rgba(34,211,238,0.3);transform:rotate(45deg)">+</div>
+        </div>
+
+        <div style="display:flex;justify-content:center;align-items:center;gap:6px;padding:10px 0 16px;flex-shrink:0">
+          <div style="width:5px;height:5px;border-radius:50%;background:var(--text-muted)"></div>
+          <div style="width:7px;height:7px;border-radius:50%;background:var(--cyan)"></div>
+          <div style="width:12px;height:1px;background:var(--text-muted);border-radius:1px"></div>
+          <div style="width:5px;height:5px;border-radius:50%;background:var(--text-muted)"></div>
+          <div style="width:5px;height:5px;border-radius:50%;background:var(--text-muted)"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════ -->
+<!--  APPROACH C: UNIFIED FEED + QUICK SWITCHER          -->
+<!-- ════════════════════════════════════════════════════ -->
+
+<div class="approach">
+  <div class="approach-header">
+    <div class="approach-number">Approach C</div>
+    <div class="approach-name">Unified Feed + Quick Switcher</div>
+    <div class="approach-insight">
+      <strong>Core insight:</strong> Instead of mirroring the desktop hierarchy, reimagine it as a live activity feed. All workspaces stream their status into a single timeline -- agent completions, build results, server logs, git pushes. Tapping any feed item opens that surface full-screen. Double-tap the bottom bar to summon a quick switcher (like Cmd+K) that fuzzy-searches across all workspaces and surfaces.
+    </div>
+  </div>
+
+  <div class="desc-grid">
+    <div class="desc-item">
+      <div class="desc-item-label">Workspace Nav</div>
+      <div class="desc-item-text">No dedicated workspace list. The feed implicitly groups by workspace. Filter chips at top let you scope to a specific workspace. Quick switcher also filters by workspace.</div>
+    </div>
+    <div class="desc-item">
+      <div class="desc-item-label">Surface Access</div>
+      <div class="desc-item-text">Tap any feed card to open that surface full-screen. Quick switcher (double-tap home) shows all surfaces with fuzzy search. Recent surfaces shown first.</div>
+    </div>
+    <div class="desc-item">
+      <div class="desc-item-label">View Switching</div>
+      <div class="desc-item-text">Bottom nav: Feed | Terminal | Browser | Files. Terminal tab remembers your last-viewed surface. Feed is the home base you always return to.</div>
+    </div>
+    <div class="desc-item">
+      <div class="desc-item-label">Notifications</div>
+      <div class="desc-item-text">Notifications ARE the feed. New events appear at top with highlight animation. No separate notification system needed -- the feed is the notification center.</div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <div class="pros-label">Strengths</div>
+      <ul>
+        <li>Perfectly suited to "monitoring" use case on mobile</li>
+        <li>No hierarchy mapping needed -- everything is flat</li>
+        <li>Quick switcher is extremely fast for power users</li>
+        <li>Notifications integrated naturally into the feed</li>
+        <li>Novel approach that plays to mobile strengths</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <div class="cons-label">Tradeoffs</div>
+      <ul>
+        <li>Loses spatial relationship between surfaces</li>
+        <li>Feed can get noisy with many active workspaces</li>
+        <li>Quick switcher requires learning the double-tap gesture</li>
+        <li>Less useful for active terminal work, more for monitoring</li>
+        <li>Mental model diverges significantly from desktop</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="phones-row">
+
+    <!-- Phone C1: Activity Feed -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Activity Feed (Home)</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="notch"></div>
+          <span style="font-size:13px">...</span>
+        </div>
+        <div class="screen-header">
+          <div class="screen-title">Activity</div>
+          <div class="screen-subtitle">mac-studio -- 5 workspaces active</div>
+        </div>
+
+        <!-- Filter chips -->
+        <div class="surface-strip" style="padding-top:0">
+          <div class="surface-chip active">
+            <span>All</span>
+          </div>
+          <div class="surface-chip">
+            <div class="chip-dot" style="background:#a78bfa"></div>
+            <span>api-server</span>
+          </div>
+          <div class="surface-chip">
+            <div class="chip-dot" style="background:#34d399"></div>
+            <span>claude-agent</span>
+          </div>
+          <div class="surface-chip">
+            <div class="chip-dot" style="background:#22D3EE"></div>
+            <span>cmux-mobile</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <!-- Feed items -->
+          <div class="mock-card" style="border-left:3px solid #34d399">
+            <div class="flex-row" style="margin-bottom:6px">
+              <div style="width:6px;height:6px;border-radius:50%;background:#34d399"></div>
+              <div class="mock-card-meta" style="color:#34d399;font-weight:600">claude-agent</div>
+              <div class="spacer"></div>
+              <div class="mock-card-meta">2m ago</div>
+            </div>
+            <div class="mock-card-title" style="color:var(--cyan)">&#x2713; Task completed</div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:4px">
+              fix/auth-flow -- All 47 tests passing
+            </div>
+            <div class="mock-progress" style="margin-top:8px">
+              <div class="mock-progress-fill" style="width:100%"></div>
+            </div>
+          </div>
+
+          <div class="mock-card">
+            <div class="flex-row" style="margin-bottom:6px">
+              <div style="width:6px;height:6px;border-radius:50%;background:#a78bfa"></div>
+              <div class="mock-card-meta" style="color:#a78bfa;font-weight:600">api-server</div>
+              <div class="spacer"></div>
+              <div class="mock-card-meta">5m ago</div>
+            </div>
+            <div class="mock-card-title">Build succeeded</div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:4px">
+              main -- deploy-preview ready on :4000
+            </div>
+          </div>
+
+          <div class="mock-card">
+            <div class="flex-row" style="margin-bottom:6px">
+              <div style="width:6px;height:6px;border-radius:50%;background:#22D3EE"></div>
+              <div class="mock-card-meta" style="color:var(--cyan);font-weight:600">cmux-mobile</div>
+              <div class="spacer"></div>
+              <div class="mock-card-meta">8m ago</div>
+            </div>
+            <div class="mock-card-title">flutter test passed</div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:4px">
+              42 tests, 0 failures (3.2s)
+            </div>
+          </div>
+
+          <div class="mock-card" style="border-left:3px solid #f59e0b">
+            <div class="flex-row" style="margin-bottom:6px">
+              <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b"></div>
+              <div class="mock-card-meta" style="color:#f59e0b;font-weight:600">docs-site</div>
+              <div class="spacer"></div>
+              <div class="mock-card-meta">12m ago</div>
+            </div>
+            <div class="mock-card-title">Port 3001 listening</div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:4px">
+              next dev -- http://localhost:3001
+            </div>
+          </div>
+
+          <div class="mock-card">
+            <div class="flex-row" style="margin-bottom:6px">
+              <div style="width:6px;height:6px;border-radius:50%;background:#f87171"></div>
+              <div class="mock-card-meta" style="color:#f87171;font-weight:600">infrastructure</div>
+              <div class="spacer"></div>
+              <div class="mock-card-meta">18m ago</div>
+            </div>
+            <div class="mock-card-title">terraform plan complete</div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:4px">
+              3 to add, 1 to change, 0 to destroy
+            </div>
+          </div>
+        </div>
+
+        <div class="mock-nav">
+          <div class="mock-nav-item active">
+            <div class="mock-nav-icon">&#x25CF;</div>
+            <div class="mock-nav-label">Feed</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25B7;</div>
+            <div class="mock-nav-label">Terminal</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25CE;</div>
+            <div class="mock-nav-label">Browser</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x2630;</div>
+            <div class="mock-nav-label">Files</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone C2: Quick Switcher -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Quick Switcher Overlay</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="notch"></div>
+          <span style="font-size:13px">...</span>
+        </div>
+
+        <div class="mock-drawer-overlay"></div>
+
+        <!-- Quick switcher overlay -->
+        <div style="position:absolute;top:60px;left:12px;right:12px;background:var(--bg-card);border-radius:var(--radius-lg);z-index:8;box-shadow:0 16px 48px rgba(0,0,0,0.6);overflow:hidden;border:1px solid rgba(34,211,238,0.15)">
+          <!-- Search input -->
+          <div style="padding:14px 16px;border-bottom:1px solid var(--divider);display:flex;align-items:center;gap:10px">
+            <span style="color:var(--cyan);font-size:14px">&#x2315;</span>
+            <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary);flex:1">clau<span class="cursor" style="height:15px"></span></div>
+          </div>
+
+          <!-- Results -->
+          <div style="padding:8px">
+            <div style="padding:10px 12px;background:rgba(34,211,238,0.08);border-radius:var(--radius-sm);margin-bottom:4px;display:flex;align-items:center;gap:10px">
+              <span style="font-size:14px;color:var(--cyan)">&#x25B7;</span>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600;color:var(--text-primary)"><span style="color:var(--cyan)">clau</span>de</div>
+                <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">cmux-mobile / Left pane</div>
+              </div>
+              <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted)">&#x23CE;</div>
+            </div>
+            <div style="padding:10px 12px;display:flex;align-items:center;gap:10px">
+              <span style="font-size:14px;color:var(--text-muted)">&#x25B7;</span>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:500;color:var(--text-secondary)"><span style="color:var(--cyan)">clau</span>de-agent</div>
+                <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">Workspace -- 2 surfaces</div>
+              </div>
+            </div>
+            <div style="padding:10px 12px;display:flex;align-items:center;gap:10px">
+              <span style="font-size:14px;color:var(--text-muted)">&#x25CE;</span>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:500;color:var(--text-secondary)">CLAUDE.md</div>
+                <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">api-server / Right pane</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hint bar -->
+          <div style="padding:8px 16px;border-top:1px solid var(--divider);display:flex;gap:16px;font-family:var(--font-mono);font-size:9px;color:var(--text-muted)">
+            <span><span style="color:var(--text-tertiary)">&#x2191;&#x2193;</span> navigate</span>
+            <span><span style="color:var(--text-tertiary)">&#x23CE;</span> open</span>
+            <span><span style="color:var(--text-tertiary)">esc</span> close</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone C3: Terminal (from feed tap) -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Terminal (from Feed Tap)</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="notch"></div>
+          <span style="font-size:13px">...</span>
+        </div>
+
+        <!-- Compact context bar -->
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 16px 8px">
+          <div style="font-size:13px;font-weight:600;color:var(--text-secondary)">&#x25C0;</div>
+          <div style="width:6px;height:6px;border-radius:50%;background:#34d399"></div>
+          <div style="font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text-primary)">claude-agent</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary)">fix/auth-flow</div>
+          <div class="spacer"></div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--cyan)">1/2</div>
+        </div>
+
+        <div class="mock-toolbar" style="margin:0 8px;border-radius:var(--radius-md) var(--radius-md) 0 0">
+          <div class="mock-toolbar-btn active">Ctrl</div>
+          <div class="mock-toolbar-btn">Tab</div>
+          <div class="mock-toolbar-btn">Esc</div>
+          <div class="mock-toolbar-title">claude -- ~/code/api</div>
+        </div>
+        <div class="mock-terminal" style="margin:0 8px;border-radius:0 0 var(--radius-md) var(--radius-md);flex:1">
+          <div><span class="prompt">claude</span> <span class="cmd">> Done!</span></div>
+          <div class="output">&nbsp;</div>
+          <div class="output">I've fixed the auth flow.</div>
+          <div class="output">Changes made:</div>
+          <div class="output">&nbsp;</div>
+          <div class="output">1. Fixed token refresh</div>
+          <div class="output">   race condition</div>
+          <div class="output">2. Added retry logic</div>
+          <div class="output">   for network errors</div>
+          <div class="output">3. Updated all 47 tests</div>
+          <div class="output">&nbsp;</div>
+          <div class="output" style="color:var(--cyan)">All tests passing.</div>
+          <div>&nbsp;</div>
+          <div><span class="prompt">$</span> <span class="cursor"></span></div>
+        </div>
+
+        <div class="mock-nav">
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25CF;</div>
+            <div class="mock-nav-label">Feed</div>
+          </div>
+          <div class="mock-nav-item active">
+            <div class="mock-nav-icon">&#x25B7;</div>
+            <div class="mock-nav-label">Terminal</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x25CE;</div>
+            <div class="mock-nav-label">Browser</div>
+          </div>
+          <div class="mock-nav-item">
+            <div class="mock-nav-icon">&#x2630;</div>
+            <div class="mock-nav-label">Files</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════ -->
+<!--  COMPARISON SUMMARY                                 -->
+<!-- ════════════════════════════════════════════════════ -->
+
+<div style="margin-top:24px">
+  <div style="font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:16px">Comparison Matrix</div>
+
+  <div style="background:var(--bg-card);border-radius:var(--radius-lg);overflow:hidden;font-size:13px">
+    <!-- Header row -->
+    <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;border-bottom:1px solid var(--divider);padding:12px 16px;font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">
+      <div>Dimension</div>
+      <div style="text-align:center">A: Strip</div>
+      <div style="text-align:center">B: Swipe</div>
+      <div style="text-align:center">C: Feed</div>
+    </div>
+    <!-- Rows -->
+    <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;border-bottom:1px solid var(--divider);padding:10px 16px;color:var(--text-secondary)">
+      <div>Discoverability</div>
+      <div style="text-align:center;color:var(--cyan)">&#x2605;&#x2605;&#x2605;</div>
+      <div style="text-align:center">&#x2605;</div>
+      <div style="text-align:center">&#x2605;&#x2605;</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;border-bottom:1px solid var(--divider);padding:10px 16px;color:var(--text-secondary)">
+      <div>Terminal real estate</div>
+      <div style="text-align:center">&#x2605;&#x2605;</div>
+      <div style="text-align:center;color:var(--cyan)">&#x2605;&#x2605;&#x2605;</div>
+      <div style="text-align:center">&#x2605;&#x2605;</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;border-bottom:1px solid var(--divider);padding:10px 16px;color:var(--text-secondary)">
+      <div>Surface switching speed</div>
+      <div style="text-align:center;color:var(--cyan)">&#x2605;&#x2605;&#x2605;</div>
+      <div style="text-align:center">&#x2605;</div>
+      <div style="text-align:center">&#x2605;&#x2605;</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;border-bottom:1px solid var(--divider);padding:10px 16px;color:var(--text-secondary)">
+      <div>Notification clarity</div>
+      <div style="text-align:center;color:var(--cyan)">&#x2605;&#x2605;&#x2605;</div>
+      <div style="text-align:center">&#x2605;&#x2605;</div>
+      <div style="text-align:center;color:var(--cyan)">&#x2605;&#x2605;&#x2605;</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;border-bottom:1px solid var(--divider);padding:10px 16px;color:var(--text-secondary)">
+      <div>Desktop mental model</div>
+      <div style="text-align:center;color:var(--cyan)">&#x2605;&#x2605;&#x2605;</div>
+      <div style="text-align:center">&#x2605;&#x2605;</div>
+      <div style="text-align:center">&#x2605;</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;border-bottom:1px solid var(--divider);padding:10px 16px;color:var(--text-secondary)">
+      <div>Learning curve</div>
+      <div style="text-align:center;color:var(--cyan)">Low</div>
+      <div style="text-align:center;color:#f59e0b">Medium</div>
+      <div style="text-align:center;color:#f59e0b">Medium</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;padding:10px 16px;color:var(--text-secondary)">
+      <div>Best for</div>
+      <div style="text-align:center;font-size:11px;color:var(--text-tertiary)">Active work + monitoring</div>
+      <div style="text-align:center;font-size:11px;color:var(--text-tertiary)">Focused single-surface</div>
+      <div style="text-align:center;font-size:11px;color:var(--text-tertiary)">Passive monitoring</div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:40px;padding:20px 24px;background:var(--bg-inset);border-radius:var(--radius-lg);border:1px solid rgba(34,211,238,0.1)">
+  <div style="font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px">Recommendation</div>
+  <div style="font-size:14px;color:var(--text-secondary);line-height:1.6">
+    <strong style="color:var(--text-primary)">Approach A (Surface Strip + Bottom Nav)</strong> is the strongest foundation. It preserves the desktop mental model (pane grouping via the strip), provides instant one-tap access to any surface, uses a familiar navigation pattern, and works equally well for active terminal work and passive monitoring. The 40px vertical cost of the surface strip is a worthwhile trade for the discoverability and speed it provides.
+    <br><br>
+    However, consider <strong style="color:var(--text-primary)">cherry-picking the quick switcher from Approach C</strong> as a power-user shortcut layered on top. Double-tap the bottom bar or use a keyboard shortcut (for users with Bluetooth keyboards) to invoke fuzzy search across all workspaces and surfaces. This gives you the best of both worlds: an immediately understandable interface for casual use, and a lightning-fast escape hatch for power users managing 10+ workspaces.
+  </div>
+</div>

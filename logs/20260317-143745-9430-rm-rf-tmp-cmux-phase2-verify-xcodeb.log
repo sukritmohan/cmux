@@ -1,0 +1,15 @@
+=== Command ===
+rm -rf /tmp/cmux-phase2-verify && xcodebuild -project GhosttyTabs.xcodeproj -scheme cmux -configuration Debug -destination 'platform=macOS' -derivedDataPath /tmp/cmux-phase2-verify build 2>&1 | grep "error:\|BUILD SUCCEEDED\|BUILD FAILED" | head -5
+
+=== Timestamp ===
+2026-03-17 14:37:45
+
+=== Exit Code ===
+0
+
+=== Output ===
+/Users/sm/code/cmux/Sources/TerminalController.swift:15313:1: error: expected '}' in class
+/Users/sm/code/cmux/Sources/TerminalController.swift:15313:1: error: expected '}' in class
+/Users/sm/code/cmux/Sources/TerminalController.swift:15313:1: error: expected '}' in class
+/Users/sm/code/cmux/Sources/TerminalController.swift:15313:1: error: expected '}' in class
+/Users/sm/code/cmux/Sources/TerminalController.swift:15313:1: error: expected '}' in class

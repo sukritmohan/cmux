@@ -1,0 +1,43 @@
+=== Command ===
+git add \
+  GhosttyTabs.xcodeproj/project.pbxproj \
+  Sources/Bridge/BridgeConnection.swift \
+  Sources/Bridge/BridgeEventRelay.swift \
+  Sources/Bridge/BridgePTYStream.swift \
+  Sources/Bridge/BridgePTYObserverContext.swift \
+  Sources/Bridge/BridgeServer.swift \
+  Sources/TabManager.swift \
+  Sources/Workspace.swift \
+  cmux-Bridging-Header.h \
+  ghostty.h \
+  ghostty \
+  docs/mobile-companion/development-architecture.md \
+  docs/superpowers/specs/2026-03-16-android-companion-design.md \
+  docs/superpowers/plans/2026-03-17-android-companion.md \
+  scripts/build-ghostty-cli-helper.sh \
+  scripts/reload.sh && git diff --cached --stat
+
+=== Timestamp ===
+2026-03-17 14:32:18
+
+=== Exit Code ===
+0
+
+=== Output ===
+ GhosttyTabs.xcodeproj/project.pbxproj              |    4 +
+ Sources/Bridge/BridgeConnection.swift              |  161 +-
+ Sources/Bridge/BridgeEventRelay.swift              |  200 +-
+ Sources/Bridge/BridgePTYObserverContext.swift      |   16 +
+ Sources/Bridge/BridgePTYStream.swift               |  205 +-
+ Sources/Bridge/BridgeServer.swift                  |    2 +-
+ Sources/TabManager.swift                           |   14 +
+ Sources/Workspace.swift                            |   81 +
+ cmux-Bridging-Header.h                             |   10 +
+ docs/mobile-companion/development-architecture.md  |   62 +-
+ .../plans/2026-03-17-android-companion.md          | 4711 ++++++++++++++++++++
+ .../specs/2026-03-16-android-companion-design.md   |  611 +++
+ ghostty                                            |    2 +-
+ ghostty.h                                          |    3 +
+ scripts/build-ghostty-cli-helper.sh                |    2 +-
+ scripts/reload.sh                                  |    4 +-
+ 16 files changed, 6054 insertions(+), 34 deletions(-)

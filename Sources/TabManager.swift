@@ -1059,6 +1059,13 @@ class TabManager: ObservableObject {
             "selectedTabId": select ? newWorkspace.id.uuidString : (snapshot.selectedTabId?.uuidString ?? "")
         ])
 #endif
+        // Notify bridge clients that a new workspace was created.
+        NotificationCenter.default.post(
+            name: .bridgeWorkspaceCreated,
+            object: nil,
+            userInfo: [GhosttyNotificationKey.tabId: newWorkspace.id]
+        )
+
         if autoWelcomeIfNeeded && select && !UserDefaults.standard.bool(forKey: WelcomeSettings.shownKey) {
             if let appDelegate = AppDelegate.shared {
                 appDelegate.sendWelcomeCommandWhenReady(to: newWorkspace, markShownOnSend: true)
@@ -1798,6 +1805,13 @@ class TabManager: ObservableObject {
                 selectedTabId = tabs[newIndex].id
             }
         }
+
+        // Notify bridge clients that a workspace was closed.
+        NotificationCenter.default.post(
+            name: .bridgeWorkspaceClosed,
+            object: nil,
+            userInfo: [GhosttyNotificationKey.tabId: workspace.id]
+        )
     }
 
     /// Detach a workspace from this window without closing its panels.

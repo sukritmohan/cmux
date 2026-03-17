@@ -1,0 +1,33 @@
+=== Command ===
+git commit -m "$(cat <<'EOF'
+feat: add PTY streaming and event relay for mobile companion (Phase 2)
+
+- Ghostty fork: add ghostty_surface_set_output_observer C API that fires
+  on the IO reader thread with raw PTY bytes before terminal processing
+- BridgePTYStream: register/unregister Ghostty observer on first/last
+  subscriber, C callback trampoline copies bytes to BridgeServer broadcast
+- BridgeConnection: implement surface.pty.write (plain text + base64),
+  surface.pty.resize (stores mobile dims, returns desktop dims),
+  surface.pty.subscribe now verifies surface exists and returns channel ID
+- BridgeEventRelay: 11 NotificationCenter observers for workspace/pane/
+  surface events (selected, created, closed, title_changed, split, focused,
+  moved) pushed to connected bridge clients as JSON
+- Surface lifecycle cleanup: BridgePTYStream observes surface.closed to
+  release observer contexts and prevent use-after-free
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+EOF
+)"
+
+=== Timestamp ===
+2026-03-17 14:32:29
+
+=== Exit Code ===
+0
+
+=== Output ===
+[feature/cmux-bridge e9645e67] feat: add PTY streaming and event relay for mobile companion (Phase 2)
+ 16 files changed, 6054 insertions(+), 34 deletions(-)
+ create mode 100644 Sources/Bridge/BridgePTYObserverContext.swift
+ create mode 100644 docs/superpowers/plans/2026-03-17-android-companion.md
+ create mode 100644 docs/superpowers/specs/2026-03-16-android-companion-design.md

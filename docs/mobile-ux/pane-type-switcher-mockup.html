@@ -1,0 +1,1991 @@
+<style>
+  /* ── Design Tokens (inherits from gesture-driven-mockup) ── */
+  :root {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+    --bg-surface: #1c2128;
+    --bg-drawer: #0d1117;
+    --border-subtle: #30363d;
+    --border-active: #58a6ff;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted: #484f58;
+    --accent-blue: #58a6ff;
+    --accent-green: #3fb950;
+    --accent-orange: #d29922;
+    --accent-red: #f85149;
+    --accent-purple: #bc8cff;
+    --accent-cyan: #39d2c0;
+    --key-bg: #21262d;
+    --key-bg-active: #30363d;
+    --key-border: #30363d;
+    --key-text: #c9d1d9;
+    --chip-bg: rgba(88, 166, 255, 0.12);
+    --chip-bg-active: rgba(88, 166, 255, 0.24);
+    --drawer-overlay: rgba(0, 0, 0, 0.5);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --shadow-key: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255,255,255,0.04) inset;
+    --shadow-dropdown: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.06);
+    --transition-fast: 150ms cubic-bezier(0.2, 0, 0, 1);
+    --transition-spring: 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    --phone-width: 375px;
+    --phone-height: 812px;
+  }
+
+  /* ── Page Layout ── */
+  .design-page {
+    font-family: -apple-system, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+    color: var(--text-primary);
+    background: #010409;
+    padding: 48px 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  .design-page h1 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .design-page h1 span { color: var(--accent-blue); }
+  .design-page > .subtitle {
+    font-size: 17px;
+    color: var(--text-secondary);
+    margin-bottom: 48px;
+    line-height: 1.5;
+    max-width: 720px;
+  }
+  .design-page h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 56px 0 8px 0;
+    letter-spacing: -0.3px;
+  }
+  .design-page h2 + p {
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 32px;
+    max-width: 640px;
+  }
+
+  /* ── Phone Frame ── */
+  .phone-frame {
+    width: var(--phone-width);
+    height: var(--phone-height);
+    background: var(--bg-primary);
+    border-radius: 44px;
+    border: 3px solid #30363d;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  }
+  .phone-frame::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 126px;
+    height: 34px;
+    background: #000;
+    border-radius: 0 0 18px 18px;
+    z-index: 100;
+  }
+  .phone-inner {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Status Bar ── */
+  .status-bar {
+    height: 54px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 28px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex-shrink: 0;
+    z-index: 50;
+  }
+  .status-icons {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  /* ── Top Bar (Tab Bar + Pane Type Dropdown) ── */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    padding: 0 0 0 12px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+    height: 40px;
+    gap: 0;
+  }
+  .tab-bar {
+    display: flex;
+    gap: 2px;
+    flex: 1;
+    overflow-x: auto;
+    align-items: center;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 4px 0;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+    position: relative;
+  }
+  .tab-item.active {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+  }
+  .tab-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 8px;
+    right: 8px;
+    height: 2px;
+    background: var(--accent-blue);
+    border-radius: 1px;
+  }
+  .tab-item .tab-icon {
+    font-size: 12px;
+    opacity: 0.6;
+  }
+  .tab-item.active .tab-icon { opacity: 1; }
+  .tab-item .tab-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    flex-shrink: 0;
+  }
+  .tab-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    font-size: 16px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    margin-left: 2px;
+    transition: all var(--transition-fast);
+  }
+  .tab-add:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+  }
+
+  /* ── Pane Type Dropdown Trigger ── */
+  .pane-type-trigger {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 14px 5px 10px;
+    margin-left: auto;
+    margin-right: 12px;
+    border-left: 1px solid var(--border-subtle);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent-blue);
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
+    height: 100%;
+    transition: all var(--transition-fast);
+  }
+  .pane-type-trigger:hover {
+    color: #79b8ff;
+  }
+  .pane-type-trigger .trigger-icon {
+    font-size: 13px;
+  }
+  .pane-type-trigger .trigger-chevron {
+    font-size: 8px;
+    opacity: 0.7;
+    margin-left: 1px;
+  }
+
+  /* ── Pane Type Dropdown Menu ── */
+  .dropdown-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 70;
+  }
+  .pane-type-dropdown {
+    position: absolute;
+    top: 96px;
+    right: 16px;
+    width: 200px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-dropdown);
+    z-index: 80;
+    overflow: hidden;
+  }
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: background var(--transition-fast);
+    cursor: pointer;
+  }
+  .dropdown-item:hover {
+    background: rgba(88, 166, 255, 0.06);
+  }
+  .dropdown-item.active {
+    color: var(--accent-blue);
+    background: rgba(88, 166, 255, 0.08);
+  }
+  .dropdown-item .dd-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .dropdown-item .dd-icon.terminal { background: rgba(63, 185, 80, 0.12); color: var(--accent-green); }
+  .dropdown-item .dd-icon.browser { background: rgba(88, 166, 255, 0.12); color: var(--accent-blue); }
+  .dropdown-item .dd-icon.files { background: rgba(210, 153, 34, 0.12); color: var(--accent-orange); }
+  .dropdown-item .dd-icon.shell { background: rgba(188, 140, 255, 0.12); color: var(--accent-purple); }
+  .dropdown-item .dd-check {
+    margin-left: auto;
+    font-size: 14px;
+    color: var(--accent-blue);
+  }
+  .dropdown-item + .dropdown-item {
+    border-top: 1px solid rgba(48, 54, 61, 0.5);
+  }
+
+  /* ── Terminal Content ── */
+  .terminal-content {
+    flex: 1;
+    padding: 12px 16px;
+    font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-primary);
+    overflow: hidden;
+    background: var(--bg-primary);
+    position: relative;
+  }
+  .terminal-content .prompt { color: var(--accent-green); }
+  .terminal-content .path { color: var(--accent-blue); }
+  .terminal-content .cmd { color: var(--text-primary); }
+  .terminal-content .output { color: var(--text-secondary); }
+  .terminal-content .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 16px;
+    background: var(--accent-blue);
+    vertical-align: text-bottom;
+    animation: cursor-blink 1s step-end infinite;
+    margin-left: 2px;
+  }
+  @keyframes cursor-blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  /* ── Modifier Key Bar ── */
+  .modifier-bar {
+    display: flex;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+    align-items: center;
+  }
+  .mod-key {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    padding: 0 10px;
+    background: var(--key-bg);
+    border: 1px solid var(--key-border);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--key-text);
+    box-shadow: var(--shadow-key);
+    flex-shrink: 0;
+    min-width: 36px;
+  }
+  .mod-key.wide { flex: 1; }
+  .arrow-group {
+    display: flex;
+    gap: 3px;
+    margin-left: auto;
+  }
+  .arrow-key {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 36px;
+    background: var(--key-bg);
+    border: 1px solid var(--key-border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    color: var(--key-text);
+    box-shadow: var(--shadow-key);
+  }
+
+  /* ── Home Indicator ── */
+  .home-indicator {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .home-indicator::after {
+    content: '';
+    width: 134px;
+    height: 5px;
+    background: #484f58;
+    border-radius: 100px;
+  }
+  .home-indicator.dark { background: var(--bg-secondary); }
+  .home-indicator.light { background: #f0f0f0; }
+  .home-indicator.files-bg { background: var(--bg-primary); }
+
+  /* ── Browser Content ── */
+  .browser-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #fff;
+  }
+  .browser-body {
+    flex: 1;
+    background: #fff;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .browser-placeholder {
+    height: 12px;
+    background: #e5e7eb;
+    border-radius: 4px;
+  }
+  .browser-placeholder.heading {
+    height: 20px;
+    width: 70%;
+    background: #d1d5db;
+    border-radius: 4px;
+    margin-bottom: 4px;
+  }
+  .browser-placeholder.short { width: 55%; }
+  .browser-placeholder.med { width: 80%; }
+  .browser-placeholder.long { width: 100%; }
+  .browser-placeholder.img {
+    height: 120px;
+    width: 100%;
+    background: #e5e7eb;
+    border-radius: 8px;
+    margin: 4px 0;
+  }
+
+  /* ── Browser Bottom Bar ── */
+  .browser-bottom-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 6px 12px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+  .browser-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .browser-nav-btn.disabled { color: var(--text-muted); opacity: 0.4; }
+  .browser-url-pill {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    margin: 0 6px;
+    background: var(--bg-tertiary);
+    border-radius: 100px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    overflow: hidden;
+  }
+  .browser-url-pill .lock-icon {
+    font-size: 10px;
+    color: var(--accent-green);
+    flex-shrink: 0;
+  }
+  .browser-url-pill .url-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .browser-share-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  /* ── File Explorer ── */
+  .file-explorer-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-primary);
+  }
+  .breadcrumb-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px;
+    height: 40px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .breadcrumb-bar::-webkit-scrollbar { display: none; }
+  .breadcrumb-segment {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .breadcrumb-segment.current {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+  .breadcrumb-sep {
+    font-size: 10px;
+    color: var(--text-muted);
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+  .file-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.3);
+  }
+  .file-item .fi-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .file-item .fi-icon.folder { background: rgba(88, 166, 255, 0.12); color: var(--accent-blue); }
+  .file-item .fi-icon.file { background: rgba(139, 148, 158, 0.12); color: var(--text-secondary); }
+  .file-item .fi-icon.swift { background: rgba(248, 81, 73, 0.12); color: var(--accent-red); }
+  .file-item .fi-icon.json { background: rgba(210, 153, 34, 0.12); color: var(--accent-orange); }
+  .file-item .fi-icon.md { background: rgba(63, 185, 80, 0.12); color: var(--accent-green); }
+  .file-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .file-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .file-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+  .file-chevron {
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  /* ── File Explorer Bottom Bar ── */
+  .file-bottom-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+  .file-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 34px;
+    padding: 0 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .file-action-btn .fa-icon { font-size: 13px; }
+  .file-action-spacer { flex: 1; }
+  .file-sort-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  /* ── Workspace Drawer ── */
+  .drawer-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--drawer-overlay);
+    z-index: 80;
+  }
+  .workspace-drawer {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 300px;
+    background: var(--bg-drawer);
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-subtle);
+    box-shadow: 16px 0 48px rgba(0, 0, 0, 0.5);
+  }
+  .drawer-header {
+    padding: 64px 20px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .drawer-header h3 {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0 0 12px 0;
+  }
+  .drawer-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .drawer-section {
+    padding: 12px 0;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .drawer-section-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 20px;
+    margin-bottom: 4px;
+  }
+  .workspace-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+  }
+  .workspace-item.active {
+    background: rgba(88, 166, 255, 0.06);
+    border-right: 2px solid var(--accent-blue);
+  }
+  .ws-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .ws-icon.terminal { background: rgba(63, 185, 80, 0.12); color: var(--accent-green); }
+  .ws-icon.branch { background: rgba(188, 140, 255, 0.12); color: var(--accent-purple); }
+  .ws-icon.pr { background: rgba(88, 166, 255, 0.12); color: var(--accent-blue); }
+  .ws-info { flex: 1; min-width: 0; }
+  .ws-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ws-meta {
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .ws-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(248, 81, 73, 0.15);
+    color: var(--accent-red);
+  }
+
+  /* ── New Workspace Button ── */
+  .drawer-new-workspace {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-subtle);
+    margin-top: auto;
+    flex-shrink: 0;
+  }
+  .new-ws-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  /* ── Mockup Grid ── */
+  .mockup-grid {
+    display: flex;
+    gap: 48px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .mockup-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .mockup-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    max-width: var(--phone-width);
+  }
+  .mockup-sublabel {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: var(--phone-width);
+    line-height: 1.5;
+  }
+
+  /* ── Annotation Callouts ── */
+  .annotation {
+    position: absolute;
+    z-index: 200;
+    pointer-events: none;
+  }
+  .annotation-line {
+    position: absolute;
+    border: 1px dashed rgba(210, 153, 34, 0.5);
+  }
+  .annotation-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--accent-orange);
+    background: rgba(210, 153, 34, 0.12);
+    border: 1px solid rgba(210, 153, 34, 0.25);
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+    position: absolute;
+    z-index: 210;
+  }
+
+  /* ── Section Containers ── */
+  .cards {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin: 24px 0;
+  }
+  .card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    flex: 1;
+    min-width: 300px;
+  }
+  .card h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+  }
+  .card p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+  }
+  .split {
+    display: flex;
+    gap: 48px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .mockup {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    min-width: 280px;
+  }
+  .mockup-header {
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .mockup-body {
+    padding: 20px;
+  }
+
+  /* ── State Transition Diagram ── */
+  .transition-diagram {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 0;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .transition-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .transition-box {
+    padding: 10px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .transition-box.primary {
+    border-color: var(--accent-blue);
+    background: rgba(88, 166, 255, 0.08);
+    color: var(--accent-blue);
+  }
+  .transition-box.green {
+    border-color: var(--accent-green);
+    background: rgba(63, 185, 80, 0.08);
+    color: var(--accent-green);
+  }
+  .transition-box.orange {
+    border-color: var(--accent-orange);
+    background: rgba(210, 153, 34, 0.08);
+    color: var(--accent-orange);
+  }
+  .transition-box.purple {
+    border-color: var(--accent-purple);
+    background: rgba(188, 140, 255, 0.08);
+    color: var(--accent-purple);
+  }
+  .transition-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .transition-arrow .arrow-line {
+    font-size: 18px;
+    color: var(--text-muted);
+  }
+  .transition-arrow .arrow-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--accent-orange);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  /* ── Spec Table ── */
+  .spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  .spec-table th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .spec-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.4);
+    color: var(--text-secondary);
+    vertical-align: top;
+  }
+  .spec-table td:first-child {
+    color: var(--text-primary);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .spec-table code {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: 'SF Mono', monospace;
+    color: var(--accent-blue);
+  }
+</style>
+
+<div class="design-page">
+
+  <h1>cmux Mobile: <span>Pane Type Switcher</span></h1>
+  <p class="subtitle">
+    The surface strip evolves into a context-aware tab bar. A pane type dropdown at the top-right corner lets users switch between Terminal, Browser, File Explorer, and Shell views. Each pane type brings its own tab bar and bottom controls. The workspace drawer remains workspace-only.
+  </p>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- UPDATED INTERACTION MODEL -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>Updated Interaction Model</h2>
+  <p>The pane type dropdown replaces the old Browser/Files/Shell quick actions from the workspace drawer. Pane switching is now a first-class top-level action, always one tap away.</p>
+
+  <div class="transition-diagram">
+    <div class="transition-node">
+      <div class="transition-box primary">Terminal View</div>
+    </div>
+    <div class="transition-arrow">
+      <span class="arrow-label">Tap dropdown</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="transition-node">
+      <div class="transition-box">Pane Type<br>Menu</div>
+    </div>
+    <div class="transition-arrow">
+      <span class="arrow-label">Select "Browser"</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="transition-node">
+      <div class="transition-box primary">Browser View</div>
+    </div>
+  </div>
+  <div class="transition-diagram">
+    <div class="transition-node">
+      <div class="transition-box primary">Any Pane View</div>
+    </div>
+    <div class="transition-arrow">
+      <span class="arrow-label">Tap dropdown</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="transition-node">
+      <div class="transition-box">Pane Type<br>Menu</div>
+    </div>
+    <div class="transition-arrow">
+      <span class="arrow-label">Select type</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="transition-node">
+      <div class="transition-box green">Terminal</div>
+    </div>
+    <div class="transition-node" style="margin-left: -16px;">
+      <div class="transition-box primary">Browser</div>
+    </div>
+    <div class="transition-node" style="margin-left: -16px;">
+      <div class="transition-box orange">Files</div>
+    </div>
+    <div class="transition-node" style="margin-left: -16px;">
+      <div class="transition-box purple">Shell</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h4>Top Bar Anatomy</h4>
+      <p>The top bar is split into two zones. Left: a scrollable tab bar showing tabs for the current pane type (terminal surfaces, browser tabs, etc.). Right: the pane type dropdown trigger, separated by a subtle vertical divider. The dropdown always shows the current pane type name and a chevron.</p>
+    </div>
+    <div class="card">
+      <h4>Tab Bar Adapts Per Pane Type</h4>
+      <p>Terminal and Browser show scrollable tabs with a "+" button. File Explorer replaces the tab bar with a breadcrumb path. Shell (Mosh) shows session tabs. The tab bar region is the flexible element; the dropdown trigger is pinned right.</p>
+    </div>
+    <div class="card">
+      <h4>Bottom Bar Adapts Too</h4>
+      <p>Terminal shows the modifier key bar (Esc, Ctrl, Alt, Cmd, Tab, arrows). Browser shows navigation controls (back, forward, URL pill, share). File Explorer shows file actions (new file, new folder, sort). Each pane type has purpose-built controls.</p>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- STATE 1: TERMINAL VIEW (DEFAULT) -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>State 1: Terminal View (Default)</h2>
+  <p>The resting state. Terminal fills the screen. Tab bar shows terminal surface tabs. Pane type dropdown reads "Terminal" at top-right. Modifier bar at bottom.</p>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <!-- Status bar -->
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>wifi</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Top bar: Tab bar + Pane type dropdown -->
+          <div class="top-bar">
+            <div class="tab-bar">
+              <div class="tab-item active">
+                <span class="tab-icon">&#9638;</span>
+                zsh
+                <span class="tab-dot"></span>
+              </div>
+              <div class="tab-item">
+                <span class="tab-icon">&#9638;</span>
+                node server
+              </div>
+              <div class="tab-item">
+                <span class="tab-icon">&#9638;</span>
+                logs
+              </div>
+              <div class="tab-add">+</div>
+            </div>
+            <div class="pane-type-trigger">
+              <span class="trigger-icon">&#9638;</span>
+              Terminal
+              <span class="trigger-chevron">&#9662;</span>
+            </div>
+          </div>
+
+          <!-- Terminal content -->
+          <div class="terminal-content">
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ git status</span></div>
+            <div class="output">On branch main</div>
+            <div class="output">Your branch is up to date with 'origin/main'.</div>
+            <div class="output">&nbsp;</div>
+            <div class="output">Changes not staged for commit:</div>
+            <div class="output">&nbsp; modified: Sources/App/ContentView.swift</div>
+            <div class="output">&nbsp; modified: Sources/Panels/TerminalPanelView.swift</div>
+            <div class="output">&nbsp;</div>
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ swift build</span></div>
+            <div class="output">Building for debugging...</div>
+            <div class="output">[142/142] Linking cmux</div>
+            <div class="output" style="color: var(--accent-green);">Build complete! (14.2s)</div>
+            <div class="output">&nbsp;</div>
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ </span><span class="cursor"></span></div>
+          </div>
+
+          <!-- Modifier bar -->
+          <div class="modifier-bar">
+            <div class="mod-key">Esc</div>
+            <div class="mod-key">Ctrl</div>
+            <div class="mod-key">Alt</div>
+            <div class="mod-key">Cmd</div>
+            <div class="mod-key">Tab</div>
+            <div class="arrow-group">
+              <div class="arrow-key">&larr;</div>
+              <div class="arrow-key">&darr;</div>
+              <div class="arrow-key">&uarr;</div>
+              <div class="arrow-key">&rarr;</div>
+            </div>
+          </div>
+
+          <!-- Home indicator -->
+          <div class="home-indicator dark"></div>
+
+          <!-- Annotations -->
+          <div style="position: absolute; top: 57px; right: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label" style="position: relative;">Pane type dropdown trigger</div>
+          </div>
+          <div style="position: absolute; top: 57px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label" style="position: relative;">Tab bar (scrollable)</div>
+          </div>
+
+        </div>
+      </div>
+      <div class="mockup-label">Terminal View -- Default State</div>
+      <div class="mockup-sublabel">Tab bar on the left shows terminal surface tabs.<br>Pane type dropdown pinned to top-right. Modifier bar at bottom.</div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- STATE 2: DROPDOWN OPEN -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>State 2: Pane Type Dropdown Open</h2>
+  <p>Tapping the dropdown trigger opens a menu anchored to the top-right. A scrim overlay dims the content behind. The current pane type is highlighted with a checkmark. Selecting an option dismisses the dropdown and transitions to that pane type.</p>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <!-- Status bar -->
+          <div class="status-bar" style="z-index: 95;">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>wifi</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Top bar -->
+          <div class="top-bar" style="z-index: 95;">
+            <div class="tab-bar">
+              <div class="tab-item active">
+                <span class="tab-icon">&#9638;</span>
+                zsh
+                <span class="tab-dot"></span>
+              </div>
+              <div class="tab-item">
+                <span class="tab-icon">&#9638;</span>
+                node server
+              </div>
+              <div class="tab-item">
+                <span class="tab-icon">&#9638;</span>
+                logs
+              </div>
+              <div class="tab-add">+</div>
+            </div>
+            <div class="pane-type-trigger" style="color: #79b8ff;">
+              <span class="trigger-icon">&#9638;</span>
+              Terminal
+              <span class="trigger-chevron">&#9652;</span>
+            </div>
+          </div>
+
+          <!-- Scrim + Dropdown -->
+          <div class="dropdown-overlay"></div>
+          <div class="pane-type-dropdown">
+            <div class="dropdown-item active">
+              <div class="dd-icon terminal">&#9638;</div>
+              Terminal
+              <span class="dd-check">&#10003;</span>
+            </div>
+            <div class="dropdown-item">
+              <div class="dd-icon browser">&#9741;</div>
+              Browser
+            </div>
+            <div class="dropdown-item">
+              <div class="dd-icon files">&#128193;</div>
+              File Explorer
+            </div>
+            <div class="dropdown-item">
+              <div class="dd-icon shell">&#9002;</div>
+              Shell (Mosh)
+            </div>
+          </div>
+
+          <!-- Terminal content (dimmed behind scrim) -->
+          <div class="terminal-content" style="z-index: 1;">
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ git status</span></div>
+            <div class="output">On branch main</div>
+            <div class="output">Your branch is up to date with 'origin/main'.</div>
+            <div class="output">&nbsp;</div>
+            <div class="output">Changes not staged for commit:</div>
+            <div class="output">&nbsp; modified: Sources/App/ContentView.swift</div>
+            <div class="output">&nbsp;</div>
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ </span><span class="cursor"></span></div>
+          </div>
+
+          <!-- Modifier bar -->
+          <div class="modifier-bar" style="z-index: 1;">
+            <div class="mod-key">Esc</div>
+            <div class="mod-key">Ctrl</div>
+            <div class="mod-key">Alt</div>
+            <div class="mod-key">Cmd</div>
+            <div class="mod-key">Tab</div>
+            <div class="arrow-group">
+              <div class="arrow-key">&larr;</div>
+              <div class="arrow-key">&darr;</div>
+              <div class="arrow-key">&uarr;</div>
+              <div class="arrow-key">&rarr;</div>
+            </div>
+          </div>
+
+          <div class="home-indicator dark" style="z-index: 1;"></div>
+
+          <!-- Annotations -->
+          <div style="position: absolute; top: 68px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label" style="position: relative;">Dropdown menu anchored top-right</div>
+          </div>
+          <div style="position: absolute; top: 136px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label" style="position: relative;">Active item has checkmark</div>
+          </div>
+
+        </div>
+      </div>
+      <div class="mockup-label">Dropdown Open -- Pane Type Selection</div>
+      <div class="mockup-sublabel">Scrim overlay dims the terminal. Dropdown shows all 4 pane types.<br>Current type (Terminal) has a checkmark. Tap any option to switch.</div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- STATE 3: BROWSER VIEW -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>State 3: Browser View</h2>
+  <p>After selecting "Browser" from the dropdown. The tab bar now shows browser tabs. The pane type dropdown reads "Browser". The bottom bar switches to browser navigation controls: back, forward, URL pill, share button.</p>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <!-- Status bar -->
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>wifi</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Top bar: Browser tabs + dropdown -->
+          <div class="top-bar">
+            <div class="tab-bar">
+              <div class="tab-item active">
+                <span class="tab-icon">&#9741;</span>
+                localhost:3000
+              </div>
+              <div class="tab-item">
+                <span class="tab-icon">&#9741;</span>
+                GitHub PR #1505
+              </div>
+              <div class="tab-item">
+                <span class="tab-icon">&#9741;</span>
+                Stack Overflow
+              </div>
+              <div class="tab-add">+</div>
+            </div>
+            <div class="pane-type-trigger">
+              <span class="trigger-icon">&#9741;</span>
+              Browser
+              <span class="trigger-chevron">&#9662;</span>
+            </div>
+          </div>
+
+          <!-- Browser content -->
+          <div class="browser-content">
+            <div class="browser-body">
+              <div class="browser-placeholder heading"></div>
+              <div class="browser-placeholder long"></div>
+              <div class="browser-placeholder med"></div>
+              <div class="browser-placeholder short"></div>
+              <div class="browser-placeholder img"></div>
+              <div class="browser-placeholder long"></div>
+              <div class="browser-placeholder med"></div>
+              <div class="browser-placeholder short"></div>
+              <div class="browser-placeholder long"></div>
+              <div class="browser-placeholder med"></div>
+            </div>
+          </div>
+
+          <!-- Browser bottom bar -->
+          <div class="browser-bottom-bar">
+            <div class="browser-nav-btn disabled">&larr;</div>
+            <div class="browser-nav-btn">&rarr;</div>
+            <div class="browser-url-pill">
+              <span class="lock-icon">&#128274;</span>
+              <span class="url-text">localhost:3000</span>
+            </div>
+            <div class="browser-share-btn">&#8682;</div>
+          </div>
+
+          <div class="home-indicator light"></div>
+
+          <!-- Annotations -->
+          <div style="position: absolute; top: 57px; right: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label" style="position: relative;">Now shows "Browser"</div>
+          </div>
+          <div style="position: absolute; bottom: 74px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label" style="position: relative;">Browser nav controls replace modifier bar</div>
+          </div>
+
+        </div>
+      </div>
+      <div class="mockup-label">Browser View -- After Selecting "Browser"</div>
+      <div class="mockup-sublabel">Tab bar shows browser tabs. Bottom bar shows back/forward, URL pill, share.<br>Pane type dropdown reads "Browser". Webpage fills the content area.</div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- STATE 4: FILE EXPLORER VIEW -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>State 4: File Explorer View</h2>
+  <p>After selecting "File Explorer" from the dropdown. The tab bar is replaced by a breadcrumb path showing the current directory. No tabs needed -- single-view. Bottom bar shows file actions (new file, new folder, sort). The dropdown reads "Files".</p>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <!-- Status bar -->
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>wifi</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Top bar: Breadcrumb + dropdown -->
+          <div class="top-bar">
+            <div class="breadcrumb-bar" style="flex: 1; border-bottom: none; height: auto; padding: 0;">
+              <span class="breadcrumb-segment">~</span>
+              <span class="breadcrumb-sep">&#9656;</span>
+              <span class="breadcrumb-segment">cmux</span>
+              <span class="breadcrumb-sep">&#9656;</span>
+              <span class="breadcrumb-segment current">Sources</span>
+            </div>
+            <div class="pane-type-trigger">
+              <span class="trigger-icon">&#128193;</span>
+              Files
+              <span class="trigger-chevron">&#9662;</span>
+            </div>
+          </div>
+
+          <!-- File list -->
+          <div class="file-explorer-content">
+            <div class="file-list">
+              <div class="file-item">
+                <div class="fi-icon folder">&#128193;</div>
+                <div class="file-info">
+                  <div class="file-name">App</div>
+                  <div class="file-meta">12 items</div>
+                </div>
+                <div class="file-chevron">&#9656;</div>
+              </div>
+              <div class="file-item">
+                <div class="fi-icon folder">&#128193;</div>
+                <div class="file-info">
+                  <div class="file-name">Panels</div>
+                  <div class="file-meta">8 items</div>
+                </div>
+                <div class="file-chevron">&#9656;</div>
+              </div>
+              <div class="file-item">
+                <div class="fi-icon folder">&#128193;</div>
+                <div class="file-info">
+                  <div class="file-name">Bonsplit</div>
+                  <div class="file-meta">15 items</div>
+                </div>
+                <div class="file-chevron">&#9656;</div>
+              </div>
+              <div class="file-item">
+                <div class="fi-icon folder">&#128193;</div>
+                <div class="file-info">
+                  <div class="file-name">Resources</div>
+                  <div class="file-meta">4 items</div>
+                </div>
+                <div class="file-chevron">&#9656;</div>
+              </div>
+              <div class="file-item">
+                <div class="fi-icon swift">S</div>
+                <div class="file-info">
+                  <div class="file-name">ContentView.swift</div>
+                  <div class="file-meta">24.3 KB -- modified 2h ago</div>
+                </div>
+              </div>
+              <div class="file-item">
+                <div class="fi-icon swift">S</div>
+                <div class="file-info">
+                  <div class="file-name">AppDelegate.swift</div>
+                  <div class="file-meta">18.1 KB -- modified 1d ago</div>
+                </div>
+              </div>
+              <div class="file-item">
+                <div class="fi-icon json">{}</div>
+                <div class="file-info">
+                  <div class="file-name">Package.swift</div>
+                  <div class="file-meta">2.8 KB -- modified 3d ago</div>
+                </div>
+              </div>
+              <div class="file-item">
+                <div class="fi-icon md">#</div>
+                <div class="file-info">
+                  <div class="file-name">README.md</div>
+                  <div class="file-meta">1.2 KB -- modified 5d ago</div>
+                </div>
+              </div>
+              <div class="file-item">
+                <div class="fi-icon file">&#9776;</div>
+                <div class="file-info">
+                  <div class="file-name">.gitignore</div>
+                  <div class="file-meta">340 B -- modified 2w ago</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- File explorer bottom bar -->
+          <div class="file-bottom-bar">
+            <div class="file-action-btn">
+              <span class="fa-icon">+</span>
+              New File
+            </div>
+            <div class="file-action-btn">
+              <span class="fa-icon">&#128193;</span>
+              New Folder
+            </div>
+            <div class="file-action-spacer"></div>
+            <div class="file-sort-btn">
+              Sort &#9662;
+            </div>
+          </div>
+
+          <div class="home-indicator dark"></div>
+
+          <!-- Annotations -->
+          <div style="position: absolute; top: 57px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label" style="position: relative;">Breadcrumb replaces tab bar</div>
+          </div>
+          <div style="position: absolute; bottom: 74px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label" style="position: relative;">File actions replace modifier bar</div>
+          </div>
+
+        </div>
+      </div>
+      <div class="mockup-label">File Explorer View -- After Selecting "Files"</div>
+      <div class="mockup-sublabel">Breadcrumb path replaces the tab bar. File list with icons, names, metadata.<br>Bottom bar shows New File, New Folder, and Sort controls.</div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- STATE 5: WORKSPACE DRAWER (WORKSPACES ONLY) -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>State 5: Workspace Drawer (Workspaces Only)</h2>
+  <p>Left edge swipe reveals the workspace drawer. The drawer now contains ONLY workspaces -- no Browser/Files/Shell quick action buttons at the bottom. Those functions have moved to the pane type dropdown. The bottom of the drawer shows a "New Workspace" button instead.</p>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <!-- Status bar -->
+          <div class="status-bar" style="z-index: 95;">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>wifi</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Top bar (behind drawer) -->
+          <div class="top-bar" style="z-index: 1;">
+            <div class="tab-bar">
+              <div class="tab-item active">
+                <span class="tab-icon">&#9638;</span>
+                zsh
+              </div>
+            </div>
+            <div class="pane-type-trigger">
+              <span class="trigger-icon">&#9638;</span>
+              Terminal
+              <span class="trigger-chevron">&#9662;</span>
+            </div>
+          </div>
+
+          <!-- Terminal (behind drawer) -->
+          <div class="terminal-content" style="z-index: 1;">
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ </span><span class="cursor"></span></div>
+          </div>
+
+          <div class="modifier-bar" style="z-index: 1;">
+            <div class="mod-key">Esc</div>
+            <div class="mod-key">Ctrl</div>
+            <div class="mod-key">Alt</div>
+            <div class="mod-key">Cmd</div>
+          </div>
+          <div class="home-indicator dark" style="z-index: 1;"></div>
+
+          <!-- Drawer overlay -->
+          <div class="drawer-overlay"></div>
+
+          <!-- Workspace drawer -->
+          <div class="workspace-drawer">
+            <div class="drawer-header">
+              <h3>Workspaces</h3>
+              <div class="drawer-search">
+                &#128269;&nbsp; Search workspaces...
+              </div>
+            </div>
+
+            <div class="drawer-section">
+              <div class="drawer-section-title">Active</div>
+
+              <div class="workspace-item active">
+                <div class="ws-icon terminal">&#9638;</div>
+                <div class="ws-info">
+                  <div class="ws-name">cmux</div>
+                  <div class="ws-meta">
+                    <span>main</span>
+                    <span>&#8226;</span>
+                    <span>3 panes</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="workspace-item">
+                <div class="ws-icon branch">&#9741;</div>
+                <div class="ws-info">
+                  <div class="ws-name">feature/mobile-companion</div>
+                  <div class="ws-meta">
+                    <span>mobile-v2</span>
+                    <span>&#8226;</span>
+                    <span>2 panes</span>
+                  </div>
+                </div>
+                <div class="ws-badge">3</div>
+              </div>
+
+              <div class="workspace-item">
+                <div class="ws-icon pr">&#8631;</div>
+                <div class="ws-info">
+                  <div class="ws-name">fix/sidebar-drop</div>
+                  <div class="ws-meta">
+                    <span>PR #1505</span>
+                    <span>&#8226;</span>
+                    <span>1 pane</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="drawer-section-title" style="margin-top: 16px;">Recent</div>
+
+              <div class="workspace-item">
+                <div class="ws-icon terminal">&#9638;</div>
+                <div class="ws-info">
+                  <div class="ws-name">ghostty-fork</div>
+                  <div class="ws-meta">
+                    <span>main</span>
+                    <span>&#8226;</span>
+                    <span>2 panes</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="workspace-item">
+                <div class="ws-icon branch">&#9741;</div>
+                <div class="ws-info">
+                  <div class="ws-name">docs/api-migration</div>
+                  <div class="ws-meta">
+                    <span>docs-v2</span>
+                    <span>&#8226;</span>
+                    <span>1 pane</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="workspace-item">
+                <div class="ws-icon terminal">&#9638;</div>
+                <div class="ws-info">
+                  <div class="ws-name">cmuxd</div>
+                  <div class="ws-meta">
+                    <span>main</span>
+                    <span>&#8226;</span>
+                    <span>1 pane</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- New Workspace button replaces the old quick actions -->
+            <div class="drawer-new-workspace">
+              <div class="new-ws-btn">
+                + &nbsp; New Workspace
+              </div>
+            </div>
+          </div>
+
+          <!-- Annotations -->
+          <div style="position: absolute; bottom: 90px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label" style="position: relative;">No Browser/Files/Shell here anymore</div>
+          </div>
+          <div style="position: absolute; top: 57px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label" style="position: relative;">Workspaces only</div>
+          </div>
+
+        </div>
+      </div>
+      <div class="mockup-label">Workspace Drawer -- Workspaces Only</div>
+      <div class="mockup-sublabel">Left edge swipe opens the drawer. Only workspaces are shown.<br>Browser/Files/Shell moved to the pane type dropdown. "New Workspace" at bottom.</div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- SIDE-BY-SIDE COMPARISON -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>Side-by-Side: Top Bar Across Pane Types</h2>
+  <p>How the top bar adapts for each pane type. The pane type dropdown trigger is always in the same position at the top-right. The left zone changes based on what the pane type needs.</p>
+
+  <div class="split" style="margin: 32px 0;">
+    <div class="mockup" style="flex: 1;">
+      <div class="mockup-header">Terminal -- Tab Bar</div>
+      <div class="mockup-body" style="padding: 0;">
+        <div class="top-bar" style="border-radius: 0;">
+          <div class="tab-bar">
+            <div class="tab-item active">
+              <span class="tab-icon">&#9638;</span>
+              zsh
+              <span class="tab-dot"></span>
+            </div>
+            <div class="tab-item">
+              <span class="tab-icon">&#9638;</span>
+              server
+            </div>
+            <div class="tab-add">+</div>
+          </div>
+          <div class="pane-type-trigger">
+            <span class="trigger-icon">&#9638;</span>
+            Terminal
+            <span class="trigger-chevron">&#9662;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mockup" style="flex: 1;">
+      <div class="mockup-header">Browser -- Tab Bar</div>
+      <div class="mockup-body" style="padding: 0;">
+        <div class="top-bar" style="border-radius: 0;">
+          <div class="tab-bar">
+            <div class="tab-item active">
+              <span class="tab-icon">&#9741;</span>
+              localhost
+            </div>
+            <div class="tab-item">
+              <span class="tab-icon">&#9741;</span>
+              GitHub
+            </div>
+            <div class="tab-add">+</div>
+          </div>
+          <div class="pane-type-trigger">
+            <span class="trigger-icon">&#9741;</span>
+            Browser
+            <span class="trigger-chevron">&#9662;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mockup" style="flex: 1;">
+      <div class="mockup-header">File Explorer -- Breadcrumb</div>
+      <div class="mockup-body" style="padding: 0;">
+        <div class="top-bar" style="border-radius: 0;">
+          <div class="breadcrumb-bar" style="flex: 1; border-bottom: none; height: auto; padding: 0;">
+            <span class="breadcrumb-segment">~</span>
+            <span class="breadcrumb-sep">&#9656;</span>
+            <span class="breadcrumb-segment">cmux</span>
+            <span class="breadcrumb-sep">&#9656;</span>
+            <span class="breadcrumb-segment current">Sources</span>
+          </div>
+          <div class="pane-type-trigger">
+            <span class="trigger-icon">&#128193;</span>
+            Files
+            <span class="trigger-chevron">&#9662;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mockup" style="flex: 1;">
+      <div class="mockup-header">Shell (Mosh) -- Session Tabs</div>
+      <div class="mockup-body" style="padding: 0;">
+        <div class="top-bar" style="border-radius: 0;">
+          <div class="tab-bar">
+            <div class="tab-item active">
+              <span class="tab-icon">&#9002;</span>
+              dev-server
+            </div>
+            <div class="tab-item">
+              <span class="tab-icon">&#9002;</span>
+              prod-box
+            </div>
+            <div class="tab-add">+</div>
+          </div>
+          <div class="pane-type-trigger">
+            <span class="trigger-icon">&#9002;</span>
+            Shell
+            <span class="trigger-chevron">&#9662;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- BOTTOM BAR COMPARISON -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>Side-by-Side: Bottom Bar Across Pane Types</h2>
+  <p>Each pane type has a purpose-built bottom bar. The bottom bar swaps in sync with the pane type switch.</p>
+
+  <div class="split" style="margin: 32px 0;">
+    <div class="mockup" style="flex: 1;">
+      <div class="mockup-header">Terminal -- Modifier Keys</div>
+      <div class="mockup-body" style="padding: 0;">
+        <div class="modifier-bar">
+          <div class="mod-key">Esc</div>
+          <div class="mod-key">Ctrl</div>
+          <div class="mod-key">Alt</div>
+          <div class="mod-key">Cmd</div>
+          <div class="mod-key">Tab</div>
+          <div class="arrow-group">
+            <div class="arrow-key">&larr;</div>
+            <div class="arrow-key">&darr;</div>
+            <div class="arrow-key">&uarr;</div>
+            <div class="arrow-key">&rarr;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mockup" style="flex: 1;">
+      <div class="mockup-header">Browser -- Navigation</div>
+      <div class="mockup-body" style="padding: 0;">
+        <div class="browser-bottom-bar">
+          <div class="browser-nav-btn disabled">&larr;</div>
+          <div class="browser-nav-btn">&rarr;</div>
+          <div class="browser-url-pill">
+            <span class="lock-icon">&#128274;</span>
+            <span class="url-text">localhost:3000/dashboard</span>
+          </div>
+          <div class="browser-share-btn">&#8682;</div>
+        </div>
+      </div>
+    </div>
+    <div class="mockup" style="flex: 1;">
+      <div class="mockup-header">File Explorer -- Actions</div>
+      <div class="mockup-body" style="padding: 0;">
+        <div class="file-bottom-bar">
+          <div class="file-action-btn">
+            <span class="fa-icon">+</span>
+            New File
+          </div>
+          <div class="file-action-btn">
+            <span class="fa-icon">&#128193;</span>
+            New Folder
+          </div>
+          <div class="file-action-spacer"></div>
+          <div class="file-sort-btn">
+            Sort &#9662;
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mockup" style="flex: 1;">
+      <div class="mockup-header">Shell (Mosh) -- Modifier Keys</div>
+      <div class="mockup-body" style="padding: 0;">
+        <div class="modifier-bar">
+          <div class="mod-key">Esc</div>
+          <div class="mod-key">Ctrl</div>
+          <div class="mod-key">Alt</div>
+          <div class="mod-key">Cmd</div>
+          <div class="mod-key">Tab</div>
+          <div class="arrow-group">
+            <div class="arrow-key">&larr;</div>
+            <div class="arrow-key">&darr;</div>
+            <div class="arrow-key">&uarr;</div>
+            <div class="arrow-key">&rarr;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- SPEC TABLE -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>Component Specifications</h2>
+  <p>Detailed specs for the new and modified components.</p>
+
+  <table class="spec-table">
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>Property</th>
+        <th>Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Top Bar</td>
+        <td>Height</td>
+        <td><code>40px</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Layout</td>
+        <td>Flex row: [Tab Bar (flex: 1, scroll)] [Divider] [Pane Type Trigger (fixed)]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Background</td>
+        <td><code>var(--bg-primary)</code> with 1px bottom border</td>
+      </tr>
+      <tr>
+        <td>Tab Item</td>
+        <td>Padding</td>
+        <td><code>5px 12px</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Font</td>
+        <td>12px / weight 500, system sans-serif</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Active indicator</td>
+        <td>2px blue bar below, background <code>var(--bg-tertiary)</code></td>
+      </tr>
+      <tr>
+        <td>Pane Type Trigger</td>
+        <td>Position</td>
+        <td>Pinned right, separated by 1px vertical divider from tab bar</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Font</td>
+        <td>12px / weight 600, <code>var(--accent-blue)</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Contents</td>
+        <td>[Icon] [Pane Type Name] [Chevron]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Tap target</td>
+        <td>Full height of top bar (40px), min-width 80px</td>
+      </tr>
+      <tr>
+        <td>Dropdown Menu</td>
+        <td>Anchor</td>
+        <td>Top-right, 16px from right edge, directly below top bar</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Width</td>
+        <td><code>200px</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Background</td>
+        <td><code>var(--bg-secondary)</code> with subtle border and elevated shadow</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Items</td>
+        <td>4: Terminal, Browser, File Explorer, Shell (Mosh)</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Item height</td>
+        <td><code>50px</code> (11px padding + 28px icon row)</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Active item</td>
+        <td>Blue text + checkmark on right</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Dismiss</td>
+        <td>Tap option, tap scrim, or swipe down</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Animation</td>
+        <td>Scale from 0.95 + fade, <code>200ms cubic-bezier(0.34, 1.56, 0.64, 1)</code></td>
+      </tr>
+      <tr>
+        <td>Breadcrumb Bar</td>
+        <td>Height</td>
+        <td>Same as tab bar (<code>40px</code>)</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Segments</td>
+        <td>Tappable path components separated by chevrons. Current segment is bold white.</td>
+      </tr>
+      <tr>
+        <td>Browser Bottom Bar</td>
+        <td>Height</td>
+        <td><code>48px</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Layout</td>
+        <td>[Back] [Forward] [URL Pill (flex:1)] [Share]</td>
+      </tr>
+      <tr>
+        <td>File Bottom Bar</td>
+        <td>Height</td>
+        <td><code>50px</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Layout</td>
+        <td>[New File] [New Folder] [Spacer] [Sort]</td>
+      </tr>
+      <tr>
+        <td>Workspace Drawer</td>
+        <td>Change</td>
+        <td>Removed: Browser/Files/Shell quick action buttons. Added: "New Workspace" button at bottom.</td>
+      </tr>
+    </tbody>
+  </table>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- TRANSITION ANIMATION SPEC -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>Transition Animations</h2>
+  <p>How the pane type switch feels. The goal is a fast, seamless swap that preserves spatial context.</p>
+
+  <div class="cards">
+    <div class="card">
+      <h4>Dropdown Open</h4>
+      <p>Scrim fades in (opacity 0 to 0.35, 150ms ease-out). Menu scales from 0.95 to 1.0 with spring easing (200ms, overshoot 1.08). Origin point: top-right corner of the menu. Items stagger in with 30ms delay each (opacity + 4px translateY).</p>
+    </div>
+    <div class="card">
+      <h4>Pane Type Switch</h4>
+      <p>Outgoing content fades out + slides left 12px (150ms). Incoming content fades in + slides from right 12px (200ms, 50ms delay). Tab bar cross-fades in place (150ms). Bottom bar swaps with a subtle 4px upward slide (200ms). Total perceived transition: under 300ms.</p>
+    </div>
+    <div class="card">
+      <h4>Dropdown Close (No Selection)</h4>
+      <p>Menu scales to 0.97 + fades out (120ms ease-in). Scrim fades out (150ms). Faster than open for responsive feel.</p>
+    </div>
+  </div>
+
+</div>

@@ -110,7 +110,7 @@ build_helper() {
 
   (
     cd "$GHOSTTY_DIR"
-    "${args[@]}"
+    env -u DEVELOPER_DIR "${args[@]}"
   )
 }
 

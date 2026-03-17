@@ -1,0 +1,2120 @@
+<style>
+  /* ── Design Tokens ── */
+  :root {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+    --bg-surface: #1c2128;
+    --bg-drawer: #0d1117;
+    --border-subtle: #30363d;
+    --border-active: #58a6ff;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted: #484f58;
+    --accent-blue: #58a6ff;
+    --accent-green: #3fb950;
+    --accent-orange: #d29922;
+    --accent-red: #f85149;
+    --accent-purple: #bc8cff;
+    --key-bg: #21262d;
+    --key-bg-active: #30363d;
+    --key-border: #30363d;
+    --key-text: #c9d1d9;
+    --chip-bg: rgba(88, 166, 255, 0.12);
+    --chip-bg-active: rgba(88, 166, 255, 0.24);
+    --minimap-pane: rgba(88, 166, 255, 0.08);
+    --minimap-pane-focused: rgba(88, 166, 255, 0.18);
+    --minimap-border: rgba(88, 166, 255, 0.25);
+    --drawer-overlay: rgba(0, 0, 0, 0.5);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --shadow-key: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255,255,255,0.04) inset;
+    --transition-fast: 150ms cubic-bezier(0.2, 0, 0, 1);
+    --transition-spring: 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    --phone-width: 375px;
+    --phone-height: 812px;
+  }
+
+  /* ── Page Layout ── */
+  .design-page {
+    font-family: -apple-system, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+    color: var(--text-primary);
+    background: #010409;
+    padding: 48px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .design-page h1 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .design-page h1 span {
+    color: var(--accent-blue);
+  }
+  .design-page > .subtitle {
+    font-size: 17px;
+    color: var(--text-secondary);
+    margin-bottom: 48px;
+    line-height: 1.5;
+    max-width: 640px;
+  }
+  .design-page h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 56px 0 8px 0;
+    letter-spacing: -0.3px;
+  }
+  .design-page h2 + p {
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 32px;
+    max-width: 640px;
+  }
+  .design-page h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 32px 0 12px 0;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+  }
+
+  /* ── Phone Frame ── */
+  .phone-frame {
+    width: var(--phone-width);
+    height: var(--phone-height);
+    background: var(--bg-primary);
+    border-radius: 44px;
+    border: 3px solid #30363d;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  }
+  .phone-frame::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 126px;
+    height: 34px;
+    background: #000;
+    border-radius: 0 0 18px 18px;
+    z-index: 100;
+  }
+  .phone-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Status Bar ── */
+  .status-bar {
+    height: 54px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 28px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex-shrink: 0;
+    z-index: 50;
+  }
+  .status-icons {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  /* ── Surface Strip ── */
+  .surface-strip {
+    display: flex;
+    gap: 6px;
+    padding: 6px 16px;
+    overflow-x: auto;
+    flex-shrink: 0;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-subtle);
+    align-items: center;
+  }
+  .surface-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: var(--chip-bg);
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+    border: 1px solid transparent;
+    transition: all var(--transition-fast);
+  }
+  .surface-chip.active {
+    background: var(--chip-bg-active);
+    color: var(--accent-blue);
+    border-color: rgba(88, 166, 255, 0.3);
+  }
+  .surface-chip .chip-icon {
+    font-size: 13px;
+    opacity: 0.7;
+  }
+  .surface-chip .chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    flex-shrink: 0;
+  }
+  .surface-strip .pane-indicator {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-left: auto;
+    padding-left: 8px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  /* ── Terminal Content ── */
+  .terminal-content {
+    flex: 1;
+    padding: 12px 16px;
+    font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-primary);
+    overflow: hidden;
+    background: var(--bg-primary);
+    position: relative;
+  }
+  .terminal-content .prompt {
+    color: var(--accent-green);
+  }
+  .terminal-content .path {
+    color: var(--accent-blue);
+  }
+  .terminal-content .cmd {
+    color: var(--text-primary);
+  }
+  .terminal-content .output {
+    color: var(--text-secondary);
+  }
+  .terminal-content .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 16px;
+    background: var(--accent-blue);
+    vertical-align: text-bottom;
+    animation: cursor-blink 1s step-end infinite;
+    margin-left: 2px;
+  }
+  @keyframes cursor-blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  /* ── Modifier Key Bar ── */
+  .modifier-bar {
+    display: flex;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+    align-items: center;
+  }
+  .mod-key {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    padding: 0 10px;
+    background: var(--key-bg);
+    border: 1px solid var(--key-border);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--key-text);
+    box-shadow: var(--shadow-key);
+    flex-shrink: 0;
+    min-width: 36px;
+    transition: all var(--transition-fast);
+  }
+  .mod-key.active {
+    background: var(--accent-blue);
+    color: #fff;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 12px rgba(88, 166, 255, 0.3);
+  }
+  .mod-key.wide {
+    flex: 1;
+  }
+  .arrow-group {
+    display: flex;
+    gap: 3px;
+    margin-left: auto;
+  }
+  .arrow-key {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 36px;
+    background: var(--key-bg);
+    border: 1px solid var(--key-border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    color: var(--key-text);
+    box-shadow: var(--shadow-key);
+  }
+
+  /* ── Home Indicator ── */
+  .home-indicator {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    flex-shrink: 0;
+  }
+  .home-indicator::after {
+    content: '';
+    width: 134px;
+    height: 5px;
+    background: #484f58;
+    border-radius: 100px;
+  }
+
+  /* ── Gesture Labels / Annotations ── */
+  .gesture-annotations {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 200;
+  }
+  .gesture-label {
+    position: absolute;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--accent-orange);
+    background: rgba(210, 153, 34, 0.12);
+    border: 1px solid rgba(210, 153, 34, 0.25);
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .gesture-arrow {
+    position: absolute;
+    color: var(--accent-orange);
+    font-size: 20px;
+    line-height: 1;
+  }
+  .gesture-zone {
+    position: absolute;
+    border: 2px dashed rgba(210, 153, 34, 0.35);
+    border-radius: var(--radius-md);
+  }
+
+  /* ── Mockup Grid ── */
+  .mockup-grid {
+    display: flex;
+    gap: 48px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .mockup-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .mockup-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    max-width: var(--phone-width);
+  }
+  .mockup-sublabel {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: var(--phone-width);
+    line-height: 1.5;
+  }
+
+  /* ── Workspace Drawer ── */
+  .drawer-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--drawer-overlay);
+    z-index: 80;
+  }
+  .workspace-drawer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 300px;
+    background: var(--bg-drawer);
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-subtle);
+    box-shadow: 16px 0 48px rgba(0, 0, 0, 0.5);
+  }
+  .drawer-header {
+    padding: 64px 20px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .drawer-header h3 {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0 0 12px 0;
+  }
+  .drawer-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .drawer-section {
+    padding: 12px 0;
+  }
+  .drawer-section-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 20px;
+    margin-bottom: 4px;
+  }
+  .workspace-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+  .workspace-item:hover, .workspace-item.active {
+    background: rgba(88, 166, 255, 0.06);
+  }
+  .workspace-item.active {
+    border-right: 2px solid var(--accent-blue);
+  }
+  .ws-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .ws-icon.terminal { background: rgba(63, 185, 80, 0.12); color: var(--accent-green); }
+  .ws-icon.branch { background: rgba(188, 140, 255, 0.12); color: var(--accent-purple); }
+  .ws-icon.pr { background: rgba(88, 166, 255, 0.12); color: var(--accent-blue); }
+  .ws-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .ws-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ws-meta {
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .ws-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(248, 81, 73, 0.15);
+    color: var(--accent-red);
+  }
+  /* ── Drawer: Quick Actions (Browser / Files / Shell) ── */
+  .drawer-quick-actions {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-subtle);
+    margin-top: auto;
+  }
+  .drawer-quick-actions .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .quick-action-row {
+    display: flex;
+    gap: 8px;
+  }
+  .quick-action-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 8px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+  }
+  .quick-action-btn:hover {
+    background: var(--key-bg-active);
+    border-color: var(--accent-blue);
+  }
+  .quick-action-btn .qa-icon {
+    font-size: 20px;
+  }
+  .quick-action-btn .qa-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Minimap View ── */
+  .minimap-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--bg-primary);
+    position: relative;
+  }
+  .minimap-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .minimap-desktop {
+    width: 100%;
+    max-width: 340px;
+    aspect-ratio: 16 / 10;
+    border: 1px solid var(--minimap-border);
+    border-radius: var(--radius-md);
+    display: grid;
+    gap: 3px;
+    padding: 3px;
+    background: rgba(88, 166, 255, 0.03);
+    position: relative;
+  }
+  .minimap-desktop.layout-3pane {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+  .minimap-pane {
+    background: var(--minimap-pane);
+    border: 1px solid var(--minimap-border);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+  }
+  .minimap-pane:hover {
+    background: var(--minimap-pane-focused);
+    border-color: var(--accent-blue);
+  }
+  .minimap-pane.focused {
+    background: var(--minimap-pane-focused);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 16px rgba(88, 166, 255, 0.15);
+  }
+  .minimap-pane.tall {
+    grid-row: 1 / 3;
+  }
+  .minimap-pane-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+  .minimap-pane-preview {
+    flex: 1;
+    font-family: 'SF Mono', monospace;
+    font-size: 5px;
+    line-height: 1.3;
+    color: var(--text-muted);
+    overflow: hidden;
+    opacity: 0.6;
+  }
+  .minimap-pane-tabs {
+    display: flex;
+    gap: 2px;
+    margin-top: 4px;
+  }
+  .minimap-tab-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+  .minimap-tab-dot.active {
+    background: var(--accent-blue);
+  }
+  .minimap-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 16px;
+    text-align: center;
+  }
+
+  /* ── Keyboard State ── */
+  .keyboard-area {
+    flex-shrink: 0;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+  }
+  .keyboard-row {
+    display: flex;
+    gap: 4px;
+    padding: 4px 3px;
+    justify-content: center;
+  }
+  .kb-key {
+    height: 42px;
+    min-width: 30px;
+    padding: 0 6px;
+    background: var(--key-bg);
+    border: 1px solid #3a3a3a;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .kb-key.space { flex: 1; max-width: 180px; }
+  .kb-key.fn { font-size: 11px; color: var(--text-secondary); min-width: 40px; }
+
+  /* ── Browser Content Preview ── */
+  .browser-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #fff;
+  }
+  .browser-url-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .browser-url {
+    flex: 1;
+    padding: 6px 10px;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .browser-body {
+    flex: 1;
+    background: #fff;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .browser-placeholder {
+    height: 12px;
+    background: #e5e7eb;
+    border-radius: 4px;
+  }
+  .browser-placeholder.short { width: 60%; }
+  .browser-placeholder.med { width: 85%; }
+  .browser-placeholder.long { width: 100%; }
+
+  /* ── Section Containers ── */
+  .cards {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin: 24px 0;
+  }
+  .card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    flex: 1;
+    min-width: 300px;
+  }
+  .card h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+  }
+  .card p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .options {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+  .option {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex: 1;
+    min-width: 200px;
+  }
+  .option:hover {
+    border-color: var(--accent-blue);
+    background: rgba(88, 166, 255, 0.04);
+  }
+  .option.selected {
+    border-color: var(--accent-blue);
+    background: rgba(88, 166, 255, 0.08);
+  }
+  .option .option-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .option .option-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .split {
+    display: flex;
+    gap: 48px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .mockup {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    min-width: 280px;
+  }
+  .mockup-header {
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .mockup-body {
+    padding: 20px;
+  }
+
+  .mock-nav {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+  }
+  .mock-sidebar {
+    width: 80px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+  }
+  .mock-content {
+    flex: 1;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    min-height: 60px;
+  }
+  .mock-button {
+    display: inline-flex;
+    padding: 6px 14px;
+    background: var(--accent-blue);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  /* ── State Transition Diagram ── */
+  .transition-diagram {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 0;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .transition-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .transition-box {
+    padding: 10px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .transition-box.primary {
+    border-color: var(--accent-blue);
+    background: rgba(88, 166, 255, 0.08);
+    color: var(--accent-blue);
+  }
+  .transition-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .transition-arrow .arrow-line {
+    font-size: 18px;
+    color: var(--text-muted);
+  }
+  .transition-arrow .arrow-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--accent-orange);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  /* ── Swipe-up hint ── */
+  .swipe-up-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 0;
+    background: var(--bg-secondary);
+  }
+  .swipe-up-hint span {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .swipe-up-chevron {
+    font-size: 14px;
+    color: var(--text-muted);
+    animation: bounce-up 1.5s ease-in-out infinite;
+  }
+  @keyframes bounce-up {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+
+  /* ── Spec table ── */
+  .spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  .spec-table th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .spec-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.4);
+    color: var(--text-secondary);
+    vertical-align: top;
+  }
+  .spec-table td:first-child {
+    color: var(--text-primary);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .spec-table code {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: 'SF Mono', monospace;
+    color: var(--accent-blue);
+  }
+</style>
+
+<div class="design-page">
+
+  <h1>cmux Mobile: <span>Gesture-Driven Terminal Experience</span></h1>
+  <p class="subtitle">
+    A companion app that puts the terminal first. Every interaction is a gesture: swipe, pinch, tap. No chrome stands between you and your shell. The entire desktop pane layout is one pinch away.
+  </p>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- GESTURE MAP -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>Gesture Map</h2>
+  <p>Five gestures replace all navigation chrome. Each maps to a single, distinct motion so muscle memory builds quickly and there is zero ambiguity.</p>
+
+  <div class="transition-diagram">
+    <div class="transition-node">
+      <div class="transition-box primary">Terminal<br>(Default)</div>
+    </div>
+    <div class="transition-arrow">
+      <span class="arrow-label">Swipe left edge &rarr;</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="transition-node">
+      <div class="transition-box">Workspace<br>Drawer</div>
+    </div>
+    <div class="transition-arrow">
+      <span class="arrow-label">&larr; Tap outside / Swipe &larr;</span>
+      <span class="arrow-line">&larr;</span>
+    </div>
+    <div class="transition-node">
+      <div class="transition-box primary">Terminal</div>
+    </div>
+    <div class="transition-arrow">
+      <span class="arrow-label">Pinch out</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="transition-node">
+      <div class="transition-box">Minimap<br>Overview</div>
+    </div>
+    <div class="transition-arrow">
+      <span class="arrow-label">Tap pane / Pinch in</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="transition-node">
+      <div class="transition-box primary">Terminal</div>
+    </div>
+  </div>
+  <div class="transition-diagram">
+    <div class="transition-node">
+      <div class="transition-box primary">Terminal</div>
+    </div>
+    <div class="transition-arrow">
+      <span class="arrow-label">Swipe up &uarr;</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="transition-node">
+      <div class="transition-box">Keyboard<br>Active</div>
+    </div>
+    <div class="transition-arrow">
+      <span class="arrow-label">Swipe down &darr; / Tap terminal</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="transition-node">
+      <div class="transition-box primary">Terminal</div>
+    </div>
+  </div>
+  <div class="transition-diagram">
+    <div class="transition-node">
+      <div class="transition-box primary">Terminal</div>
+    </div>
+    <div class="transition-arrow">
+      <span class="arrow-label">Scroll surface strip</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="transition-node">
+      <div class="transition-box">Switch Surface<br>(within pane)</div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- STATE 1: DEFAULT TERMINAL -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>State 1: Default Terminal View</h2>
+  <p>The resting state. Terminal content fills the screen. The surface strip at the top provides pane context. The modifier bar at the bottom provides terminal controls. Every other UI element is hidden behind a gesture.</p>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <!-- Status bar -->
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>wifi</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Surface strip -->
+          <div class="surface-strip">
+            <div class="surface-chip active">
+              <span class="chip-icon">&#9638;</span>
+              zsh
+              <span class="chip-dot"></span>
+            </div>
+            <div class="surface-chip">
+              <span class="chip-icon">&#9638;</span>
+              node server
+            </div>
+            <div class="surface-chip">
+              <span class="chip-icon">&#9741;</span>
+              localhost:3000
+            </div>
+            <span class="pane-indicator">Pane 1 of 3</span>
+          </div>
+
+          <!-- Terminal -->
+          <div class="terminal-content">
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ git log --oneline -5</span></div>
+            <div class="output">3b507d3 fix: require pinned ids in sidebar drop planner</div>
+            <div class="output">7a9a6a5 Keep pinned workspaces above the sidebar pin boundary</div>
+            <div class="output">225c5b8 Fix CI: remove broken tests for deleted function</div>
+            <div class="output">2e4c482 Fix Google sign-in infinite loading in browser pane</div>
+            <div class="output">bd17886 Fix terminal find overlay crash and focus handoff</div>
+            <div><br></div>
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ npm run dev</span></div>
+            <div class="output">  VITE v5.4.1  ready in 312ms</div>
+            <div class="output">  &#10145;  Local:   http://localhost:3000/</div>
+            <div class="output">  &#10145;  Network: http://192.168.1.42:3000/</div>
+            <div><br></div>
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ </span><span class="cursor"></span></div>
+
+            <!-- Gesture annotations -->
+            <div class="gesture-annotations">
+              <div class="gesture-label" style="left: -2px; top: 40%; transform: rotate(-90deg) translateX(-50%); transform-origin: left center;">
+                &larr; Swipe from edge
+              </div>
+              <div class="gesture-label" style="left: 50%; bottom: 8px; transform: translateX(-50%);">
+                &#x1F90F; Pinch out for minimap
+              </div>
+            </div>
+          </div>
+
+          <!-- Swipe-up hint -->
+          <div class="swipe-up-hint">
+            <span class="swipe-up-chevron">&and;</span>
+            <span>Swipe up for keyboard</span>
+          </div>
+
+          <!-- Modifier bar -->
+          <div class="modifier-bar">
+            <div class="mod-key">Esc</div>
+            <div class="mod-key">Ctrl</div>
+            <div class="mod-key">Alt</div>
+            <div class="mod-key">Cmd</div>
+            <div class="mod-key">Tab</div>
+            <div class="arrow-group">
+              <div class="arrow-key">&larr;</div>
+              <div class="arrow-key">&darr;</div>
+              <div class="arrow-key">&uarr;</div>
+              <div class="arrow-key">&rarr;</div>
+            </div>
+          </div>
+
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+      <div class="mockup-label">Default State</div>
+      <div class="mockup-sublabel">Terminal fills the viewport. Surface strip at top, modifier bar at bottom. All navigation is gestural.</div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- STATE 2: WORKSPACE DRAWER -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>State 2: Workspace Drawer (Left Edge Swipe)</h2>
+  <p>Swiping from the left edge reveals the workspace drawer. It follows the finger with spring physics (tension: 300, friction: 26). The drawer contains workspaces, quick search, and the three actions that lost their home when the bottom nav was removed: Browser, Files, and Shell.</p>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <!-- Status bar (above drawer) -->
+          <div class="status-bar" style="z-index: 95;">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>wifi</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Drawer overlay -->
+          <div class="drawer-overlay"></div>
+
+          <!-- Workspace Drawer -->
+          <div class="workspace-drawer">
+            <div class="drawer-header">
+              <h3>Workspaces</h3>
+              <div class="drawer-search">
+                &#128269; Search workspaces...
+              </div>
+            </div>
+
+            <div class="drawer-section" style="flex: 1; overflow-y: auto;">
+              <div class="drawer-section-title">Active</div>
+
+              <div class="workspace-item active">
+                <div class="ws-icon branch">&#9741;</div>
+                <div class="ws-info">
+                  <div class="ws-name">feat/mobile-companion</div>
+                  <div class="ws-meta">
+                    <span>3 panes</span>
+                    <span>&bull;</span>
+                    <span>npm running</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="workspace-item">
+                <div class="ws-icon pr">&#9679;</div>
+                <div class="ws-info">
+                  <div class="ws-name">PR #1505 review</div>
+                  <div class="ws-meta">
+                    <span>2 panes</span>
+                    <span>&bull;</span>
+                    <span>idle</span>
+                  </div>
+                </div>
+                <div class="ws-badge">3</div>
+              </div>
+
+              <div class="workspace-item">
+                <div class="ws-icon terminal">&#9638;</div>
+                <div class="ws-info">
+                  <div class="ws-name">main</div>
+                  <div class="ws-meta">
+                    <span>1 pane</span>
+                    <span>&bull;</span>
+                    <span>idle</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="workspace-item">
+                <div class="ws-icon branch">&#9741;</div>
+                <div class="ws-info">
+                  <div class="ws-name">fix/sidebar-drop</div>
+                  <div class="ws-meta">
+                    <span>2 panes</span>
+                    <span>&bull;</span>
+                    <span>tests passing</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="workspace-item">
+                <div class="ws-icon terminal">&#9638;</div>
+                <div class="ws-info">
+                  <div class="ws-name">staging-deploy</div>
+                  <div class="ws-meta">
+                    <span>1 pane</span>
+                    <span>&bull;</span>
+                    <span style="color: var(--accent-green);">deployed</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Actions: Browser, Files, Shell -->
+            <div class="drawer-quick-actions">
+              <div class="section-label">Open in current workspace</div>
+              <div class="quick-action-row">
+                <div class="quick-action-btn">
+                  <span class="qa-icon">&#127760;</span>
+                  <span class="qa-label">Browser</span>
+                </div>
+                <div class="quick-action-btn">
+                  <span class="qa-icon">&#128193;</span>
+                  <span class="qa-label">Files</span>
+                </div>
+                <div class="quick-action-btn">
+                  <span class="qa-icon">&#128225;</span>
+                  <span class="qa-label">Shell</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="home-indicator" style="background: var(--bg-drawer);"></div>
+          </div>
+        </div>
+      </div>
+      <div class="mockup-label">Workspace Drawer</div>
+      <div class="mockup-sublabel">Swipe from left edge. Workspace list with branch/PR context, notification badges, and quick actions for Browser, Files, and Shell at the bottom.</div>
+    </div>
+  </div>
+
+  <!-- Decision: Where Browser/Files/Shell Live -->
+  <h3>Design Decision: Browser, Files, and Shell Placement</h3>
+
+  <div class="cards">
+    <div class="card">
+      <h4 style="color: var(--accent-green);">Chosen: Drawer Quick Actions + Surface Strip</h4>
+      <p>
+        Browser, Files, and Shell live as quick-action buttons at the bottom of the workspace drawer. Tapping one opens it as a new surface in the current pane -- it then appears as a chip in the surface strip at the top. This is the right call for three reasons:
+      </p>
+      <p style="margin-top: 8px;">
+        <strong>1.</strong> These are "open" actions, not "switch" actions. You do not toggle between them constantly. You open a browser tab, use it, then go back to terminal. The drawer is the natural home for "do something new."<br><br>
+        <strong>2.</strong> Once opened, they become surface chips -- the same horizontal strip used for terminal tabs. This means you switch between terminal/browser/files using the same gesture (tap surface chip), which is consistent and learnable.<br><br>
+        <strong>3.</strong> The bottom of the drawer is always visible without scrolling, so these actions are always one swipe + one tap away. Two gestures total. Fast enough for any frequency of use.
+      </p>
+    </div>
+    <div class="card">
+      <h4 style="color: var(--text-muted);">Rejected: Top-right overflow menu</h4>
+      <p>
+        Hiding these behind a "..." menu adds an extra tap and hides functionality. Overflow menus are where features go to die. The drawer is already a natural "actions" panel -- no need for a second one.
+      </p>
+    </div>
+    <div class="card">
+      <h4 style="color: var(--text-muted);">Rejected: Long-press gesture</h4>
+      <p>
+        Long-press is invisible -- there is no affordance. New users would never discover it. Long-press is acceptable for power-user shortcuts but not for primary navigation to Browser/Files/Shell.
+      </p>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- STATE 3: MINIMAP VIEW (PINCH OUT) -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>State 3: Minimap Overview (Pinch Out)</h2>
+  <p>Pinching outward on the terminal zooms out to show the full desktop pane layout in miniature. Each pane shows a tiny preview of its content and tab dots. The currently focused pane is highlighted. Tap any pane to zoom into it. This is the spatial bridge between desktop cmux's split-pane model and the mobile single-pane view.</p>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <!-- Status bar -->
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>wifi</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Workspace name bar -->
+          <div style="display: flex; align-items: center; justify-content: center; padding: 8px 16px; gap: 8px;">
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">feat/mobile-companion</span>
+            <span style="font-size: 11px; color: var(--text-muted); background: var(--bg-tertiary); padding: 2px 8px; border-radius: 100px;">3 panes</span>
+          </div>
+
+          <!-- Minimap -->
+          <div class="minimap-container">
+            <div class="minimap-title">Desktop Layout</div>
+
+            <div class="minimap-desktop layout-3pane">
+              <!-- Pane 1: Editor (left, tall) -->
+              <div class="minimap-pane tall focused">
+                <div class="minimap-pane-label">Pane 1 &bull; focused</div>
+                <div class="minimap-pane-preview">
+                  ~/cmux main<br>
+                  $ git log --oneline<br>
+                  3b507d3 fix: require...<br>
+                  7a9a6a5 Keep pinned...<br>
+                  225c5b8 Fix CI: rem...<br>
+                  $ npm run dev<br>
+                  VITE ready in 312ms<br>
+                  Local: localhost:3000<br>
+                  $<br>
+                </div>
+                <div class="minimap-pane-tabs">
+                  <div class="minimap-tab-dot active"></div>
+                  <div class="minimap-tab-dot"></div>
+                  <div class="minimap-tab-dot"></div>
+                </div>
+              </div>
+
+              <!-- Pane 2: Tests (top right) -->
+              <div class="minimap-pane">
+                <div class="minimap-pane-label">Pane 2</div>
+                <div class="minimap-pane-preview">
+                  $ npm test<br>
+                  PASS src/split.test<br>
+                  PASS src/tab.test<br>
+                  Tests: 42 passed<br>
+                  Time: 3.2s<br>
+                </div>
+                <div class="minimap-pane-tabs">
+                  <div class="minimap-tab-dot active"></div>
+                </div>
+              </div>
+
+              <!-- Pane 3: Server logs (bottom right) -->
+              <div class="minimap-pane">
+                <div class="minimap-pane-label">Pane 3</div>
+                <div class="minimap-pane-preview">
+                  GET /api/ws 200 12ms<br>
+                  GET /api/panes 200 8ms<br>
+                  WS connected: id=7a<br>
+                  POST /api/cmd 201 4ms<br>
+                  GET /health 200 1ms<br>
+                </div>
+                <div class="minimap-pane-tabs">
+                  <div class="minimap-tab-dot active"></div>
+                  <div class="minimap-tab-dot"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="minimap-hint">Tap a pane to focus &bull; Pinch in to return</div>
+          </div>
+
+          <!-- Modifier bar (dimmed in minimap state) -->
+          <div class="modifier-bar" style="opacity: 0.3;">
+            <div class="mod-key">Esc</div>
+            <div class="mod-key">Ctrl</div>
+            <div class="mod-key">Alt</div>
+            <div class="mod-key">Cmd</div>
+            <div class="mod-key">Tab</div>
+            <div class="arrow-group">
+              <div class="arrow-key">&larr;</div>
+              <div class="arrow-key">&darr;</div>
+              <div class="arrow-key">&uarr;</div>
+              <div class="arrow-key">&rarr;</div>
+            </div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+      <div class="mockup-label">Minimap Overview</div>
+      <div class="mockup-sublabel">Pinch out to see all panes as they are arranged on the desktop. The layout is a faithful miniature of the actual split tree. Tap to focus a pane.</div>
+    </div>
+
+    <!-- Minimap with 4-pane layout variant -->
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>wifi</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: center; padding: 8px 16px; gap: 8px;">
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">PR #1505 review</span>
+            <span style="font-size: 11px; color: var(--text-muted); background: var(--bg-tertiary); padding: 2px 8px; border-radius: 100px;">4 panes</span>
+          </div>
+
+          <div class="minimap-container">
+            <div class="minimap-title">Desktop Layout</div>
+
+            <div class="minimap-desktop" style="grid-template-columns: 1fr 1fr; grid-template-rows: 1.4fr 1fr;">
+              <div class="minimap-pane">
+                <div class="minimap-pane-label">Pane 1 &bull; Editor</div>
+                <div class="minimap-pane-preview">
+                  import SwiftUI<br>
+                  struct ContentView {<br>
+                  &nbsp; var body: some..<br>
+                  &nbsp;&nbsp; NavigationStack<br>
+                </div>
+                <div class="minimap-pane-tabs">
+                  <div class="minimap-tab-dot active"></div>
+                  <div class="minimap-tab-dot"></div>
+                </div>
+              </div>
+
+              <div class="minimap-pane focused">
+                <div class="minimap-pane-label">Pane 2 &bull; focused</div>
+                <div class="minimap-pane-preview">
+                  $ git diff --stat<br>
+                  3 files changed<br>
+                  +42 -18<br>
+                </div>
+                <div class="minimap-pane-tabs">
+                  <div class="minimap-tab-dot active"></div>
+                </div>
+              </div>
+
+              <div class="minimap-pane">
+                <div class="minimap-pane-label">Pane 3 &bull; Browser</div>
+                <div class="minimap-pane-preview" style="background: rgba(255,255,255,0.05); border-radius: 2px; padding: 2px;">
+                  github.com/...<br>
+                  PR #1505<br>
+                  [Conversation]<br>
+                </div>
+                <div class="minimap-pane-tabs">
+                  <div class="minimap-tab-dot active"></div>
+                </div>
+              </div>
+
+              <div class="minimap-pane">
+                <div class="minimap-pane-label">Pane 4 &bull; Tests</div>
+                <div class="minimap-pane-preview">
+                  $ swift test<br>
+                  Build complete!<br>
+                  All tests passed<br>
+                </div>
+                <div class="minimap-pane-tabs">
+                  <div class="minimap-tab-dot active"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="minimap-hint">Tap a pane to focus &bull; Pinch in to return</div>
+          </div>
+
+          <div class="modifier-bar" style="opacity: 0.3;">
+            <div class="mod-key">Esc</div>
+            <div class="mod-key">Ctrl</div>
+            <div class="mod-key">Alt</div>
+            <div class="mod-key">Cmd</div>
+            <div class="mod-key">Tab</div>
+            <div class="arrow-group">
+              <div class="arrow-key">&larr;</div>
+              <div class="arrow-key">&darr;</div>
+              <div class="arrow-key">&uarr;</div>
+              <div class="arrow-key">&rarr;</div>
+            </div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+      <div class="mockup-label">4-Pane Layout Variant</div>
+      <div class="mockup-sublabel">The minimap faithfully mirrors any desktop split arrangement. The grid proportions match the actual pane ratios from the LayoutSnapshot API.</div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- STATE 4: KEYBOARD ACTIVE -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>State 4: Keyboard Active (Swipe Up)</h2>
+  <p>Swiping up from the modifier bar reveals the full software keyboard. The modifier bar repositions itself directly above the keyboard as a toolbar row. The terminal content compresses but remains visible. Swipe down or tap the terminal to dismiss.</p>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <!-- Status bar -->
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>wifi</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Surface strip -->
+          <div class="surface-strip">
+            <div class="surface-chip active">
+              <span class="chip-icon">&#9638;</span>
+              zsh
+              <span class="chip-dot"></span>
+            </div>
+            <div class="surface-chip">
+              <span class="chip-icon">&#9638;</span>
+              node server
+            </div>
+            <div class="surface-chip">
+              <span class="chip-icon">&#9741;</span>
+              localhost:3000
+            </div>
+          </div>
+
+          <!-- Terminal (compressed) -->
+          <div class="terminal-content" style="flex: 1;">
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ npm run dev</span></div>
+            <div class="output">  VITE v5.4.1  ready in 312ms</div>
+            <div class="output">  &#10145;  Local:   http://localhost:3000/</div>
+            <div><br></div>
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ git status</span><span class="cursor"></span></div>
+          </div>
+
+          <!-- Modifier bar (now toolbar above keyboard) -->
+          <div class="modifier-bar" style="background: #1a1a1a; border-color: #333;">
+            <div class="mod-key">Esc</div>
+            <div class="mod-key active">Ctrl</div>
+            <div class="mod-key">Alt</div>
+            <div class="mod-key">Cmd</div>
+            <div class="mod-key">Tab</div>
+            <div class="arrow-group">
+              <div class="arrow-key">&larr;</div>
+              <div class="arrow-key">&darr;</div>
+              <div class="arrow-key">&uarr;</div>
+              <div class="arrow-key">&rarr;</div>
+            </div>
+          </div>
+
+          <!-- Software keyboard -->
+          <div class="keyboard-area">
+            <div class="keyboard-row">
+              <div class="kb-key">q</div>
+              <div class="kb-key">w</div>
+              <div class="kb-key">e</div>
+              <div class="kb-key">r</div>
+              <div class="kb-key">t</div>
+              <div class="kb-key">y</div>
+              <div class="kb-key">u</div>
+              <div class="kb-key">i</div>
+              <div class="kb-key">o</div>
+              <div class="kb-key">p</div>
+            </div>
+            <div class="keyboard-row">
+              <div class="kb-key">a</div>
+              <div class="kb-key">s</div>
+              <div class="kb-key">d</div>
+              <div class="kb-key">f</div>
+              <div class="kb-key">g</div>
+              <div class="kb-key">h</div>
+              <div class="kb-key">j</div>
+              <div class="kb-key">k</div>
+              <div class="kb-key">l</div>
+            </div>
+            <div class="keyboard-row">
+              <div class="kb-key fn">Shift</div>
+              <div class="kb-key">z</div>
+              <div class="kb-key">x</div>
+              <div class="kb-key">c</div>
+              <div class="kb-key">v</div>
+              <div class="kb-key">b</div>
+              <div class="kb-key">n</div>
+              <div class="kb-key">m</div>
+              <div class="kb-key fn">&#9003;</div>
+            </div>
+            <div class="keyboard-row">
+              <div class="kb-key fn">123</div>
+              <div class="kb-key fn">&#127760;</div>
+              <div class="kb-key space"></div>
+              <div class="kb-key fn">Enter</div>
+            </div>
+          </div>
+
+          <div class="home-indicator" style="background: #1a1a1a;"></div>
+        </div>
+      </div>
+      <div class="mockup-label">Keyboard Active</div>
+      <div class="mockup-sublabel">Swipe up reveals the full keyboard. Modifier bar slides above it as a toolbar. Ctrl is toggled on (blue highlight) for sending Ctrl+C. Terminal stays visible.</div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- STATE 5: BROWSER SURFACE -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>State 5: Browser Surface Active</h2>
+  <p>Browser, Files, and Shell open as surfaces within the current pane. They appear as chips in the surface strip, indistinguishable from terminal tabs at the navigation level. This means you switch between terminal and browser with the same gesture: tap a chip.</p>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>wifi</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Surface strip with browser active -->
+          <div class="surface-strip">
+            <div class="surface-chip">
+              <span class="chip-icon">&#9638;</span>
+              zsh
+            </div>
+            <div class="surface-chip">
+              <span class="chip-icon">&#9638;</span>
+              node server
+            </div>
+            <div class="surface-chip active">
+              <span class="chip-icon">&#127760;</span>
+              localhost:3000
+            </div>
+            <div class="surface-chip">
+              <span class="chip-icon">&#128193;</span>
+              Files
+            </div>
+          </div>
+
+          <!-- Browser URL bar -->
+          <div class="browser-url-bar">
+            <span style="font-size: 16px; color: var(--text-muted);">&larr;</span>
+            <div class="browser-url">
+              &#128274; localhost:3000
+            </div>
+            <span style="font-size: 16px; color: var(--text-muted);">&#8942;</span>
+          </div>
+
+          <!-- Browser content -->
+          <div class="browser-body" style="flex: 1;">
+            <div style="height: 20px; width: 50%; background: #1f2937; border-radius: 4px;"></div>
+            <div style="display: flex; gap: 12px; margin-top: 8px;">
+              <div style="width: 80px; height: 80px; background: #e5e7eb; border-radius: 8px;"></div>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 6px; justify-content: center;">
+                <div class="browser-placeholder long"></div>
+                <div class="browser-placeholder med"></div>
+                <div class="browser-placeholder short"></div>
+              </div>
+            </div>
+            <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
+              <div class="browser-placeholder long"></div>
+              <div class="browser-placeholder med"></div>
+              <div class="browser-placeholder long"></div>
+              <div class="browser-placeholder short"></div>
+            </div>
+            <div style="margin-top: 16px; display: flex; gap: 8px;">
+              <div style="flex: 1; height: 100px; background: #f3f4f6; border-radius: 8px;"></div>
+              <div style="flex: 1; height: 100px; background: #f3f4f6; border-radius: 8px;"></div>
+            </div>
+          </div>
+
+          <!-- No modifier bar when browser is focused (it's for terminal) -->
+          <!-- Instead, show back/forward/share bar -->
+          <div class="modifier-bar">
+            <div class="mod-key">&larr;</div>
+            <div class="mod-key">&rarr;</div>
+            <div class="mod-key wide" style="font-size: 11px;">Share</div>
+            <div class="mod-key wide" style="font-size: 11px;">Desktop</div>
+            <div class="mod-key" style="font-size: 16px;">&#8942;</div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+      <div class="mockup-label">Browser Surface</div>
+      <div class="mockup-sublabel">Browser appears as a surface chip in the strip. The bottom bar adapts: browser gets back/forward/share instead of terminal modifiers. "Desktop" opens this URL on the desktop cmux browser pane.</div>
+    </div>
+
+    <!-- Files surface -->
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>wifi</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <div class="surface-strip">
+            <div class="surface-chip">
+              <span class="chip-icon">&#9638;</span>
+              zsh
+            </div>
+            <div class="surface-chip active">
+              <span class="chip-icon">&#128193;</span>
+              ~/cmux
+            </div>
+            <div class="surface-chip">
+              <span class="chip-icon">&#127760;</span>
+              localhost:3000
+            </div>
+          </div>
+
+          <!-- Files content -->
+          <div style="flex: 1; padding: 8px 0; background: var(--bg-primary); overflow: hidden;">
+            <div style="padding: 8px 16px; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <span style="font-size: 14px; color: var(--text-muted);">&larr;</span>
+              <span style="font-size: 13px; color: var(--text-secondary); font-family: 'SF Mono', monospace;">~/cmux</span>
+            </div>
+
+            <!-- File list -->
+            <div style="display: flex; flex-direction: column;">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid rgba(48,54,61,0.3);">
+                <span style="font-size: 16px;">&#128194;</span>
+                <span style="font-size: 13px; color: var(--accent-blue);">Sources/</span>
+                <span style="font-size: 11px; color: var(--text-muted); margin-left: auto;">12 items</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid rgba(48,54,61,0.3);">
+                <span style="font-size: 16px;">&#128194;</span>
+                <span style="font-size: 13px; color: var(--accent-blue);">vendor/</span>
+                <span style="font-size: 11px; color: var(--text-muted); margin-left: auto;">3 items</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid rgba(48,54,61,0.3);">
+                <span style="font-size: 16px;">&#128194;</span>
+                <span style="font-size: 13px; color: var(--accent-blue);">scripts/</span>
+                <span style="font-size: 11px; color: var(--text-muted); margin-left: auto;">8 items</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid rgba(48,54,61,0.3);">
+                <span style="font-size: 16px;">&#128196;</span>
+                <span style="font-size: 13px; color: var(--text-primary);">Package.swift</span>
+                <span style="font-size: 11px; color: var(--text-muted); margin-left: auto;">2.1 KB</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid rgba(48,54,61,0.3);">
+                <span style="font-size: 16px;">&#128196;</span>
+                <span style="font-size: 13px; color: var(--text-primary);">CHANGELOG.md</span>
+                <span style="font-size: 11px; color: var(--text-muted); margin-left: auto;">8.4 KB</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid rgba(48,54,61,0.3);">
+                <span style="font-size: 16px;">&#128196;</span>
+                <span style="font-size: 13px; color: var(--text-primary);">CLAUDE.md</span>
+                <span style="font-size: 11px; color: var(--text-muted); margin-left: auto;">5.2 KB</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid rgba(48,54,61,0.3);">
+                <span style="font-size: 16px;">&#128196;</span>
+                <span style="font-size: 13px; color: var(--text-primary);">GhosttyTabs.xcodeproj</span>
+                <span style="font-size: 11px; color: var(--text-muted); margin-left: auto;">dir</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modifier-bar">
+            <div class="mod-key" style="font-size: 11px;">Sort</div>
+            <div class="mod-key" style="font-size: 11px;">Filter</div>
+            <div class="mod-key wide" style="font-size: 11px;">Open in Terminal</div>
+            <div class="mod-key" style="font-size: 16px;">&#8942;</div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+      <div class="mockup-label">Files Surface</div>
+      <div class="mockup-sublabel">Files browser shows the workspace's working directory. "Open in Terminal" creates a new terminal surface cd'd to the current path. Bottom bar adapts to file-relevant actions.</div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- INTERACTION SPECS -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>Interaction Specifications</h2>
+  <p>Precise timing, physics, and behavior for every gesture and transition in the system.</p>
+
+  <div class="mockup">
+    <div class="mockup-header">Gesture Physics</div>
+    <div class="mockup-body">
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>Gesture</th>
+            <th>Trigger</th>
+            <th>Animation</th>
+            <th>Dismissal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Left edge swipe</td>
+            <td>Pan from x &lt; 20pt, velocity &gt; 200pt/s or displacement &gt; 80pt</td>
+            <td>Spring: tension 300, friction 26, mass 1.0. Drawer follows finger 1:1 during drag, then springs to open/closed.</td>
+            <td>Tap scrim, swipe left, or back gesture. Spring to x=0 with same physics.</td>
+          </tr>
+          <tr>
+            <td>Pinch out (minimap)</td>
+            <td>Two-finger pinch with scale &lt; 0.7 (zooming out). 300ms minimum gesture duration to avoid accidental triggers.</td>
+            <td>Terminal content scales down with the pinch (live tracking). On release, spring to minimap state: <code>duration: 350ms</code>, <code>curve: cubic-bezier(0.34, 1.56, 0.64, 1)</code></td>
+            <td>Tap a pane (zoom in with 300ms ease-out to that pane) or pinch in (scale &gt; 1.3) to return.</td>
+          </tr>
+          <tr>
+            <td>Swipe up (keyboard)</td>
+            <td>Vertical pan starting below the modifier bar, displacement &gt; 60pt upward, velocity &gt; 300pt/s</td>
+            <td>Keyboard slides up: <code>250ms ease-out</code>. Modifier bar repositions: <code>200ms ease-out</code>. Terminal content reflows immediately.</td>
+            <td>Swipe down on keyboard area, tap terminal content, or system back. <code>200ms ease-in</code>.</td>
+          </tr>
+          <tr>
+            <td>Surface strip scroll</td>
+            <td>Horizontal pan on the strip area. Deceleration: 0.998 (momentum scrolling).</td>
+            <td>Chip tap: crossfade terminal content <code>150ms ease-in-out</code>. Active chip highlight: <code>100ms</code>.</td>
+            <td>N/A (inline interaction)</td>
+          </tr>
+          <tr>
+            <td>Modifier key toggle</td>
+            <td>Tap. Haptic: <code>UIImpactFeedbackGenerator(style: .light)</code></td>
+            <td>Key depression: scale 0.95 during touch, spring back on release. Active state: background color transition <code>100ms</code>.</td>
+            <td>Tap again to toggle off. Esc and Tab are momentary (not toggles).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mockup" style="margin-top: 24px;">
+    <div class="mockup-header">Adaptive Bottom Bar</div>
+    <div class="mockup-body">
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>Surface Type</th>
+            <th>Bottom Bar Contents</th>
+            <th>Rationale</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Terminal</td>
+            <td>Esc, Ctrl, Alt, Cmd, Tab + Arrow keys (left, down, up, right)</td>
+            <td>Terminal power users need modifier keys constantly. Arrow keys for command-line navigation. Swipe up for full keyboard.</td>
+          </tr>
+          <tr>
+            <td>Browser</td>
+            <td>Back, Forward, Share, Desktop, More</td>
+            <td>"Desktop" sends URL to the desktop cmux browser pane. Standard browser controls otherwise.</td>
+          </tr>
+          <tr>
+            <td>Files</td>
+            <td>Sort, Filter, Open in Terminal, More</td>
+            <td>"Open in Terminal" creates a new terminal surface cd'd to the current directory. Bridges file browsing to terminal workflow.</td>
+          </tr>
+          <tr>
+            <td>Shell (Mosh)</td>
+            <td>Same as Terminal (Esc, Ctrl, Alt, Cmd, Tab + Arrows)</td>
+            <td>Mosh is a terminal session. Same controls, different connection transport.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- MINIMAP TECHNICAL DETAILS -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>Minimap: Technical Bridge to Desktop</h2>
+  <p>The minimap is not decorative -- it is a live representation of the desktop's LayoutSnapshot. The mobile app subscribes to the desktop's pane tree and renders it faithfully.</p>
+
+  <div class="cards">
+    <div class="card">
+      <h4>Data Source</h4>
+      <p>
+        The minimap reads from <code>LayoutSnapshot</code> (defined in bonsplit). Each <code>PaneGeometry</code> provides a <code>PixelRect</code> with x, y, width, height. The mobile app normalizes these into the minimap viewport, preserving exact proportional relationships. The <code>focusedPaneId</code> determines which pane gets the blue highlight.
+      </p>
+    </div>
+    <div class="card">
+      <h4>Pane Previews</h4>
+      <p>
+        Each minimap pane shows a tiny text preview -- the last 4-6 lines of terminal output. This is fetched via the socket API's screen capture command. Previews update every 2 seconds while the minimap is open (not on every frame). Browser panes show a URL summary instead of terminal text.
+      </p>
+    </div>
+    <div class="card">
+      <h4>Zoom Transition</h4>
+      <p>
+        Tapping a minimap pane triggers a zoom animation: the tapped pane expands to fill the screen while other panes fade out. The animation follows <code>cubic-bezier(0.4, 0, 0.2, 1)</code> over 300ms. The surface strip populates with that pane's tabs during the transition, arriving fully visible by the time the zoom completes.
+      </p>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- INFORMATION ARCHITECTURE -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>Information Architecture</h2>
+  <p>How the desktop cmux hierarchy maps to mobile gestures.</p>
+
+  <div class="mockup">
+    <div class="mockup-header">Desktop to Mobile Mapping</div>
+    <div class="mockup-body">
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>Desktop Concept</th>
+            <th>Mobile Access</th>
+            <th>Gesture / Location</th>
+            <th>Depth</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Window</td>
+            <td>Implicit (single window assumed on mobile)</td>
+            <td>N/A -- mobile connects to one window at a time</td>
+            <td>0 taps</td>
+          </tr>
+          <tr>
+            <td>Workspace</td>
+            <td>Workspace Drawer</td>
+            <td>Swipe from left edge</td>
+            <td>1 gesture + 1 tap</td>
+          </tr>
+          <tr>
+            <td>Pane</td>
+            <td>Minimap Overview</td>
+            <td>Pinch out + tap pane</td>
+            <td>1 gesture + 1 tap</td>
+          </tr>
+          <tr>
+            <td>Surface (tab)</td>
+            <td>Surface Strip</td>
+            <td>Tap chip at top of screen</td>
+            <td>1 tap (always visible)</td>
+          </tr>
+          <tr>
+            <td>Browser</td>
+            <td>Drawer quick action or surface chip (if open)</td>
+            <td>Left swipe + tap "Browser", or tap chip</td>
+            <td>1 gesture + 1 tap (first open) / 1 tap (subsequent)</td>
+          </tr>
+          <tr>
+            <td>Files</td>
+            <td>Drawer quick action or surface chip (if open)</td>
+            <td>Left swipe + tap "Files", or tap chip</td>
+            <td>1 gesture + 1 tap (first open) / 1 tap (subsequent)</td>
+          </tr>
+          <tr>
+            <td>Shell (Mosh)</td>
+            <td>Drawer quick action or surface chip (if open)</td>
+            <td>Left swipe + tap "Shell", or tap chip</td>
+            <td>1 gesture + 1 tap (first open) / 1 tap (subsequent)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- EDGE CASES -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>Edge Cases and States</h2>
+
+  <div class="cards">
+    <div class="card">
+      <h4>Empty Workspace (No Panes)</h4>
+      <p>
+        If a workspace has no panes (freshly created), the terminal area shows a centered message: "No panes yet. This workspace is empty on the desktop." with a subtle "Open Shell" button. The minimap pinch-out shows an empty container outline with the same message.
+      </p>
+    </div>
+    <div class="card">
+      <h4>Single Pane (No Minimap Value)</h4>
+      <p>
+        Pinch-out still works but shows a single pane filling the entire minimap viewport. A subtle label reads "1 pane -- split on desktop to see layout here." This teaches the user what the minimap is for without blocking the gesture.
+      </p>
+    </div>
+    <div class="card">
+      <h4>Connection Lost</h4>
+      <p>
+        A thin red bar appears below the surface strip: "Connection lost. Reconnecting..." with a pulsing animation. Terminal content freezes but remains visible (last known state). Modifier keys and keyboard are disabled (grayed out). On reconnect, the bar turns green briefly ("Connected") then fades out over 2 seconds.
+      </p>
+    </div>
+    <div class="card">
+      <h4>Many Surfaces (Strip Overflow)</h4>
+      <p>
+        When a pane has more than ~5 surfaces, the strip scrolls horizontally. A subtle gradient fade on the right edge hints at more chips. A long-press on any chip shows a popover list of all surfaces for quick jumping (power user shortcut).
+      </p>
+    </div>
+    <div class="card">
+      <h4>Landscape Orientation</h4>
+      <p>
+        In landscape, the modifier bar moves to the right edge as a vertical column. Surface strip remains at top. This gives the terminal maximum horizontal space for wide output (logs, diffs, tables). The minimap naturally adjusts its aspect ratio to match the wider viewport.
+      </p>
+    </div>
+    <div class="card">
+      <h4>First Launch / Onboarding</h4>
+      <p>
+        On first launch, after connecting to a desktop cmux instance, a brief overlay teaches the three core gestures: left-swipe (workspaces), pinch-out (minimap), swipe-up (keyboard). Each gesture is demonstrated with a ghost finger animation. The user can skip or tap through. Total time: ~8 seconds.
+      </p>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- COMPONENT SPECS -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>Component Specifications</h2>
+
+  <div class="mockup">
+    <div class="mockup-header">Surface Strip</div>
+    <div class="mockup-body">
+      <table class="spec-table">
+        <thead><tr><th>Property</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Height</td><td>40px (including 6px top + 6px bottom padding)</td></tr>
+          <tr><td>Background</td><td><code>#0d1117</code> (matches terminal bg)</td></tr>
+          <tr><td>Bottom border</td><td>1px solid <code>#30363d</code></td></tr>
+          <tr><td>Chip height</td><td>28px</td></tr>
+          <tr><td>Chip padding</td><td>5px 12px</td></tr>
+          <tr><td>Chip gap</td><td>6px</td></tr>
+          <tr><td>Chip radius</td><td>100px (fully rounded)</td></tr>
+          <tr><td>Chip font</td><td>SF Pro Text, 12px, weight 500</td></tr>
+          <tr><td>Active chip border</td><td>1px solid <code>rgba(88, 166, 255, 0.3)</code></td></tr>
+          <tr><td>Pane indicator</td><td>10px, color <code>#484f58</code>, right-aligned</td></tr>
+          <tr><td>Touch target</td><td>44px minimum height (chip area includes padding)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mockup" style="margin-top: 24px;">
+    <div class="mockup-header">Modifier Key Bar</div>
+    <div class="mockup-body">
+      <table class="spec-table">
+        <thead><tr><th>Property</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Height</td><td>52px (including 8px top + 8px bottom padding)</td></tr>
+          <tr><td>Background</td><td><code>#161b22</code></td></tr>
+          <tr><td>Key height</td><td>36px</td></tr>
+          <tr><td>Key min-width</td><td>36px (modifier), 32px (arrow)</td></tr>
+          <tr><td>Key font</td><td>SF Pro Text, 12px, weight 500</td></tr>
+          <tr><td>Key gap</td><td>6px (modifiers), 3px (arrows)</td></tr>
+          <tr><td>Key radius</td><td>6px</td></tr>
+          <tr><td>Key shadow</td><td><code>0 1px 3px rgba(0,0,0,0.3)</code>, inset <code>0 1px 0 rgba(255,255,255,0.04)</code></td></tr>
+          <tr><td>Active key bg</td><td><code>#58a6ff</code> with <code>0 0 12px rgba(88,166,255,0.3)</code> glow</td></tr>
+          <tr><td>Haptic</td><td><code>HapticFeedback.lightImpact()</code> on tap</td></tr>
+          <tr><td>Touch target</td><td>44px (keys are 36px + 8px padding contributes)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mockup" style="margin-top: 24px;">
+    <div class="mockup-header">Workspace Drawer</div>
+    <div class="mockup-body">
+      <table class="spec-table">
+        <thead><tr><th>Property</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Width</td><td>300px (80% of screen width, max 300px)</td></tr>
+          <tr><td>Background</td><td><code>#0d1117</code></td></tr>
+          <tr><td>Scrim</td><td><code>rgba(0, 0, 0, 0.5)</code>, tappable to dismiss</td></tr>
+          <tr><td>Right border</td><td>1px solid <code>#30363d</code></td></tr>
+          <tr><td>Shadow</td><td><code>16px 0 48px rgba(0,0,0,0.5)</code></td></tr>
+          <tr><td>Workspace item height</td><td>52px (10px vertical padding)</td></tr>
+          <tr><td>Active indicator</td><td>2px right border, <code>#58a6ff</code></td></tr>
+          <tr><td>Icon size</td><td>32x32px, 6px radius</td></tr>
+          <tr><td>Quick action buttons</td><td>Equal-width flex, 10px vertical padding, icons 20px</td></tr>
+          <tr><td>Spring physics</td><td>tension: 300, friction: 26, mass: 1.0</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mockup" style="margin-top: 24px;">
+    <div class="mockup-header">Minimap Pane</div>
+    <div class="mockup-body">
+      <table class="spec-table">
+        <thead><tr><th>Property</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Container aspect ratio</td><td>16:10 (matches typical desktop)</td></tr>
+          <tr><td>Container max-width</td><td>340px</td></tr>
+          <tr><td>Pane gap</td><td>3px</td></tr>
+          <tr><td>Pane background</td><td><code>rgba(88, 166, 255, 0.08)</code></td></tr>
+          <tr><td>Pane border</td><td>1px solid <code>rgba(88, 166, 255, 0.25)</code></td></tr>
+          <tr><td>Focused pane</td><td>Background <code>rgba(88, 166, 255, 0.18)</code>, border <code>#58a6ff</code>, glow <code>0 0 16px rgba(88,166,255,0.15)</code></td></tr>
+          <tr><td>Preview font</td><td>SF Mono, 5px (intentionally tiny -- impressionistic)</td></tr>
+          <tr><td>Tab dots</td><td>4px circles, active = <code>#58a6ff</code></td></tr>
+          <tr><td>Layout source</td><td><code>LayoutSnapshot.panes[].frame</code> normalized to container</td></tr>
+          <tr><td>Tap target</td><td>Entire pane area (minimum 44x44pt enforced by container sizing)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- DESIGN RATIONALE -->
+  <!-- ════════════════════════════════════════════ -->
+  <h2>Design Rationale</h2>
+
+  <div class="cards">
+    <div class="card">
+      <h4>Why No Bottom Nav</h4>
+      <p>
+        Bottom navigation bars are designed for apps where you switch between equal-priority sections. cmux mobile is not that app. It is a terminal with occasional excursions to browser or files. The bottom real estate is far more valuable as a modifier key bar -- something terminal users will touch hundreds of times per session. A bottom nav would have been tapped maybe twice.
+      </p>
+    </div>
+    <div class="card">
+      <h4>Why the Drawer (Not a Tab or Sidebar)</h4>
+      <p>
+        Workspaces are high-value but low-frequency. You check them when context-switching, not every few seconds. A persistent sidebar wastes screen width on a narrow phone. A tab adds chrome. A drawer is invisible until needed, then provides full context (branch name, pane count, status) in a generous layout. The left-edge swipe is a universal mobile convention (Android back gesture, iOS navigation) so discoverability is built in.
+      </p>
+    </div>
+    <div class="card">
+      <h4>Why Pinch-Out for Minimap</h4>
+      <p>
+        The pinch-out gesture is semantically perfect: you are literally "zooming out" to see the bigger picture. It maps directly to the mental model of "I want to see my whole desktop layout." The alternative -- a button or menu item labeled "Pane Overview" -- is less discoverable but more importantly less <em>satisfying</em>. The pinch creates a physical, spatial connection between "my phone showing one pane" and "my desktop showing all panes." That spatial continuity is what makes the mobile app feel like a true companion rather than a separate tool.
+      </p>
+    </div>
+    <div class="card">
+      <h4>Why Browser/Files/Shell in the Drawer</h4>
+      <p>
+        These are "open new thing" actions, not "switch to existing thing" actions. The drawer is already the "what else can I do?" panel. Placing them there creates a consistent mental model: left-swipe = access everything that is not the current terminal. Once opened, they become surface chips -- meaning the switching interaction is the same 1-tap gesture regardless of whether you are switching between two terminals or between a terminal and a browser. Consistency wins.
+      </p>
+    </div>
+  </div>
+
+</div>
