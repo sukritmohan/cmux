@@ -3,13 +3,13 @@
 /// Layout:
 /// ```
 /// ┌─────────────────────────────┐
-/// │ [Tab Bar         ][Type ▼]  │  40px — TopBar
+/// │ [Tab Bar         ][Type ▼]  │  42px — TopBar
 /// ├─────────────────────────────┤
 /// │                             │
-/// │  Terminal Content           │  flex:1 — TerminalView (pure renderer)
+/// │  Pane Content (per type)    │  flex:1 — Terminal/Browser/Files
 /// │                             │
 /// ├─────────────────────────────┤
-/// │ [Esc][Ctrl][Alt]  [←↓↑→]   │  52px — ModifierBar
+/// │ [Esc][Ctrl][Alt]  [←↓↑→]   │  44px — ModifierBar (terminal+browser)
 /// └─────────────────────────────┘
 /// ```
 ///
@@ -23,10 +23,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/colors.dart';
 import '../app/providers.dart';
+import '../browser/browser_view.dart';
 import '../connection/connection_state.dart';
+import '../files/file_explorer_view.dart';
 import '../minimap/minimap_view.dart';
 import '../shared/connection_overlay.dart';
 import '../shared/gesture_layer.dart';
+import '../shared/pane_type_dropdown.dart';
 import '../state/event_handler.dart';
 import '../state/pane_provider.dart';
 import '../state/surface_provider.dart';
@@ -48,6 +51,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   StreamSubscription? _statusSub;
   bool _initialFetchDone = false;
   bool _showMinimap = false;
+  PaneType _activePaneType = PaneType.terminal;
 
   @override
   void initState() {
@@ -97,8 +101,6 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   Future<void> _fetchInitialData() async {
     final wsNotifier = ref.read(workspaceProvider.notifier);
     await wsNotifier.fetchWorkspaces();
-
-    // Populate surfaces from the active workspace's panels.
     _syncSurfacesFromWorkspace();
   }
 
@@ -123,23 +125,19 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     );
   }
 
-  /// Called when a tab is tapped in the top bar.
   void _onSurfaceSelected(String surfaceId) {
     ref.read(surfaceProvider.notifier).focusSurface(surfaceId);
   }
 
-  /// Called when a workspace is selected in the drawer.
   void _onWorkspaceSelected(String workspaceId) {
     ref.read(workspaceProvider.notifier).selectWorkspace(workspaceId);
 
-    // Tell the Mac to switch workspace, then sync surfaces.
     final manager = ref.read(connectionManagerProvider);
     manager.sendRequest(
       'workspace.select',
       params: {'workspace_id': workspaceId},
     ).then((_) => _syncSurfacesFromWorkspace());
 
-    // Close the drawer.
     _scaffoldKey.currentState?.closeDrawer();
   }
 
@@ -165,7 +163,6 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   }
 
   void _openMinimap() {
-    // Fetch fresh layout data, then show the minimap.
     final wsState = ref.read(workspaceProvider);
     final activeWsId = wsState.activeWorkspaceId;
     if (activeWsId != null) {
@@ -177,7 +174,6 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   void _onMinimapPaneTapped(String paneId) {
     setState(() => _showMinimap = false);
 
-    // Find the surface associated with this pane and focus it.
     final paneState = ref.read(paneProvider);
     final pane = paneState.panes.where((p) => p.id == paneId).firstOrNull;
     if (pane?.surfaceId != null) {
@@ -185,7 +181,6 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     }
   }
 
-  /// Handles arrow swipe gestures from the gesture layer.
   void _onArrowSwipe(String direction) {
     final escSeq = switch (direction) {
       'left' => '\x1b[D',
@@ -197,8 +192,60 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     if (escSeq != null) _sendInput(escSeq);
   }
 
+  void _onPaneTypeChanged(PaneType type) {
+    if (type == PaneType.overview) {
+      _openMinimap();
+      return;
+    }
+    setState(() => _activePaneType = type);
+  }
+
+  /// Whether the modifier bar should be shown for the current pane type.
+  bool get _showModifierBar =>
+      _activePaneType == PaneType.terminal || _activePaneType == PaneType.browser;
+
+  /// Builds the content area for the current pane type.
+  Widget _buildPaneContent(String? focusedSurfaceId, String? activeWorkspaceId) {
+    final c = AppColors.of(context);
+
+    switch (_activePaneType) {
+      case PaneType.terminal:
+        return GestureLayer(
+          callbacks: GestureCallbacks(
+            onOpenDrawer: _openDrawer,
+            onOpenMinimap: _openMinimap,
+            onArrowSwipe: _onArrowSwipe,
+          ),
+          child: focusedSurfaceId != null
+              ? TerminalView(
+                  key: ValueKey(focusedSurfaceId),
+                  surfaceId: focusedSurfaceId,
+                  workspaceId: activeWorkspaceId,
+                )
+              : Center(
+                  child: Text(
+                    'No terminal surfaces',
+                    style: TextStyle(color: c.textSecondary),
+                  ),
+                ),
+        );
+
+      case PaneType.browser:
+        return const BrowserView();
+
+      case PaneType.files:
+        return const FileExplorerView();
+
+      case PaneType.overview:
+        // Overview is handled by minimap overlay, not inline content.
+        // Shouldn't reach here because _onPaneTypeChanged opens minimap.
+        return const SizedBox.shrink();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final connectionStatus =
         ref.watch(connectionStatusProvider).valueOrNull ??
             ConnectionStatus.disconnected;
@@ -209,7 +256,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: c.bgDeep,
       drawer: WorkspaceDrawer(
         workspaces: wsState.workspaces,
         activeWorkspaceId: wsState.activeWorkspaceId,
@@ -221,39 +268,26 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
             // Main content column
             Column(
               children: [
-                // Top bar: tab strip + pane type dropdown
+                // Top bar: tab strip + pane type icon
                 TopBar(
                   surfaces: surfaceState.surfaces,
                   focusedSurfaceId: focusedSurfaceId,
                   onSurfaceSelected: _onSurfaceSelected,
                   onMenuTap: _openDrawer,
+                  activePaneType: _activePaneType,
+                  onPaneTypeChanged: _onPaneTypeChanged,
                 ),
 
-                // Terminal content area with gesture layer
+                // Content area — switches by pane type
                 Expanded(
-                  child: GestureLayer(
-                    callbacks: GestureCallbacks(
-                      onOpenDrawer: _openDrawer,
-                      onOpenMinimap: _openMinimap,
-                      onArrowSwipe: _onArrowSwipe,
-                    ),
-                    child: focusedSurfaceId != null
-                        ? TerminalView(
-                            key: ValueKey(focusedSurfaceId),
-                            surfaceId: focusedSurfaceId,
-                            workspaceId: wsState.activeWorkspaceId,
-                          )
-                        : const Center(
-                            child: Text(
-                              'No terminal surfaces',
-                              style: TextStyle(color: AppColors.textSecondary),
-                            ),
-                          ),
+                  child: _buildPaneContent(
+                    focusedSurfaceId,
+                    wsState.activeWorkspaceId,
                   ),
                 ),
 
-                // Modifier bar
-                ModifierBar(onInput: _sendInput),
+                // Modifier bar (only for terminal + browser)
+                if (_showModifierBar) ModifierBar(onInput: _sendInput),
               ],
             ),
 
@@ -264,6 +298,8 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                 focusedPaneId: ref.watch(paneProvider).focusedPaneId,
                 onPaneTapped: _onMinimapPaneTapped,
                 onDismiss: () => setState(() => _showMinimap = false),
+                workspaceName: wsState.activeWorkspace?.title,
+                workspaceBranch: wsState.activeWorkspace?.branch,
               ),
 
             // Connection overlay (shown on top when not connected)

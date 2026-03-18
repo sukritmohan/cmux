@@ -37,6 +37,9 @@ import 'cell_frame_parser.dart';
 /// rows in portrait vs ~12-14 with the previous 2.0 ratio.
 const _cellAspectRatio = 1.75;
 
+/// Error red used in loading/error states (not theme-dependent).
+const _errorRed = Color(0xFFF85149);
+
 class TerminalView extends ConsumerStatefulWidget {
   final String surfaceId;
   final String? workspaceId;
@@ -312,16 +315,18 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
     if (_subscribing) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: AppColors.accentBlue),
-            SizedBox(height: 16),
+            CircularProgressIndicator(color: c.accent),
+            const SizedBox(height: 16),
             Text(
               'Connecting to terminal...',
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: c.textSecondary),
             ),
           ],
         ),
@@ -335,11 +340,11 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: AppColors.accentRed),
+              const Icon(Icons.error_outline, size: 48, color: _errorRed),
               const SizedBox(height: 16),
               Text(
                 _error!,
-                style: const TextStyle(color: AppColors.accentRed),
+                style: const TextStyle(color: _errorRed),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -367,8 +372,8 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           if (_cols == 0 || _rows == 0) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.accentBlue),
+            return Center(
+              child: CircularProgressIndicator(color: c.accent),
             );
           }
 
@@ -388,11 +393,6 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
             child: Stack(
               children: [
                 // Hidden text input to capture soft keyboard IME events.
-                // Full-size but transparent — ensures Android IME connects
-                // properly. Tapping anywhere focuses this TextField and
-                // opens the soft keyboard. Input flows through
-                // _onTextChanged(). Hardware key events still flow through
-                // _focusNode.onKeyEvent → _handleKeyEvent().
                 Positioned.fill(
                   child: Opacity(
                     opacity: 0,
@@ -501,16 +501,8 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
 /// CustomPainter that renders the terminal cell grid.
 ///
-/// Cell dimensions are passed in from the layout — never re-derived from
-/// the paint area size. This prevents text shrinking when the keyboard
-/// reduces the visible viewport (adjustResize).
-///
-/// Rendering order:
-///   1. Full background fill (prevents gaps)
-///   2. Per-cell backgrounds
-///   3. Character glyphs (JetBrains Mono)
-///   4. Text decorations (underline, strikethrough, overline)
-///   5. Cursor (filled block with character inversion)
+/// Uses dark theme colors always since terminal content is Mac-rendered
+/// and should maintain dark terminal aesthetics regardless of app theme.
 class TerminalPainter extends CustomPainter {
   final List<CellData> cells;
   final int cols;
@@ -520,6 +512,11 @@ class TerminalPainter extends CustomPainter {
   final int cursorCol;
   final int cursorRow;
   final bool cursorVisible;
+
+  // Terminal always uses dark palette for cell rendering.
+  static const _bg = Color(0xFF0A0A0F);
+  static const _fg = Color(0xFFE8E8EE);
+  static const _cursorColor = Color(0xCCE0A030); // amber cursor at ~80%
 
   TerminalPainter({
     required this.cells,
@@ -541,7 +538,7 @@ class TerminalPainter extends CustomPainter {
     // 1. Fill entire canvas with terminal background to prevent gaps.
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, size.height),
-      Paint()..color = AppColors.terminalBg,
+      Paint()..color = _bg,
     );
 
     final bgPaint = Paint();
@@ -565,13 +562,13 @@ class TerminalPainter extends CustomPainter {
         Color bg;
 
         if (cell.fgIsDefault) {
-          fg = AppColors.terminalFg;
+          fg = _fg;
         } else {
           fg = Color.fromARGB(255, cell.fgR, cell.fgG, cell.fgB);
         }
 
         if (cell.bgIsDefault) {
-          bg = AppColors.terminalBg;
+          bg = _bg;
         } else {
           bg = Color.fromARGB(255, cell.bgR, cell.bgG, cell.bgB);
         }
@@ -598,7 +595,7 @@ class TerminalPainter extends CustomPainter {
         // Draw character glyph.
         if (cell.codepoint != 0 && !cell.isInvisible) {
           // Under cursor: draw character in background color for inversion effect.
-          final charColor = isCursorCell ? AppColors.terminalBg : fg;
+          final charColor = isCursorCell ? _bg : fg;
 
           final textStyle = ui.TextStyle(
             color: charColor,
@@ -656,7 +653,7 @@ class TerminalPainter extends CustomPainter {
       final cx = cursorCol * cellWidth;
       final cy = cursorRow * cellHeight;
       final cursorPaint = Paint()
-        ..color = AppColors.terminalCursorFill
+        ..color = _cursorColor
         ..style = PaintingStyle.fill;
       canvas.drawRRect(
         RRect.fromRectAndRadius(

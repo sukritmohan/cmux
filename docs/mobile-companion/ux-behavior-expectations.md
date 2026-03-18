@@ -62,74 +62,112 @@ All user-facing strings use `String(localized:defaultValue:)` with keys prefixed
 
 ## Android Companion — Design System
 
-### Design Tokens (Merged Palette)
+### Visual Identity
 
-GitHub-dark backgrounds with selective vibrancy. All tokens in `lib/app/colors.dart`.
+Warm amber identity replacing the original GitHub Dark blue-accent palette. Dual dark/light theme support via `AppColors.of(context)`. Source of truth: `docs/mobile-ux/pane-type-switcher-final.html`.
 
-| Token | Hex | Usage |
-|-------|-----|-------|
-| bgPrimary | `#0D1117` | Main background |
-| bgSecondary | `#161B22` | Cards, bars, elevated surfaces |
-| bgTertiary | `#21262D` | Active states, key backgrounds |
-| bgSurface | `#1C2128` | Inset panels |
-| textPrimary | `#E6EDF3` | Primary text |
-| textSecondary | `#8B949E` | Secondary text |
-| textMuted | `#484F58` | Muted/disabled text |
-| accentBlue | `#58A6FF` | Primary accent (tabs, links, active states) |
-| accentGreen | `#3FB950` | Running/connected indicators |
-| accentOrange | `#D29922` | Warnings, reconnecting |
-| accentRed | `#F85149` | Errors, destructive |
-| accentPurple | `#BC8CFF` | Shell type indicator |
-| accentCyan | `#39D2C0` | Secondary accent |
-| borderSubtle | `#30363D` | Default borders |
-| borderActive | `#58A6FF` | Active/focused borders |
+### Color System (Dual Theme)
 
-Radii: sm=6, md=10, lg=16, xl=20
+All tokens in `lib/app/colors.dart`. Access via `AppColors.of(context)` which returns `AppColorScheme` matching current brightness.
+
+**Dark theme (default):**
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| bgDeep | `#0A0A0F` | Deepest background (terminal area) |
+| bgPrimary | `#0E0E14` | Main background |
+| bgElevated | `#16161E` | Cards, bars, elevated surfaces |
+| bgSurface | `#1A1A24` | Active states, panels |
+| textPrimary | `#E8E8EE` | Primary text |
+| textSecondary | `#E8E8EE` 55% | Secondary text |
+| textMuted | `#E8E8EE` 30% | Muted/disabled text |
+| accent | `#E0A030` | Signature warm amber accent |
+| accentText | `#F0C060` | Amber text on dark bg |
+
+**Light theme:**
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| bgDeep | `#F5F5F0` | Deepest background |
+| bgPrimary | `#FAFAF7` | Main background |
+| bgElevated | `#FFFFFF` | Cards, bars |
+| bgSurface | `#F0F0EB` | Active states |
+| textPrimary | `#1A1A1F` | Primary text |
+| accentText | `#B07810` | Amber text on light bg |
+
+**Pane type colors (dark/light):**
+
+| Pane Type | Dark | Light |
+|-----------|------|-------|
+| Terminal | `#50C878` | `#1B8C4E` |
+| Browser | `#5B9BD5` | `#2D6AB0` |
+| Files | `#E0A030` | `#B07810` |
+| Overview | `#B08CDC` | `#7A5AAE` |
+
+Radii: xs=4, sm=6, md=10, lg=14, xl=20
+
+### Font Families
+
+- **JetBrains Mono**: Headings, labels, section headers (bundled TTF)
+- **IBM Plex Sans**: Body text, UI controls (via google_fonts)
+- **IBM Plex Mono**: Code, tab labels, monospace content (via google_fonts)
 
 ### Terminal Screen Layout
 
 ```
 ┌─────────────────────────────┐
-│ [☰][Tab Bar       ][Type ▼] │  40px — TopBar
+│ [☰][Tab Bar      ][PaneIcon]│  42px — TopBar
 ├─────────────────────────────┤
 │                             │
-│  Terminal Content           │  flex:1 — TerminalView (pure renderer)
-│  (gesture layer wraps this) │
+│  Pane Content (per type)    │  flex:1 — Terminal/Browser/Files
+│  (gesture layer on terminal)│
 │                             │
 ├─────────────────────────────┤
-│ [Esc][Ctrl][Alt]  [←↓↑→][⏎]│  44px — ModifierBar
+│ [+][📋] │ [↑] │ RETURN     │  42px — Floating Capsule ModifierBar
+│         │[←↓→]│            │  (terminal + browser only)
 └─────────────────────────────┘
 ```
 
+### Pane Type Switching
+
+- Active pane type stored as `_activePaneType` state in TerminalScreen
+- Switching types changes the content area: Terminal → TerminalView, Browser → BrowserView, Files → FileExplorerView
+- Overview type opens the minimap overlay (not inline content)
+- ModifierBar shown only for Terminal and Browser types
+- Tab strip adapts: terminal mode shows surface tabs, browser mode shows static "localhost"/"GitHub" tabs
+
 ### Tab Bar Behavior
 
-- Scrollable horizontal tab strip showing surfaces in the current workspace
-- Active tab: bgTertiary background, 2px blue underline, blue text, bold weight
-- Inactive tab: transparent background, textSecondary color
-- Green dot on tabs with running processes
-- Separated from pane type dropdown by 1px vertical divider
+- Font: IBM Plex Mono 11.5px, weight 500, 0.2px letter spacing
+- Active tab: textPrimary color, bgSurface background, amber underline (2px)
+- Inactive tab: textMuted color, transparent background
+- Connection dot: 5px green circle before active tab title (when process running)
+- Right-edge fade gradient (32px) hinting at scrollability
+- Browser mode: static tabs "localhost" (active) + "GitHub"
 
 ### Pane Type Dropdown
 
-- Anchored to top bar trigger, 200px wide
-- Items: Terminal (green), Browser (blue), Files (orange), Shell (purple)
-- Active type has checkmark; non-terminal types show "Soon" label
-- Scale animation 0.95→1.0 on open
-- Tap outside to dismiss
+- Trigger: 36x36 icon-only button, tinted with pane type color/bg
+- Dropdown: 200px wide, 14px radius, bgElevated bg, 4px padding
+- Items: 28x28 colored icon bg + label + checkmark for active
+- Active item: 3px amber left bar indicator
+- Scrim: 40% black (dark) / 10% (light)
+- All types functional (no "Coming soon" — Browser/Files show placeholder views)
+- Four types: Terminal, Browser, Files, Overview
 
-### Modifier Bar Behavior
+### Modifier Bar Behavior (Floating Capsule)
 
-- Left group: Esc, Ctrl, Alt, Tab
-- Right group: ← ↓ ↑ → arrow keys (grouped in a pill container) + Enter
-- **Esc and Tab**: Momentary — fire escape sequence on tap
-- **Ctrl and Alt**: Toggle — highlight active until next key, then auto-clear
-- **Bar height**: 44px (reduced from 52px to save terminal space while meeting 44pt touch targets)
-- Key styling: bgTertiary bg, borderSubtle border, 36px height, radiusSm corners
-- **Arrow key grouping**: Arrows wrapped in a single rounded container (bgTertiary pill) with thin 1px internal dividers — signals "d-pad" as a unit
-- **Enter key accent**: Subtle accentBlue at 15% opacity background to distinguish from regular keys
-- **Active modifier glow**: accentBlue at 12% bg + 80% border + subtle spread shadow (replaces solid blue fill)
-- **Press animation**: Scale 0.95 on tap down via AnimatedScale (80ms duration)
-- **Haptic feedback**: lightImpact on every key press, mediumImpact on modifier toggle
+- **Shape**: Floating capsule, rounded 18px, backdrop blur(24px)
+- **Position**: Margin 0 8px 2px, floats above home indicator
+- **Background**: Semi-transparent (dark: rgba(16,16,24,0.82), light: rgba(255,255,255,0.75))
+- **Three zones** separated by 1px dividers:
+  1. **(+) amber accent button** + clipboard paste button (38x32, rounded 10px)
+  2. **Inverted-T arrow grid** (3x2, 26px cells, rounded 6px, borderless)
+  3. **"RETURN" key** (JetBrains Mono 9px, 700 weight, uppercase, 1.2px spacing)
+- All keys: 32px height, rounded 10px, borderless
+- Press animation: AnimatedScale 0.93 on tap
+- Haptic: selectionClick on arrows, lightImpact on RETURN, mediumImpact on (+)
+- The (+) fan-out button will expand to show Esc/Ctrl/Alt/Tab (future)
 
 ### Terminal Rendering
 
@@ -138,7 +176,7 @@ Radii: sm=6, md=10, lg=16, xl=20
 - **Font sizing**: fontSize = cellHeight * 0.72, tuned for JetBrains Mono's larger x-height
 - **Keyboard stability**: Cell dimensions derived from viewport width only (not height). When the on-screen keyboard appears via adjustResize, height shrinks but width stays constant — text size never changes
 - **Cursor auto-scroll**: When keyboard reduces visible area, the terminal auto-scrolls via clip + translate to keep the cursor row visible
-- **Cursor style**: Filled block with 2px corner radius, ~78% alpha blue (`terminalCursorFill`), slightly transparent
+- **Cursor style**: Filled block with 2px corner radius, ~80% alpha amber (`#E0A030`), slightly transparent
 - **Character inversion**: Character under cursor drawn in terminalBg color for contrast
 - **Cursor blink**: 530ms on/530ms off cycle, resets on new cell frame (content/cursor change)
 - **Background fill**: Painter fills entire canvas with terminalBg first to prevent gaps
@@ -151,21 +189,46 @@ Radii: sm=6, md=10, lg=16, xl=20
 
 ### Workspace Drawer
 
-- 300px width, left edge, bgPrimary background
-- Header: "WORKSPACES" (uppercase, 10px, textMuted)
-- Workspace items: 52px height, 32x32 icon + name + panel count
-- Active workspace: bgSurface bg + 2px right border accentBlue
-- Scrim overlay rgba(0,0,0,0.5) when open
-- Tap workspace → switch workspace, update tab bar, close drawer
+- 280px width, left edge, frosted glass (BackdropFilter blur 40px)
+- Background: semi-transparent (dark: rgba(14,14,20,0.92), light: rgba(250,250,247,0.92))
+- Header: "WORKSPACES" (JetBrains Mono, 10px, 600 weight, 2.5px spacing, textMuted)
+- Search bar: 34px, magnifier icon, "Search workspaces..." placeholder, filters list
+- Workspace items: name + panel count metadata row + optional branch badge
+- Active workspace: bgSurface bg + 3px amber left bar (c.accent, not blue right border)
+- Branch badge: IBM Plex Mono 10.5px, rounded 4px, accentGlow bg, accentText text
+- Notification badge: 18px amber circle with white count text (if notificationCount > 0)
+- Bottom pinned section:
+  - Appearance toggle: segmented "Dark"/"Light" control dispatching to themeModeProvider
+  - "+ New Workspace" button: bordered, textMuted placeholder
 
 ### Minimap Overlay
 
-- Triggered by pinch-out gesture on terminal area (scale < 0.7)
-- Shows proportional pane layout from `workspace.layout` API
-- Focused pane: chipBgActive bg, accentBlue border, glow shadow
-- Pane labels: 9px, textSecondary
-- Tap pane → dismiss minimap, focus that pane's surface
+- Triggered by pinch-out gesture on terminal area (scale < 0.7) or Overview pane type
+- Dot grid background: 1px dots, 20px grid, textMuted at ~15% alpha
+- Header: "WORKSPACE" label + workspace name (20px semibold) + LIVE badge (pulsing green dot, 2s cycle)
+- Optional branch badge in header
+- 16:10 aspect ratio pane layout container, bgElevated bg, border
+- Pane cards: bgElevated, type-color dot (6px) + IBM Plex Mono title (9px)
+- Focused pane: amber border + amber glow shadow
+- Stacked cards for surfaceCount > 1: pseudo-layers at -4px/-8px offsets
+- Stack badge: 18px amber circle with count, top-right
+- Hint: "Tap a pane to focus · Pinch in to dismiss"
 - Fade + scale animation on open/close
+
+### Browser View (Placeholder)
+
+- URL bar: back/forward nav buttons (28x28) + URL field (30px, rounded 6px, bgSurface)
+- URL text: scheme at 40% opacity + host (textPrimary) + path (textSecondary)
+- Content area: shimmer-style placeholder blocks mimicking a web page
+- No live functionality yet (Mac API integration pending)
+
+### File Explorer View (Placeholder)
+
+- Breadcrumb bar: IBM Plex Mono path segments ("~" > "cmux" > "Sources"), current bold
+- File list: typed icons (folder=amber, swift=blue, json=purple) + name + size/chevron
+- File action bar: "+ New File", "+ New Folder", "Sort" buttons
+- Static mock data: 3 folders, 3 Swift files, 1 JSON file
+- No live functionality yet (Mac API integration pending)
 
 ### Gesture Map
 
@@ -177,11 +240,11 @@ Radii: sm=6, md=10, lg=16, xl=20
 
 ### Pairing Screen
 
-- Dark branded background (bgPrimary)
+- Branded background (bgPrimary, adapts to dark/light)
 - "cmux" wordmark at top, "Companion" subtitle
-- Camera viewfinder with rounded corners and accentBlue corner markers
+- Camera viewfinder with rounded corners and amber corner markers (c.accent)
 - Instruction text in textSecondary
-- Error banners: accentRed background tint + red border
+- Error banners: red (#F85149) background tint + red border
 - Success animation: green check icon with elastic scale before navigating
 
 ### Connection State Overlays
@@ -190,6 +253,6 @@ Overlays the terminal screen (not separate routes):
 
 | State | Visual | Action |
 |-------|--------|--------|
-| Connecting/Authenticating | Blue pulse ring + "Connecting to Mac..." | — |
+| Connecting/Authenticating | Amber pulse ring + "Connecting to Mac..." | — |
 | Reconnecting | Orange pulse ring + "Reconnecting..." | — |
 | Disconnected | Cloud-off icon + "Connection lost" | Reconnect button |

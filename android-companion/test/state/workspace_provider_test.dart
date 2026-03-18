@@ -30,6 +30,8 @@ void main() {
       expect(ws.title, equals('Untitled'));
       expect(ws.panels, isEmpty);
       expect(ws.focusedPanelId, isNull);
+      expect(ws.branch, isNull);
+      expect(ws.notificationCount, equals(0));
     });
 
     test('primarySurfaceId returns first terminal panel', () {
@@ -57,6 +59,105 @@ void main() {
       });
 
       expect(ws.primarySurfaceId, equals('browser-1'));
+    });
+
+    test('parses branch field from JSON', () {
+      final ws = Workspace.fromJson({
+        'id': 'ws-1',
+        'title': 'Feature Work',
+        'branch': 'feat/new-ui',
+      });
+
+      expect(ws.branch, equals('feat/new-ui'));
+    });
+
+    test('branch defaults to null when absent', () {
+      final ws = Workspace.fromJson({
+        'id': 'ws-1',
+        'title': 'No Branch',
+      });
+
+      expect(ws.branch, isNull);
+    });
+
+    test('parses notificationCount from JSON', () {
+      final ws = Workspace.fromJson({
+        'id': 'ws-1',
+        'title': 'Busy Workspace',
+        'notification_count': 5,
+      });
+
+      expect(ws.notificationCount, equals(5));
+    });
+
+    test('notificationCount defaults to zero when absent', () {
+      final ws = Workspace.fromJson({
+        'id': 'ws-1',
+        'title': 'Quiet Workspace',
+      });
+
+      expect(ws.notificationCount, equals(0));
+    });
+
+    test('parses all fields together including branch and notifications', () {
+      final ws = Workspace.fromJson({
+        'id': 'ws-full',
+        'title': 'Full Workspace',
+        'panels': [
+          {'id': 'p-1', 'type': 'terminal'},
+        ],
+        'focused_panel_id': 'p-1',
+        'branch': 'main',
+        'notification_count': 3,
+      });
+
+      expect(ws.id, equals('ws-full'));
+      expect(ws.title, equals('Full Workspace'));
+      expect(ws.panels.length, equals(1));
+      expect(ws.focusedPanelId, equals('p-1'));
+      expect(ws.branch, equals('main'));
+      expect(ws.notificationCount, equals(3));
+    });
+  });
+
+  group('Workspace.copyWith', () {
+    test('preserves branch when not overridden', () {
+      const ws = Workspace(
+        id: 'ws-1',
+        title: 'Original',
+        branch: 'develop',
+        notificationCount: 2,
+      );
+
+      final updated = ws.copyWith(title: 'Updated');
+
+      expect(updated.title, equals('Updated'));
+      expect(updated.branch, equals('develop'));
+      expect(updated.notificationCount, equals(2));
+    });
+
+    test('overrides branch when provided', () {
+      const ws = Workspace(
+        id: 'ws-1',
+        title: 'Original',
+        branch: 'develop',
+      );
+
+      final updated = ws.copyWith(branch: 'main');
+
+      expect(updated.branch, equals('main'));
+    });
+
+    test('overrides notificationCount when provided', () {
+      const ws = Workspace(
+        id: 'ws-1',
+        title: 'Original',
+        notificationCount: 5,
+      );
+
+      final updated = ws.copyWith(notificationCount: 0);
+
+      expect(updated.notificationCount, equals(0));
     });
   });
 
@@ -193,6 +294,20 @@ void main() {
 
       final state = container.read(workspaceProvider);
       expect(state.activeWorkspaceId, equals('ws-42'));
+    });
+
+    test('onWorkspaceCreated preserves branch and notificationCount', () {
+      final notifier = container.read(workspaceProvider.notifier);
+      notifier.onWorkspaceCreated({
+        'id': 'ws-branch',
+        'title': 'Dev',
+        'branch': 'feature/drawer',
+        'notification_count': 7,
+      });
+
+      final state = container.read(workspaceProvider);
+      expect(state.workspaces.first.branch, equals('feature/drawer'));
+      expect(state.workspaces.first.notificationCount, equals(7));
     });
   });
 }

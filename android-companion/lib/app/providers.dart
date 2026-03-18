@@ -1,6 +1,7 @@
 /// Riverpod providers for app-wide services.
 library;
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../connection/connection_manager.dart';
@@ -30,3 +31,6 @@ final isPairedProvider = FutureProvider<bool>((ref) async {
   final pairing = ref.watch(pairingServiceProvider);
   return pairing.isPaired();
 });
+
+/// Current theme mode (dark/light/system). Defaults to dark.
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.dark);

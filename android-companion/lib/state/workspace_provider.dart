@@ -15,11 +15,19 @@ class Workspace {
   final List<WorkspacePanel> panels;
   final String? focusedPanelId;
 
+  /// Git branch name associated with this workspace, if any.
+  final String? branch;
+
+  /// Number of unread notifications for this workspace.
+  final int notificationCount;
+
   const Workspace({
     required this.id,
     required this.title,
     this.panels = const [],
     this.focusedPanelId,
+    this.branch,
+    this.notificationCount = 0,
   });
 
   factory Workspace.fromJson(Map<String, dynamic> json) {
@@ -33,6 +41,8 @@ class Workspace {
       title: json['title'] as String? ?? 'Untitled',
       panels: panelList,
       focusedPanelId: json['focused_panel_id'] as String?,
+      branch: json['branch'] as String?,
+      notificationCount: json['notification_count'] as int? ?? 0,
     );
   }
 
@@ -47,12 +57,16 @@ class Workspace {
     String? title,
     List<WorkspacePanel>? panels,
     String? focusedPanelId,
+    String? branch,
+    int? notificationCount,
   }) {
     return Workspace(
       id: id ?? this.id,
       title: title ?? this.title,
       panels: panels ?? this.panels,
       focusedPanelId: focusedPanelId ?? this.focusedPanelId,
+      branch: branch ?? this.branch,
+      notificationCount: notificationCount ?? this.notificationCount,
     );
   }
 }

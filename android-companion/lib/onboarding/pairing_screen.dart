@@ -1,7 +1,7 @@
 /// QR code pairing screen with branded dark styling.
 ///
 /// Full-screen camera view with rounded viewfinder frame and
-/// accentBlue corner markers. On successful scan, plays a brief
+/// amber corner markers. On successful scan, plays a brief
 /// success animation before navigating to the terminal screen.
 library;
 
@@ -12,6 +12,9 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../app/colors.dart';
 import '../app/providers.dart';
+
+/// Error red used in error banner (not theme-dependent).
+const _errorRed = Color(0xFFF85149);
 
 class PairingScreen extends ConsumerStatefulWidget {
   /// Whether this is an intentional re-scan from the terminal screen.
@@ -99,8 +102,10 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: c.bgPrimary,
       body: Stack(
         children: [
           // Camera preview
@@ -118,7 +123,7 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
               top: MediaQuery.of(context).padding.top + 8,
               left: 8,
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                icon: Icon(Icons.arrow_back, color: c.textPrimary),
                 onPressed: () => context.go('/terminal'),
               ),
             ),
@@ -126,7 +131,7 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
           // Success overlay
           if (_success)
             Container(
-              color: AppColors.bgPrimary.withAlpha(230),
+              color: c.bgPrimary.withAlpha(230),
               child: Center(
                 child: ScaleTransition(
                   scale: _successScale,
@@ -134,14 +139,14 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: AppColors.accentGreen.withAlpha(30),
+                      color: c.connectedColor.withAlpha(30),
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.accentGreen, width: 2),
+                      border: Border.all(color: c.connectedColor, width: 2),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.check_rounded,
                       size: 40,
-                      color: AppColors.accentGreen,
+                      color: c.connectedColor,
                     ),
                   ),
                 ),
@@ -153,6 +158,7 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
   }
 
   Widget _buildOverlay(BuildContext context) {
+    final c = AppColors.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final viewfinderSize = screenWidth * 0.7;
 
@@ -163,8 +169,8 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
           Expanded(
             flex: 3,
             child: Container(
-              color: AppColors.bgPrimary.withAlpha(180),
-              child: const Center(
+              color: c.bgPrimary.withAlpha(180),
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -174,17 +180,17 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: c.textPrimary,
                         letterSpacing: -1,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       'Companion',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
-                        color: AppColors.textSecondary,
+                        color: c.textSecondary,
                         letterSpacing: 2,
                       ),
                     ),
@@ -200,18 +206,18 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
             child: Row(
               children: [
                 // Left dark bar
-                Expanded(child: Container(color: AppColors.bgPrimary.withAlpha(180))),
+                Expanded(child: Container(color: c.bgPrimary.withAlpha(180))),
 
                 // Viewfinder frame with corner markers
                 SizedBox(
                   width: viewfinderSize,
                   child: CustomPaint(
-                    painter: _ViewfinderPainter(),
+                    painter: _ViewfinderPainter(color: c.accent),
                   ),
                 ),
 
                 // Right dark bar
-                Expanded(child: Container(color: AppColors.bgPrimary.withAlpha(180))),
+                Expanded(child: Container(color: c.bgPrimary.withAlpha(180))),
               ],
             ),
           ),
@@ -220,25 +226,25 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
           Expanded(
             flex: 4,
             child: Container(
-              color: AppColors.bgPrimary.withAlpha(180),
+              color: c.bgPrimary.withAlpha(180),
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
+                  Text(
                     'Scan cmux QR Code',
                     style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: c.textPrimary,
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Open cmux Settings on your Mac and scan\nthe pairing QR code to connect.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: c.textSecondary,
                       fontSize: 14,
                       height: 1.5,
                     ),
@@ -250,22 +256,22 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
-                        color: AppColors.accentRed.withAlpha(20),
+                        color: _errorRed.withAlpha(20),
                         borderRadius: BorderRadius.circular(AppColors.radiusSm),
                         border: Border.all(
-                          color: AppColors.accentRed.withAlpha(60),
+                          color: _errorRed.withAlpha(60),
                         ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.error_outline, size: 16, color: AppColors.accentRed),
+                          const Icon(Icons.error_outline, size: 16, color: _errorRed),
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
                               _errorMessage!,
                               style: const TextStyle(
-                                color: AppColors.accentRed,
+                                color: _errorRed,
                                 fontSize: 13,
                               ),
                             ),
@@ -278,11 +284,11 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
                   // Processing spinner
                   if (_processing && !_success) ...[
                     const SizedBox(height: 20),
-                    const SizedBox(
+                    SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(
-                        color: AppColors.accentBlue,
+                        color: c.accent,
                         strokeWidth: 2,
                       ),
                     ),
@@ -297,12 +303,16 @@ class _PairingScreenState extends ConsumerState<PairingScreen>
   }
 }
 
-/// Paints viewfinder corner markers (blue L-shaped corners).
+/// Paints viewfinder corner markers (amber L-shaped corners).
 class _ViewfinderPainter extends CustomPainter {
+  final Color color;
+
+  _ViewfinderPainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.accentBlue
+      ..color = color
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
@@ -352,5 +362,6 @@ class _ViewfinderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _ViewfinderPainter oldDelegate) =>
+      color != oldDelegate.color;
 }

@@ -14,6 +14,7 @@ void main() {
         'width': 0.5,
         'height': 1.0,
         'focused': true,
+        'surface_count': 3,
       });
 
       expect(pane.id, equals('pane-1'));
@@ -24,6 +25,7 @@ void main() {
       expect(pane.width, equals(0.5));
       expect(pane.height, equals(1.0));
       expect(pane.focused, isTrue);
+      expect(pane.surfaceCount, equals(3));
     });
 
     test('provides defaults for missing fields', () {
@@ -36,6 +38,67 @@ void main() {
       expect(pane.width, equals(1));
       expect(pane.height, equals(1));
       expect(pane.focused, isFalse);
+      expect(pane.surfaceCount, equals(1));
+    });
+
+    test('surfaceCount defaults to 1 when absent', () {
+      final pane = Pane.fromJson({
+        'id': 'pane-x',
+        'type': 'browser',
+      });
+      expect(pane.surfaceCount, equals(1));
+    });
+
+    test('surfaceCount parses explicit value', () {
+      final pane = Pane.fromJson({
+        'id': 'pane-y',
+        'surface_count': 5,
+      });
+      expect(pane.surfaceCount, equals(5));
+    });
+  });
+
+  group('Pane.copyWith', () {
+    test('copies with updated focused', () {
+      const original = Pane(id: 'p1', focused: false, surfaceCount: 2);
+      final copy = original.copyWith(focused: true);
+
+      expect(copy.focused, isTrue);
+      expect(copy.surfaceCount, equals(2));
+      expect(copy.id, equals('p1'));
+    });
+
+    test('copies with updated surfaceCount', () {
+      const original = Pane(id: 'p2', surfaceCount: 1);
+      final copy = original.copyWith(surfaceCount: 4);
+
+      expect(copy.surfaceCount, equals(4));
+      expect(copy.id, equals('p2'));
+    });
+
+    test('preserves all fields when no overrides given', () {
+      const original = Pane(
+        id: 'p3',
+        surfaceId: 'surf-3',
+        type: 'browser',
+        x: 0.5,
+        y: 0.0,
+        width: 0.5,
+        height: 1.0,
+        focused: true,
+        surfaceCount: 3,
+      );
+      final copy = original.copyWith();
+
+      expect(copy.id, equals(original.id));
+      expect(copy.surfaceId, equals(original.surfaceId));
+      expect(copy.type, equals(original.type));
+      expect(copy.x, equals(original.x));
+      expect(copy.y, equals(original.y));
+      expect(copy.width, equals(original.width));
+      expect(copy.height, equals(original.height));
+      expect(copy.focused, equals(original.focused));
+      expect(copy.surfaceCount, equals(original.surfaceCount));
     });
   });
 
