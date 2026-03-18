@@ -404,6 +404,63 @@
     flex-shrink: 0;
   }
 
+  /* ── Tab Add (+) button: fixed next to pane icon ── */
+  .tab-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 300;
+    flex-shrink: 0;
+    cursor: pointer;
+    margin-left: 2px;
+    transition: all var(--duration-fast) var(--ease-out-expo);
+    position: relative;
+    z-index: 2;
+  }
+  .dark .tab-add {
+    color: var(--d-text-muted);
+  }
+  .dark .tab-add:hover {
+    color: var(--d-text-secondary);
+    background: var(--d-bg-surface);
+  }
+  .light .tab-add {
+    color: var(--l-text-muted);
+  }
+  .light .tab-add:hover {
+    color: var(--l-text-secondary);
+    background: var(--l-bg-surface);
+  }
+
+  /* ── Tab strip fade: gradient over right edge to hint at scrollability ── */
+  .tab-strip-wrap {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    position: relative;
+  }
+  .tab-strip-wrap::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 32px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .dark .tab-strip-wrap::after {
+    background: linear-gradient(to right, transparent, var(--d-bg-primary));
+  }
+  .light .tab-strip-wrap::after {
+    background: linear-gradient(to right, transparent, var(--l-bg-primary));
+  }
+
   /* ── Pane Type Icon Trigger (collapsed state) ── */
   .pane-type-icon {
     display: flex;
@@ -432,6 +489,24 @@
   }
   .light .pane-type-icon:hover {
     background: rgba(224,160,48,0.18);
+  }
+
+  /* Pane-type-specific icon colors */
+  .dark .pane-type-icon.terminal-icon {
+    color: var(--terminal-color);
+    background: var(--terminal-bg);
+  }
+  .light .pane-type-icon.terminal-icon {
+    color: #1B8C4E;
+    background: rgba(45,180,90,0.10);
+  }
+  .dark .pane-type-icon.browser-icon {
+    color: var(--browser-color);
+    background: var(--browser-bg);
+  }
+  .light .pane-type-icon.browser-icon {
+    color: #2D6AB0;
+    background: rgba(91,155,213,0.10);
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -586,96 +661,151 @@
   .terminal-content.dimmed { opacity: 0.3; }
 
   /* ══════════════════════════════════════════════════════════
-     BOTTOM MODIFIER BAR
+     BOTTOM MODIFIER BAR -- Floating Capsule Toolbar
+     A frosted floating pill that hovers above the home indicator.
+     Three visually grouped zones: actions | arrows | enter.
+     Organic, tactile, borderless keys with soft depth.
      ══════════════════════════════════════════════════════════ */
   .modifier-bar {
     display: flex;
     align-items: center;
-    padding: 6px 10px;
-    gap: 6px;
+    padding: 5px 6px;
+    gap: 4px;
     flex-shrink: 0;
+    margin: 0 8px 2px;
+    border-radius: 18px;
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
   }
   .dark .modifier-bar {
-    background: var(--d-bg-primary);
-    border-top: 1px solid var(--d-border);
+    background: rgba(16, 16, 24, 0.82);
+    box-shadow:
+      0 -0.5px 0 rgba(255,255,255,0.06) inset,
+      0 0.5px 0 rgba(255,255,255,0.02) inset,
+      0 4px 24px rgba(0,0,0,0.50),
+      0 0 0 0.5px rgba(255,255,255,0.05);
   }
   .light .modifier-bar {
-    background: var(--l-bg-primary);
-    border-top: 1px solid var(--l-border);
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow:
+      0 -0.5px 0 rgba(255,255,255,0.7) inset,
+      0 4px 24px rgba(0,0,0,0.07),
+      0 0 0 0.5px rgba(0,0,0,0.05);
   }
 
+  /* ── Shared key base: borderless, soft shapes ── */
   .mod-key {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 34px;
-    border-radius: var(--radius-sm);
-    font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace;
-    font-size: 12px;
+    height: 32px;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    font-size: 11px;
     font-weight: 500;
     cursor: pointer;
     transition: all var(--duration-fast) var(--ease-out-expo);
     flex-shrink: 0;
-  }
-  .mod-key.fan {
-    width: 40px;
-    padding: 0;
-    font-size: 13px;
-    font-weight: 600;
-  }
-  .dark .mod-key {
-    background: var(--d-bg-surface);
-    color: var(--d-text-secondary);
-    border: 1px solid var(--d-border);
-  }
-  .light .mod-key {
-    background: var(--l-bg-surface);
-    color: var(--l-text-secondary);
-    border: 1px solid var(--l-border);
-  }
-  .dark .mod-key.accent-key {
-    background: var(--accent-glow);
-    color: var(--accent-text-on-dark);
-    border-color: rgba(224,160,48,0.20);
-  }
-  .light .mod-key.accent-key {
-    background: rgba(224,160,48,0.12);
-    color: var(--accent-text-on-light);
-    border-color: rgba(224,160,48,0.20);
+    border: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
-  /* Arrow key cluster */
+  /* ── Fan-out action buttons: (+) and clipboard ── */
+  .mod-key.fan {
+    width: 38px;
+    height: 32px;
+    padding: 0;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 10px;
+  }
+  .dark .mod-key.fan {
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.50);
+  }
+  .light .mod-key.fan {
+    background: rgba(0,0,0,0.05);
+    color: rgba(0,0,0,0.40);
+  }
+
+  /* ── Accent fan button (+): warm amber glow ── */
+  .dark .mod-key.accent-key {
+    background: linear-gradient(145deg, rgba(224,160,48,0.22), rgba(224,160,48,0.10));
+    color: var(--accent-text-on-dark);
+    box-shadow: 0 0 16px rgba(224,160,48,0.08);
+  }
+  .light .mod-key.accent-key {
+    background: linear-gradient(145deg, rgba(224,160,48,0.16), rgba(224,160,48,0.06));
+    color: var(--accent-text-on-light);
+    box-shadow: 0 0 10px rgba(224,160,48,0.05);
+  }
+
+  /* ── Group dividers: subtle vertical separators ── */
+  .bar-divider {
+    width: 1px;
+    height: 16px;
+    flex-shrink: 0;
+    border-radius: 1px;
+    margin: 0 2px;
+  }
+  .dark .bar-divider { background: rgba(255,255,255,0.07); }
+  .light .bar-divider { background: rgba(0,0,0,0.07); }
+
+  /* ── Arrow key cluster: inverted-T layout ── */
   .arrow-cluster {
-    display: flex;
-    gap: 3px;
+    display: grid;
+    grid-template-columns: 26px 26px 26px;
+    grid-template-rows: 14px 14px;
+    gap: 2px;
     margin-left: auto;
+    flex-shrink: 0;
   }
   .arrow-key {
-    width: 32px;
-    height: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--radius-xs);
-    font-size: 14px;
+    border-radius: 6px;
+    font-size: 10px;
+    cursor: pointer;
+    border: none;
+    transition: all var(--duration-fast) var(--ease-out-expo);
+    line-height: 1;
   }
+  .arrow-key.up    { grid-column: 2; grid-row: 1; }
+  .arrow-key.left  { grid-column: 1; grid-row: 2; }
+  .arrow-key.down  { grid-column: 2; grid-row: 2; }
+  .arrow-key.right { grid-column: 3; grid-row: 2; }
+
   .dark .arrow-key {
-    background: var(--d-bg-surface);
-    color: var(--d-text-secondary);
-    border: 1px solid var(--d-border);
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.40);
   }
   .light .arrow-key {
-    background: var(--l-bg-surface);
-    color: var(--l-text-secondary);
-    border: 1px solid var(--l-border);
+    background: rgba(0,0,0,0.04);
+    color: rgba(0,0,0,0.35);
   }
 
+  /* ── Enter key: elevated action button ── */
   .enter-key {
-    width: 48px;
-    padding: 0 8px;
-    margin-left: 4px;
-    font-size: 11px;
-    letter-spacing: 0.3px;
+    padding: 0 14px;
+    height: 32px;
+    margin-left: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    border-radius: 10px;
+  }
+  .dark .enter-key {
+    background: linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+    color: rgba(255,255,255,0.75);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .light .enter-key {
+    background: linear-gradient(145deg, rgba(0,0,0,0.08), rgba(0,0,0,0.04));
+    color: rgba(0,0,0,0.55);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -1096,6 +1226,70 @@
     color: var(--l-text-muted);
   }
 
+  /* ── Drawer Settings Row ── */
+  .drawer-settings {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    margin: 12px 16px 0;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .dark .drawer-settings {
+    background: var(--d-bg-surface);
+    color: var(--d-text-secondary);
+  }
+  .light .drawer-settings {
+    background: var(--l-bg-surface);
+    color: var(--l-text-secondary);
+  }
+  .drawer-settings-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .drawer-settings-icon {
+    font-size: 14px;
+    opacity: 0.6;
+  }
+
+  /* Toggle switch */
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .toggle-opt {
+    padding: 4px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  .dark .toggle-opt {
+    background: var(--d-bg-hover);
+    color: var(--d-text-muted);
+  }
+  .dark .toggle-opt.active {
+    background: var(--accent-glow);
+    color: var(--accent-text-on-dark);
+  }
+  .light .toggle-opt {
+    background: var(--l-bg-hover);
+    color: var(--l-text-muted);
+  }
+  .light .toggle-opt.active {
+    background: rgba(224,160,48,0.15);
+    color: var(--accent-text-on-light);
+  }
+
   /* ══════════════════════════════════════════════════════════
      SPEC TABLES
      ══════════════════════════════════════════════════════════ */
@@ -1237,6 +1431,274 @@
   /* ══════════════════════════════════════════════════════════
      RESPONSIVE
      ══════════════════════════════════════════════════════════ */
+  /* ══════════════════════════════════════════════════════════
+     DROPDOWN: OVERVIEW DIVIDER + ITEM
+     ══════════════════════════════════════════════════════════ */
+  .dd-divider {
+    height: 1px;
+    margin: 4px 12px;
+  }
+  .dark .dd-divider { background: var(--d-border); }
+  .light .dd-divider { background: var(--l-border); }
+
+  .dd-icon.overview {
+    background: rgba(255,255,255,0.06);
+    color: var(--d-text-secondary);
+    font-size: 12px;
+  }
+  .light .dd-icon.overview {
+    background: rgba(0,0,0,0.05);
+    color: var(--l-text-secondary);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     MINIMAP -- Live Workspace Overview
+     Dot grid background, elevated pane cards, stacked surfaces.
+     ══════════════════════════════════════════════════════════ */
+
+  /* Dot grid background */
+  .minimap-bg-grid {
+    position: absolute;
+    top: 54px; left: 0; right: 0; bottom: 0;
+    z-index: 0;
+    background-size: 20px 20px;
+  }
+  .dark .minimap-bg-grid {
+    background-image:
+      radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+  }
+  .light .minimap-bg-grid {
+    background-image:
+      radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px);
+  }
+
+  /* Workspace header */
+  .minimap-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 20px 12px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .ws-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .dark .ws-title { color: var(--d-text-muted); }
+  .light .ws-title { color: var(--l-text-muted); }
+
+  .ws-name {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  .dark .ws-name { color: var(--d-text-primary); }
+  .light .ws-name { color: var(--l-text-primary); }
+
+  .ws-branch {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+  }
+  .dark .ws-branch { background: rgba(255,255,255,0.06); color: var(--d-text-secondary); }
+  .light .ws-branch { background: rgba(0,0,0,0.05); color: var(--l-text-secondary); }
+
+  /* Pane layout area */
+  .minimap-content {
+    flex: 1;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .pane-row {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+  }
+  .pane-row.half { flex: 0.5; }
+
+  /* Individual pane card */
+  .pane-card {
+    flex: 1;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .dark .pane-card {
+    background: var(--d-bg-elevated);
+    border: 1px solid var(--d-border);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .light .pane-card {
+    background: var(--l-bg-elevated);
+    border: 1px solid var(--l-border);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+
+  /* Active pane: amber border glow */
+  .pane-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 4px 24px rgba(224,160,48,0.12);
+  }
+
+  .pane-card-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .dark .pane-card-header { border-bottom: 1px solid var(--d-border); }
+  .light .pane-card-header { border-bottom: 1px solid var(--l-border); }
+
+  .pane-type-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .pane-type-dot.terminal { background: var(--terminal-color); }
+  .pane-type-dot.browser { background: var(--browser-color); }
+  .pane-type-dot.files { background: var(--files-color); }
+
+  .pane-card-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dark .pane-card-title { color: var(--d-text-secondary); }
+  .light .pane-card-title { color: var(--l-text-secondary); }
+
+  .pane-card-body {
+    flex: 1;
+    padding: 6px 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+  .dark .pane-card-body { color: var(--d-text-muted); }
+  .light .pane-card-body { color: var(--l-text-muted); }
+  .pane-card-body .highlight { color: var(--terminal-color); font-weight: 500; }
+
+  /* Stacked card effect (multiple surfaces in one pane) */
+  .pane-stack {
+    position: relative;
+    flex: 1;
+  }
+  .pane-stack .pane-card { position: relative; }
+
+  .pane-stack::before,
+  .pane-stack::after {
+    content: '';
+    position: absolute;
+    border-radius: 12px;
+    pointer-events: none;
+  }
+  .pane-stack::before {
+    top: -4px; left: 4px; right: 4px;
+    height: 100%;
+  }
+  .pane-stack.triple::after {
+    top: -8px; left: 8px; right: 8px;
+    height: 100%;
+  }
+  .dark .pane-stack::before {
+    background: var(--d-bg-surface);
+    border: 1px solid var(--d-border);
+  }
+  .dark .pane-stack.triple::after {
+    background: var(--d-bg-surface);
+    border: 1px solid var(--d-border);
+    opacity: 0.6;
+  }
+  .light .pane-stack::before {
+    background: var(--l-bg-surface);
+    border: 1px solid var(--l-border);
+  }
+  .light .pane-stack.triple::after {
+    background: var(--l-bg-surface);
+    border: 1px solid var(--l-border);
+    opacity: 0.6;
+  }
+
+  /* Stack count badge */
+  .stack-badge {
+    position: absolute;
+    top: -6px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    z-index: 10;
+    padding: 0 4px;
+  }
+  .dark .stack-badge { background: var(--accent); color: #0E0E14; }
+  .light .stack-badge { background: var(--accent); color: #FFFFFF; }
+
+  /* Tap hint */
+  .minimap-tap-hint {
+    text-align: center;
+    padding: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+  }
+  .dark .minimap-tap-hint { color: var(--d-text-muted); }
+  .light .minimap-tap-hint { color: var(--l-text-muted); }
+
+  /* "LIVE" indicator badge */
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .live-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--terminal-color);
+    animation: live-pulse 2s ease-in-out infinite;
+  }
+  @keyframes live-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .dark .live-badge { background: rgba(62,207,123,0.10); color: var(--terminal-color); }
+  .light .live-badge { background: rgba(62,207,123,0.08); color: #1B8C4E; }
+
   @media (max-width: 900px) {
     .design-page { padding: 48px 20px 80px; }
     .hero h1 { font-size: 32px; }
@@ -1369,16 +1831,19 @@
           </div>
           <!-- Top Bar: Tab Strip + Pane Type Icon -->
           <div class="top-bar">
-            <div class="tab-strip">
-              <div class="tab-item active">
-                <span class="tab-status-dot"></span>
-                zsh
+            <div class="tab-strip-wrap">
+              <div class="tab-strip">
+                <div class="tab-item active">
+                  <span class="tab-status-dot"></span>
+                  zsh
+                </div>
+                <div class="tab-item">node</div>
+                <div class="pane-dot"></div>
+                <div class="tab-item">server-log</div>
               </div>
-              <div class="tab-item">node</div>
-              <div class="pane-dot"></div>
-              <div class="tab-item">server-log</div>
             </div>
-            <div class="pane-type-icon" title="Terminal">&#9638;</div>
+            <div class="tab-add">+</div>
+            <div class="pane-type-icon terminal-icon" title="Terminal">&#9002;</div>
           </div>
           <!-- Terminal Content -->
           <div class="terminal-content">
@@ -1401,15 +1866,17 @@
           </div>
           <!-- Bottom Modifier Bar -->
           <div class="modifier-bar">
-            <div class="mod-key fan accent-key">(+)</div>
-            <div class="mod-key fan">&#9633;</div>
+            <div class="mod-key fan accent-key">+</div>
+            <div class="mod-key fan">&#9112;</div>
+            <div class="bar-divider"></div>
             <div class="arrow-cluster">
-              <div class="mod-key arrow-key">&#8592;</div>
-              <div class="mod-key arrow-key">&#8595;</div>
-              <div class="mod-key arrow-key">&#8593;</div>
-              <div class="mod-key arrow-key">&#8594;</div>
+              <div class="arrow-key up">&#8593;</div>
+              <div class="arrow-key left">&#8592;</div>
+              <div class="arrow-key down">&#8595;</div>
+              <div class="arrow-key right">&#8594;</div>
             </div>
-            <div class="mod-key enter-key">Enter</div>
+            <div class="bar-divider"></div>
+            <div class="mod-key enter-key">return</div>
           </div>
           <!-- Home Indicator -->
           <div class="home-indicator"></div>
@@ -1430,16 +1897,19 @@
             </div>
           </div>
           <div class="top-bar">
-            <div class="tab-strip">
-              <div class="tab-item active">
-                <span class="tab-status-dot"></span>
-                zsh
+            <div class="tab-strip-wrap">
+              <div class="tab-strip">
+                <div class="tab-item active">
+                  <span class="tab-status-dot"></span>
+                  zsh
+                </div>
+                <div class="tab-item">node</div>
+                <div class="pane-dot"></div>
+                <div class="tab-item">server-log</div>
               </div>
-              <div class="tab-item">node</div>
-              <div class="pane-dot"></div>
-              <div class="tab-item">server-log</div>
             </div>
-            <div class="pane-type-icon">&#9638;</div>
+            <div class="tab-add">+</div>
+            <div class="pane-type-icon terminal-icon">&#9002;</div>
           </div>
           <div class="terminal-content">
             <div><span class="prompt">~/cmux $</span> <span class="cmd">git status</span></div>
@@ -1460,15 +1930,17 @@
             <div><span class="prompt">~/cmux $</span> <span class="cursor-block"></span></div>
           </div>
           <div class="modifier-bar">
-            <div class="mod-key fan accent-key">(+)</div>
-            <div class="mod-key fan">&#9633;</div>
+            <div class="mod-key fan accent-key">+</div>
+            <div class="mod-key fan">&#9112;</div>
+            <div class="bar-divider"></div>
             <div class="arrow-cluster">
-              <div class="mod-key arrow-key">&#8592;</div>
-              <div class="mod-key arrow-key">&#8595;</div>
-              <div class="mod-key arrow-key">&#8593;</div>
-              <div class="mod-key arrow-key">&#8594;</div>
+              <div class="arrow-key up">&#8593;</div>
+              <div class="arrow-key left">&#8592;</div>
+              <div class="arrow-key down">&#8595;</div>
+              <div class="arrow-key right">&#8594;</div>
             </div>
-            <div class="mod-key enter-key">Enter</div>
+            <div class="bar-divider"></div>
+            <div class="mod-key enter-key">return</div>
           </div>
           <div class="home-indicator"></div>
         </div>
@@ -1513,36 +1985,40 @@
             </div>
           </div>
           <div class="top-bar">
-            <div class="tab-strip">
-              <div class="tab-item active">
-                <span class="tab-status-dot"></span>
-                zsh
+            <div class="tab-strip-wrap">
+              <div class="tab-strip">
+                <div class="tab-item active">
+                  <span class="tab-status-dot"></span>
+                  zsh
+                </div>
+                <div class="tab-item">node</div>
+                <div class="pane-dot"></div>
+                <div class="tab-item">server-log</div>
               </div>
-              <div class="tab-item">node</div>
-              <div class="pane-dot"></div>
-              <div class="tab-item">server-log</div>
             </div>
-            <div class="pane-type-icon">&#9638;</div>
+            <div class="tab-add">+</div>
+            <div class="pane-type-icon terminal-icon">&#9002;</div>
           </div>
           <!-- Dropdown overlay + menu -->
           <div class="dropdown-overlay"></div>
           <div class="pane-dropdown" style="top: 100px;">
             <div class="dd-item active">
-              <div class="dd-icon terminal">&#9638;</div>
+              <div class="dd-icon terminal">&#9002;</div>
               <span class="dd-label">Terminal</span>
               <span class="dd-check">&#10003;</span>
             </div>
             <div class="dd-item">
-              <div class="dd-icon browser">&#9673;</div>
+              <div class="dd-icon browser">&#127760;</div>
               <span class="dd-label">Browser</span>
             </div>
             <div class="dd-item">
               <div class="dd-icon files">&#9782;</div>
               <span class="dd-label">Files</span>
             </div>
+            <div class="dd-divider"></div>
             <div class="dd-item">
-              <div class="dd-icon shell">&#9002;</div>
-              <span class="dd-label">Shell</span>
+              <div class="dd-icon overview">&#9638;</div>
+              <span class="dd-label">Overview</span>
             </div>
           </div>
           <div class="terminal-content dimmed">
@@ -1555,15 +2031,17 @@
             <div><span class="prompt">~/cmux $</span> <span class="cursor-block"></span></div>
           </div>
           <div class="modifier-bar">
-            <div class="mod-key fan accent-key">(+)</div>
-            <div class="mod-key fan">&#9633;</div>
+            <div class="mod-key fan accent-key">+</div>
+            <div class="mod-key fan">&#9112;</div>
+            <div class="bar-divider"></div>
             <div class="arrow-cluster">
-              <div class="mod-key arrow-key">&#8592;</div>
-              <div class="mod-key arrow-key">&#8595;</div>
-              <div class="mod-key arrow-key">&#8593;</div>
-              <div class="mod-key arrow-key">&#8594;</div>
+              <div class="arrow-key up">&#8593;</div>
+              <div class="arrow-key left">&#8592;</div>
+              <div class="arrow-key down">&#8595;</div>
+              <div class="arrow-key right">&#8594;</div>
             </div>
-            <div class="mod-key enter-key">Enter</div>
+            <div class="bar-divider"></div>
+            <div class="mod-key enter-key">return</div>
           </div>
           <div class="home-indicator"></div>
         </div>
@@ -1583,35 +2061,39 @@
             </div>
           </div>
           <div class="top-bar">
-            <div class="tab-strip">
-              <div class="tab-item active">
-                <span class="tab-status-dot"></span>
-                zsh
+            <div class="tab-strip-wrap">
+              <div class="tab-strip">
+                <div class="tab-item active">
+                  <span class="tab-status-dot"></span>
+                  zsh
+                </div>
+                <div class="tab-item">node</div>
+                <div class="pane-dot"></div>
+                <div class="tab-item">server-log</div>
               </div>
-              <div class="tab-item">node</div>
-              <div class="pane-dot"></div>
-              <div class="tab-item">server-log</div>
             </div>
-            <div class="pane-type-icon">&#9638;</div>
+            <div class="tab-add">+</div>
+            <div class="pane-type-icon terminal-icon">&#9002;</div>
           </div>
           <div class="dropdown-overlay"></div>
           <div class="pane-dropdown" style="top: 100px;">
             <div class="dd-item active">
-              <div class="dd-icon terminal">&#9638;</div>
+              <div class="dd-icon terminal">&#9002;</div>
               <span class="dd-label">Terminal</span>
               <span class="dd-check">&#10003;</span>
             </div>
             <div class="dd-item">
-              <div class="dd-icon browser">&#9673;</div>
+              <div class="dd-icon browser">&#127760;</div>
               <span class="dd-label">Browser</span>
             </div>
             <div class="dd-item">
               <div class="dd-icon files">&#9782;</div>
               <span class="dd-label">Files</span>
             </div>
+            <div class="dd-divider"></div>
             <div class="dd-item">
-              <div class="dd-icon shell">&#9002;</div>
-              <span class="dd-label">Shell</span>
+              <div class="dd-icon overview">&#9638;</div>
+              <span class="dd-label">Overview</span>
             </div>
           </div>
           <div class="terminal-content dimmed">
@@ -1624,15 +2106,17 @@
             <div><span class="prompt">~/cmux $</span> <span class="cursor-block"></span></div>
           </div>
           <div class="modifier-bar">
-            <div class="mod-key fan accent-key">(+)</div>
-            <div class="mod-key fan">&#9633;</div>
+            <div class="mod-key fan accent-key">+</div>
+            <div class="mod-key fan">&#9112;</div>
+            <div class="bar-divider"></div>
             <div class="arrow-cluster">
-              <div class="mod-key arrow-key">&#8592;</div>
-              <div class="mod-key arrow-key">&#8595;</div>
-              <div class="mod-key arrow-key">&#8593;</div>
-              <div class="mod-key arrow-key">&#8594;</div>
+              <div class="arrow-key up">&#8593;</div>
+              <div class="arrow-key left">&#8592;</div>
+              <div class="arrow-key down">&#8595;</div>
+              <div class="arrow-key right">&#8594;</div>
             </div>
-            <div class="mod-key enter-key">Enter</div>
+            <div class="bar-divider"></div>
+            <div class="mod-key enter-key">return</div>
           </div>
           <div class="home-indicator"></div>
         </div>
@@ -1678,11 +2162,14 @@
           </div>
           <!-- Top Bar: Browser tabs + type icon -->
           <div class="top-bar">
-            <div class="tab-strip">
-              <div class="tab-item active">localhost</div>
-              <div class="tab-item">GitHub</div>
+            <div class="tab-strip-wrap">
+              <div class="tab-strip">
+                <div class="tab-item active">localhost</div>
+                <div class="tab-item">GitHub</div>
+              </div>
             </div>
-            <div class="pane-type-icon" style="color: var(--browser-color); background: var(--browser-bg);">&#9673;</div>
+            <div class="tab-add">+</div>
+            <div class="pane-type-icon browser-icon" style="color: var(--browser-color); background: var(--browser-bg);">&#127760;</div>
           </div>
           <!-- URL Bar -->
           <div class="url-bar-row">
@@ -1713,15 +2200,17 @@
           </div>
           <!-- Bottom Modifier Bar -->
           <div class="modifier-bar">
-            <div class="mod-key fan accent-key">(+)</div>
-            <div class="mod-key fan">&#9633;</div>
+            <div class="mod-key fan accent-key">+</div>
+            <div class="mod-key fan">&#9112;</div>
+            <div class="bar-divider"></div>
             <div class="arrow-cluster">
-              <div class="mod-key arrow-key">&#8592;</div>
-              <div class="mod-key arrow-key">&#8595;</div>
-              <div class="mod-key arrow-key">&#8593;</div>
-              <div class="mod-key arrow-key">&#8594;</div>
+              <div class="arrow-key up">&#8593;</div>
+              <div class="arrow-key left">&#8592;</div>
+              <div class="arrow-key down">&#8595;</div>
+              <div class="arrow-key right">&#8594;</div>
             </div>
-            <div class="mod-key enter-key">Enter</div>
+            <div class="bar-divider"></div>
+            <div class="mod-key enter-key">return</div>
           </div>
           <div class="home-indicator"></div>
         </div>
@@ -1741,11 +2230,14 @@
             </div>
           </div>
           <div class="top-bar">
-            <div class="tab-strip">
-              <div class="tab-item active">localhost</div>
-              <div class="tab-item">GitHub</div>
+            <div class="tab-strip-wrap">
+              <div class="tab-strip">
+                <div class="tab-item active">localhost</div>
+                <div class="tab-item">GitHub</div>
+              </div>
             </div>
-            <div class="pane-type-icon" style="color: #2D6AB0; background: rgba(91,155,213,0.10);">&#9673;</div>
+            <div class="tab-add">+</div>
+            <div class="pane-type-icon browser-icon" style="color: #2D6AB0; background: rgba(91,155,213,0.10);">&#127760;</div>
           </div>
           <div class="url-bar-row">
             <div class="nav-btn disabled">&#8592;</div>
@@ -1773,15 +2265,17 @@
             </div>
           </div>
           <div class="modifier-bar">
-            <div class="mod-key fan accent-key">(+)</div>
-            <div class="mod-key fan">&#9633;</div>
+            <div class="mod-key fan accent-key">+</div>
+            <div class="mod-key fan">&#9112;</div>
+            <div class="bar-divider"></div>
             <div class="arrow-cluster">
-              <div class="mod-key arrow-key">&#8592;</div>
-              <div class="mod-key arrow-key">&#8595;</div>
-              <div class="mod-key arrow-key">&#8593;</div>
-              <div class="mod-key arrow-key">&#8594;</div>
+              <div class="arrow-key up">&#8593;</div>
+              <div class="arrow-key left">&#8592;</div>
+              <div class="arrow-key down">&#8595;</div>
+              <div class="arrow-key right">&#8594;</div>
             </div>
-            <div class="mod-key enter-key">Enter</div>
+            <div class="bar-divider"></div>
+            <div class="mod-key enter-key">return</div>
           </div>
           <div class="home-indicator"></div>
         </div>
@@ -2011,6 +2505,16 @@
                   <span>1 pane</span>
                 </div>
               </div>
+              <div class="drawer-settings">
+                <div class="drawer-settings-label">
+                  <span class="drawer-settings-icon">&#9789;</span>
+                  Appearance
+                </div>
+                <div class="theme-toggle">
+                  <div class="toggle-opt active">Dark</div>
+                  <div class="toggle-opt">Light</div>
+                </div>
+              </div>
               <div class="drawer-add-btn">+ New Workspace</div>
             </div>
             <div class="drawer-scrim"></div>
@@ -2059,6 +2563,16 @@
                   <span>1 pane</span>
                 </div>
               </div>
+              <div class="drawer-settings">
+                <div class="drawer-settings-label">
+                  <span class="drawer-settings-icon">&#9788;</span>
+                  Appearance
+                </div>
+                <div class="theme-toggle">
+                  <div class="toggle-opt">Dark</div>
+                  <div class="toggle-opt active">Light</div>
+                </div>
+              </div>
               <div class="drawer-add-btn">+ New Workspace</div>
             </div>
             <div class="drawer-scrim"></div>
@@ -2069,10 +2583,260 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════════
-       SECTION 6: SIDE-BY-SIDE COMPARISON -- Top Bars
+       SECTION 6: MINIMAP -- Live Workspace Overview
        ══════════════════════════════════════════════════════════ -->
   <div class="section-header">
-    <div class="section-label">06 / Component Comparison</div>
+    <div class="section-label">06 / Minimap</div>
+    <h2>Live Workspace Overview</h2>
+    <p>
+      Pinch out on any view (or tap "Overview" in the pane type dropdown) to reveal
+      a bird's-eye view of the entire desktop workspace. Every pane renders live content
+      in real time — this is a full progress tracker, not a static snapshot. You see
+      everything happening across your project at once: builds running, logs streaming,
+      servers responding, agents working.
+    </p>
+  </div>
+
+  <!-- Minimap design cards -->
+  <div class="annotation-row" style="display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 40px;">
+    <div style="flex: 1; min-width: 260px; padding: 20px; border-radius: 14px; background: var(--d-bg-elevated); border: 1px solid var(--d-border);">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 8px;">Trigger</div>
+      <div style="font-size: 14px; font-weight: 600; color: var(--d-text-primary); margin-bottom: 6px;">Pinch Out + Dropdown</div>
+      <div style="font-size: 13px; color: var(--d-text-secondary); line-height: 1.5;">Pinch out from any view zooms to minimap. Also accessible via "Overview" in the pane type dropdown — always two taps away. Pinch in or tap a pane to zoom back.</div>
+    </div>
+    <div style="flex: 1; min-width: 260px; padding: 20px; border-radius: 14px; background: var(--d-bg-elevated); border: 1px solid var(--d-border);">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 8px;">Live Content</div>
+      <div style="font-size: 14px; font-weight: 600; color: var(--d-text-primary); margin-bottom: 6px;">Real-Time Pane Previews</div>
+      <div style="font-size: 13px; color: var(--d-text-secondary); line-height: 1.5;">Every pane card shows live content from the desktop — terminal output streams, browser page renders, file lists update. PTY subscriptions remain active. A pulsing "LIVE" indicator confirms real-time streaming.</div>
+    </div>
+    <div style="flex: 1; min-width: 260px; padding: 20px; border-radius: 14px; background: var(--d-bg-elevated); border: 1px solid var(--d-border);">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 8px;">Multi-Surface Panes</div>
+      <div style="font-size: 14px; font-weight: 600; color: var(--d-text-primary); margin-bottom: 6px;">Stacked Cards with Fan-Out</div>
+      <div style="font-size: 13px; color: var(--d-text-secondary); line-height: 1.5;">When a desktop pane has multiple surfaces (e.g., 3 terminal tabs), the minimap shows stacked cards with a count badge. Tap the stack to fan out cards inline — then tap a specific card to zoom into that surface.</div>
+    </div>
+    <div style="flex: 1; min-width: 260px; padding: 20px; border-radius: 14px; background: var(--d-bg-elevated); border: 1px solid var(--d-border);">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 8px;">Mobile ↔ Desktop</div>
+      <div style="font-size: 14px; font-weight: 600; color: var(--d-text-primary); margin-bottom: 6px;">Flat Tab Strip vs. Spatial Layout</div>
+      <div style="font-size: 13px; color: var(--d-text-secondary); line-height: 1.5;">Mobile flattens all surfaces per type into one scrollable tab strip (Terminal shows all terminals, Browser shows all tabs). The minimap is the only place on mobile where you see the actual desktop spatial arrangement — pane columns, proportions, and stacking.</div>
+    </div>
+  </div>
+
+  <!-- Phone mockups: Minimap dark + light -->
+  <div class="phone-pair">
+    <!-- DARK -->
+    <div class="phone-column">
+      <span class="phone-label dark">Dark</span>
+      <div class="phone-frame dark">
+        <div class="phone-inner">
+          <div class="minimap-bg-grid"></div>
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>WiFi</span>
+              <span>&#9608;&#9608;</span>
+            </div>
+          </div>
+          <div class="minimap-header">
+            <div>
+              <div class="ws-title">Workspace</div>
+              <div class="ws-name">cmux</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="live-badge"><span class="live-dot"></span> Live</div>
+              <div class="ws-branch">main</div>
+            </div>
+          </div>
+          <div class="minimap-content">
+            <!-- Row 1: two panes side by side -->
+            <div class="pane-row">
+              <!-- Pane 1: Terminal with 3 stacked surfaces -->
+              <div class="pane-stack triple">
+                <div class="stack-badge">3</div>
+                <div class="pane-card active">
+                  <div class="pane-card-header">
+                    <div class="pane-type-dot terminal"></div>
+                    <span class="pane-card-title">zsh — claude code</span>
+                  </div>
+                  <div class="pane-card-body">
+                    <div><span class="highlight">~/cmux $</span> claude</div>
+                    <div>Analyzing BridgeServer...</div>
+                    <div>Reading 4 files...</div>
+                    <div>Writing BridgeCellStream</div>
+                    <div style="color: var(--accent);">&#9608; working...</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Pane 2: Single terminal -->
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot terminal"></div>
+                  <span class="pane-card-title">server-log</span>
+                </div>
+                <div class="pane-card-body">
+                  <div>listening on :3000</div>
+                  <div>GET /api/ws 200 12ms</div>
+                  <div>WS connected: phone</div>
+                  <div>PTY sub: surf-01</div>
+                  <div>GET /api/tree 200 3ms</div>
+                </div>
+              </div>
+            </div>
+            <!-- Row 2: browser pane (shorter) -->
+            <div class="pane-row half">
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot browser"></div>
+                  <span class="pane-card-title">localhost:3000</span>
+                </div>
+                <div class="pane-card-body" style="background: rgba(255,255,255,0.02);">
+                  <div style="width: 55%; height: 5px; background: rgba(255,255,255,0.07); border-radius: 3px; margin-bottom: 4px;"></div>
+                  <div style="width: 100%; height: 20px; background: rgba(255,255,255,0.03); border-radius: 4px; margin-bottom: 4px;"></div>
+                  <div style="width: 80%; height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-bottom: 3px;"></div>
+                  <div style="width: 65%; height: 5px; background: rgba(255,255,255,0.04); border-radius: 3px;"></div>
+                </div>
+              </div>
+              <!-- Pane 4: File explorer -->
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot files"></div>
+                  <span class="pane-card-title">~/cmux/Sources</span>
+                </div>
+                <div class="pane-card-body">
+                  <div style="display: flex; gap: 4px; align-items: center; margin-bottom: 2px;"><span style="color: var(--browser-color);">&#9656;</span> App/</div>
+                  <div style="display: flex; gap: 4px; align-items: center; margin-bottom: 2px;"><span style="color: var(--browser-color);">&#9656;</span> Bridge/</div>
+                  <div style="display: flex; gap: 4px; align-items: center; margin-bottom: 2px;"><span style="color: var(--browser-color);">&#9656;</span> Panels/</div>
+                  <div style="opacity: 0.5;">ContentView.swift</div>
+                  <div style="opacity: 0.5;">AppDelegate.swift</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="minimap-tap-hint">Tap a pane to focus &middot; Pinch in to dismiss</div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIGHT -->
+    <div class="phone-column">
+      <span class="phone-label light" style="background: #F0F0EB; border-color: rgba(0,0,0,0.08); color: rgba(26,26,31,0.5);">Light</span>
+      <div class="phone-frame light">
+        <div class="phone-inner">
+          <div class="minimap-bg-grid"></div>
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>WiFi</span>
+              <span>&#9608;&#9608;</span>
+            </div>
+          </div>
+          <div class="minimap-header">
+            <div>
+              <div class="ws-title">Workspace</div>
+              <div class="ws-name">cmux</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="live-badge"><span class="live-dot"></span> Live</div>
+              <div class="ws-branch">main</div>
+            </div>
+          </div>
+          <div class="minimap-content">
+            <div class="pane-row">
+              <div class="pane-stack triple">
+                <div class="stack-badge">3</div>
+                <div class="pane-card active">
+                  <div class="pane-card-header">
+                    <div class="pane-type-dot terminal"></div>
+                    <span class="pane-card-title">zsh — claude code</span>
+                  </div>
+                  <div class="pane-card-body">
+                    <div><span class="highlight">~/cmux $</span> claude</div>
+                    <div>Analyzing BridgeServer...</div>
+                    <div>Reading 4 files...</div>
+                    <div>Writing BridgeCellStream</div>
+                    <div style="color: var(--accent);">&#9608; working...</div>
+                  </div>
+                </div>
+              </div>
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot terminal"></div>
+                  <span class="pane-card-title">server-log</span>
+                </div>
+                <div class="pane-card-body">
+                  <div>listening on :3000</div>
+                  <div>GET /api/ws 200 12ms</div>
+                  <div>WS connected: phone</div>
+                  <div>PTY sub: surf-01</div>
+                  <div>GET /api/tree 200 3ms</div>
+                </div>
+              </div>
+            </div>
+            <div class="pane-row half">
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot browser"></div>
+                  <span class="pane-card-title">localhost:3000</span>
+                </div>
+                <div class="pane-card-body" style="background: rgba(0,0,0,0.015);">
+                  <div style="width: 55%; height: 5px; background: rgba(0,0,0,0.06); border-radius: 3px; margin-bottom: 4px;"></div>
+                  <div style="width: 100%; height: 20px; background: rgba(0,0,0,0.03); border-radius: 4px; margin-bottom: 4px;"></div>
+                  <div style="width: 80%; height: 5px; background: rgba(0,0,0,0.05); border-radius: 3px; margin-bottom: 3px;"></div>
+                  <div style="width: 65%; height: 5px; background: rgba(0,0,0,0.04); border-radius: 3px;"></div>
+                </div>
+              </div>
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot files"></div>
+                  <span class="pane-card-title">~/cmux/Sources</span>
+                </div>
+                <div class="pane-card-body">
+                  <div style="display: flex; gap: 4px; align-items: center; margin-bottom: 2px;"><span style="color: var(--browser-color);">&#9656;</span> App/</div>
+                  <div style="display: flex; gap: 4px; align-items: center; margin-bottom: 2px;"><span style="color: var(--browser-color);">&#9656;</span> Bridge/</div>
+                  <div style="display: flex; gap: 4px; align-items: center; margin-bottom: 2px;"><span style="color: var(--browser-color);">&#9656;</span> Panels/</div>
+                  <div style="opacity: 0.5;">ContentView.swift</div>
+                  <div style="opacity: 0.5;">AppDelegate.swift</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="minimap-tap-hint">Tap a pane to focus &middot; Pinch in to dismiss</div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Minimap interaction flow -->
+  <div style="margin-top: 48px; padding: 24px; border-radius: 14px; background: var(--d-bg-elevated); border: 1px solid var(--d-border);">
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 12px;">Interaction Flow</div>
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--d-text-secondary); line-height: 1.5;">
+      <div style="padding: 8px 14px; background: var(--d-bg-surface); border-radius: 8px; color: var(--d-text-primary); font-weight: 500;">Pinch out</div>
+      <span style="color: var(--d-text-muted);">or</span>
+      <div style="padding: 8px 14px; background: var(--d-bg-surface); border-radius: 8px; color: var(--d-text-primary); font-weight: 500;">Dropdown → Overview</div>
+      <span style="color: var(--accent);">→</span>
+      <div style="padding: 8px 14px; background: var(--d-bg-surface); border-radius: 8px; color: var(--d-text-primary); font-weight: 500;">Minimap (live)</div>
+      <span style="color: var(--accent);">→</span>
+      <div style="padding: 8px 14px; background: var(--d-bg-surface); border-radius: 8px; color: var(--d-text-primary); font-weight: 500;">Tap stacked pane</div>
+      <span style="color: var(--accent);">→</span>
+      <div style="padding: 8px 14px; background: var(--d-bg-surface); border-radius: 8px; color: var(--d-text-primary); font-weight: 500;">Cards fan out</div>
+      <span style="color: var(--accent);">→</span>
+      <div style="padding: 8px 14px; background: var(--d-bg-surface); border-radius: 8px; color: var(--d-text-primary); font-weight: 500;">Tap card → Zoom in</div>
+    </div>
+    <div style="margin-top: 16px; font-size: 12px; color: var(--d-text-muted); line-height: 1.5;">
+      <strong style="color: var(--d-text-secondary);">Single-surface pane:</strong> Tap once → zooms directly into that surface.<br>
+      <strong style="color: var(--d-text-secondary);">Multi-surface pane (stacked):</strong> Tap → cards fan out horizontally → tap a specific card to zoom in.<br>
+      <strong style="color: var(--d-text-secondary);">Dismiss:</strong> Pinch in, or tap empty space between panes.
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 7: SIDE-BY-SIDE COMPARISON -- Top Bars
+       ══════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <div class="section-label">07 / Component Comparison</div>
     <h2>Top Bar Across Types</h2>
     <p>
       The top bar adapts its content per pane type while maintaining a consistent
@@ -2087,16 +2851,19 @@
       <span class="strip-label">Terminal</span>
       <div class="comparison-strip dark" style="border: 1px solid rgba(255,255,255,0.08);">
         <div class="top-bar" style="height: 42px;">
-          <div class="tab-strip">
-            <div class="tab-item active">
-              <span class="tab-status-dot"></span>
-              zsh
+          <div class="tab-strip-wrap">
+            <div class="tab-strip">
+              <div class="tab-item active">
+                <span class="tab-status-dot"></span>
+                zsh
+              </div>
+              <div class="tab-item">node</div>
+              <div class="pane-dot"></div>
+              <div class="tab-item">server-log</div>
             </div>
-            <div class="tab-item">node</div>
-            <div class="pane-dot"></div>
-            <div class="tab-item">server-log</div>
           </div>
-          <div class="pane-type-icon">&#9638;</div>
+          <div class="tab-add">+</div>
+          <div class="pane-type-icon terminal-icon">&#9002;</div>
         </div>
       </div>
     </div>
@@ -2105,11 +2872,14 @@
       <span class="strip-label">Browser</span>
       <div class="comparison-strip dark" style="border: 1px solid rgba(255,255,255,0.08);">
         <div class="top-bar" style="height: 42px;">
-          <div class="tab-strip">
-            <div class="tab-item active">localhost</div>
-            <div class="tab-item">GitHub</div>
+          <div class="tab-strip-wrap">
+            <div class="tab-strip">
+              <div class="tab-item active">localhost</div>
+              <div class="tab-item">GitHub</div>
+            </div>
           </div>
-          <div class="pane-type-icon" style="color: var(--browser-color); background: var(--browser-bg);">&#9673;</div>
+          <div class="tab-add">+</div>
+          <div class="pane-type-icon browser-icon" style="color: var(--browser-color); background: var(--browser-bg);">&#127760;</div>
         </div>
       </div>
     </div>
@@ -2137,16 +2907,19 @@
       <span class="strip-label">Terminal (Light)</span>
       <div class="comparison-strip light" style="border: 1px solid rgba(0,0,0,0.10); background: var(--l-bg-primary);">
         <div class="top-bar" style="height: 42px; background: var(--l-bg-primary); border-bottom: 1px solid var(--l-border);">
-          <div class="tab-strip">
-            <div class="tab-item active" style="color: var(--l-text-primary); background: var(--l-bg-surface);">
-              <span class="tab-status-dot"></span>
-              zsh
+          <div class="tab-strip-wrap">
+            <div class="tab-strip">
+              <div class="tab-item active" style="color: var(--l-text-primary); background: var(--l-bg-surface);">
+                <span class="tab-status-dot"></span>
+                zsh
+              </div>
+              <div class="tab-item" style="color: var(--l-text-muted);">node</div>
+              <div class="pane-dot" style="background: var(--l-text-muted);"></div>
+              <div class="tab-item" style="color: var(--l-text-muted);">server-log</div>
             </div>
-            <div class="tab-item" style="color: var(--l-text-muted);">node</div>
-            <div class="pane-dot" style="background: var(--l-text-muted);"></div>
-            <div class="tab-item" style="color: var(--l-text-muted);">server-log</div>
           </div>
-          <div class="pane-type-icon" style="color: var(--accent-text-on-light); background: rgba(224,160,48,0.10);">&#9638;</div>
+          <div class="tab-add" style="color: var(--l-text-muted);">+</div>
+          <div class="pane-type-icon terminal-icon" style="color: #1B8C4E; background: rgba(45,180,90,0.10);">&#9002;</div>
         </div>
       </div>
     </div>
@@ -2154,11 +2927,14 @@
       <span class="strip-label">Browser (Light)</span>
       <div class="comparison-strip light" style="border: 1px solid rgba(0,0,0,0.10); background: var(--l-bg-primary);">
         <div class="top-bar" style="height: 42px; background: var(--l-bg-primary); border-bottom: 1px solid var(--l-border);">
-          <div class="tab-strip">
-            <div class="tab-item active" style="color: var(--l-text-primary); background: var(--l-bg-surface);">localhost</div>
-            <div class="tab-item" style="color: var(--l-text-muted);">GitHub</div>
+          <div class="tab-strip-wrap">
+            <div class="tab-strip">
+              <div class="tab-item active" style="color: var(--l-text-primary); background: var(--l-bg-surface);">localhost</div>
+              <div class="tab-item" style="color: var(--l-text-muted);">GitHub</div>
+            </div>
           </div>
-          <div class="pane-type-icon" style="color: #2D6AB0; background: rgba(91,155,213,0.10);">&#9673;</div>
+          <div class="tab-add" style="color: var(--l-text-muted);">+</div>
+          <div class="pane-type-icon browser-icon" style="color: #2D6AB0; background: rgba(91,155,213,0.10);">&#127760;</div>
         </div>
       </div>
     </div>
@@ -2183,10 +2959,10 @@
        SECTION 7: BOTTOM BAR COMPARISON
        ══════════════════════════════════════════════════════════ -->
   <div class="section-header">
-    <div class="section-label">07 / Bottom Bar</div>
+    <div class="section-label">08 / Bottom Bar</div>
     <h2>Modifier Bar Consistency</h2>
     <p>
-      The bottom modifier bar is consistent across Terminal, Browser, and Shell
+      The bottom modifier bar is consistent across Terminal and Browser
       views. The File Explorer replaces it with contextual file actions. This
       consistency builds muscle memory for keyboard shortcuts.
     </p>
@@ -2197,15 +2973,17 @@
       <span class="strip-label">Modifier Bar (Dark)</span>
       <div class="comparison-strip dark" style="border: 1px solid rgba(255,255,255,0.08);">
         <div class="modifier-bar">
-          <div class="mod-key fan accent-key">(+)</div>
-          <div class="mod-key fan">&#9633;</div>
+          <div class="mod-key fan accent-key">+</div>
+          <div class="mod-key fan">&#9112;</div>
+          <div class="bar-divider"></div>
           <div class="arrow-cluster">
-            <div class="mod-key arrow-key">&#8592;</div>
-            <div class="mod-key arrow-key">&#8595;</div>
-            <div class="mod-key arrow-key">&#8593;</div>
-            <div class="mod-key arrow-key">&#8594;</div>
+            <div class="arrow-key up">&#8593;</div>
+            <div class="arrow-key left">&#8592;</div>
+            <div class="arrow-key down">&#8595;</div>
+            <div class="arrow-key right">&#8594;</div>
           </div>
-          <div class="mod-key enter-key">Enter</div>
+          <div class="bar-divider"></div>
+          <div class="mod-key enter-key">return</div>
         </div>
       </div>
     </div>
@@ -2225,16 +3003,18 @@
     <div class="comparison-item">
       <span class="strip-label">Modifier Bar (Light)</span>
       <div class="comparison-strip light" style="border: 1px solid rgba(0,0,0,0.10); background: var(--l-bg-primary);">
-        <div class="modifier-bar" style="background: var(--l-bg-primary); border-top: 1px solid var(--l-border);">
-          <div class="mod-key fan accent-key" style="background: rgba(224,160,48,0.12); color: var(--accent-text-on-light); border-color: rgba(224,160,48,0.20);">(+)</div>
-          <div class="mod-key fan" style="background: var(--l-bg-surface); color: var(--l-text-secondary); border-color: var(--l-border);">&#9633;</div>
+        <div class="modifier-bar">
+          <div class="mod-key fan accent-key">+</div>
+          <div class="mod-key fan">&#9112;</div>
+          <div class="bar-divider"></div>
           <div class="arrow-cluster">
-            <div class="mod-key arrow-key" style="background: var(--l-bg-surface); color: var(--l-text-secondary); border-color: var(--l-border);">&#8592;</div>
-            <div class="mod-key arrow-key" style="background: var(--l-bg-surface); color: var(--l-text-secondary); border-color: var(--l-border);">&#8595;</div>
-            <div class="mod-key arrow-key" style="background: var(--l-bg-surface); color: var(--l-text-secondary); border-color: var(--l-border);">&#8593;</div>
-            <div class="mod-key arrow-key" style="background: var(--l-bg-surface); color: var(--l-text-secondary); border-color: var(--l-border);">&#8594;</div>
+            <div class="arrow-key up">&#8593;</div>
+            <div class="arrow-key left">&#8592;</div>
+            <div class="arrow-key down">&#8595;</div>
+            <div class="arrow-key right">&#8594;</div>
           </div>
-          <div class="mod-key enter-key" style="background: var(--l-bg-surface); color: var(--l-text-secondary); border-color: var(--l-border);">Enter</div>
+          <div class="bar-divider"></div>
+          <div class="mod-key enter-key">return</div>
         </div>
       </div>
     </div>
@@ -2254,7 +3034,7 @@
        SPEC TABLES
        ══════════════════════════════════════════════════════════ -->
   <div class="section-header">
-    <div class="section-label">08 / Specifications</div>
+    <div class="section-label">09 / Specifications</div>
     <h2>Component Specs</h2>
     <p>
       Precise measurements, colors, and typography for implementation. All values

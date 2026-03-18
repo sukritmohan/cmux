@@ -225,6 +225,47 @@ lib/
 
 **Connection overlay as Stack layer:** Connection states (connecting, reconnecting, disconnected) are overlaid on top of the terminal screen's Stack, not as separate routes. This means the terminal view stays mounted and can resume rendering immediately when connection is restored.
 
+### Cell Sizing Pipeline (Keyboard-Stable)
+
+The terminal text resize bug was caused by `TerminalPainter.paint()` re-deriving `cellHeight = size.height / rows` from the clamped paint area. When `adjustResize` shrinks the view for the on-screen keyboard, height decreases → cellHeight decreases → font shrinks.
+
+**Fix:** Cell dimensions are derived from viewport width only (stable regardless of keyboard state) and passed to the painter as constructor parameters — never re-derived from the paint area.
+
+```
+cellWidth     = constraints.maxWidth / cols       // width-only derivation
+cellHeight    = cellWidth * 1.75                  // constant aspect ratio
+terminalHeight = cellHeight * rows                // full logical height
+fontSize      = cellHeight * 0.72                 // tuned for JetBrains Mono
+```
+
+When the terminal's logical height exceeds the visible viewport (keyboard up), a `ClipRect` + `Transform.translate` scrolls to keep the cursor row visible:
+
+```
+visibleRows   = (constraints.maxHeight / cellHeight).floor()
+maxScrollRow  = max(0, rows - visibleRows)
+scrollRow     = clamp(cursorRow - visibleRows + 1, 0, maxScrollRow)
+scrollOffsetY = scrollRow * cellHeight
+```
+
+The `adjustResize` setting in AndroidManifest.xml is preserved — the modifier bar naturally stays above the keyboard.
+
+### Font
+
+JetBrains Mono (SIL Open Font License) bundled in `assets/fonts/`. Four weights: Regular, Bold, Italic, BoldItalic. Registered in `pubspec.yaml` under `flutter.fonts`. The painter uses `fontFamily: 'JetBrains Mono'`.
+
+### Cursor Rendering
+
+- Filled block cursor with `PaintingStyle.fill`, 2px corner radius via `RRect`
+- Color: `terminalCursorFill` (accentBlue at ~78% alpha)
+- Character under cursor drawn in `terminalBg` color for inversion effect
+- Blink: 530ms on/530ms off via `Timer.periodic`, phase resets on new cell frame
+
+### Depth Effects
+
+- Top bar: `BoxShadow(black26, blur 4, offset 0,1)` replaces hard 1px border
+- Terminal inner shadow: 3px `LinearGradient` overlay at top edge
+- Terminal vignette: `RadialGradient` overlay (transparent center, `#080B10` edges at ~16%)
+
 ## Phase 3 (Planned)
 
 - Mobile-specific rendering hints using stored mobile dimensions

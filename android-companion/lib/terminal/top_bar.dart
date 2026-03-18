@@ -30,11 +30,15 @@ class TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 40,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.bgSecondary,
-        border: Border(
-          bottom: BorderSide(color: AppColors.borderSubtle),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(66), // ~26%
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Row(
         children: [

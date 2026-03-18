@@ -7,6 +7,15 @@
 ///   4. CellFrameParser updates cell grid
 ///   5. CustomPainter renders cells at native mobile font size
 ///
+/// Cell sizing pipeline (keyboard-stable):
+///   cellWidth  = viewportWidth / cols         (width-only derivation)
+///   cellHeight = cellWidth * _cellAspectRatio  (stable regardless of keyboard)
+///   fontSize   = cellHeight * 0.72             (tuned for JetBrains Mono x-height)
+///
+/// When the on-screen keyboard appears (adjustResize), the viewport shrinks
+/// vertically but width stays constant — so cell dimensions never change.
+/// A clip + translate keeps the cursor row visible by scrolling the terminal.
+///
 /// No VT parser needed on Android — the Mac does all terminal parsing.
 /// This widget is a pure renderer with no navigation chrome (no Scaffold,
 /// no AppBar, no Drawer). The parent [TerminalScreen] provides those.
@@ -23,6 +32,10 @@ import '../app/colors.dart';
 import '../app/providers.dart';
 import '../native/ghostty_vt.dart';
 import 'cell_frame_parser.dart';
+
+/// Height-to-width ratio for terminal cells. 1.75:1 yields ~15-18 visible
+/// rows in portrait vs ~12-14 with the previous 2.0 ratio.
+const _cellAspectRatio = 1.75;
 
 class TerminalView extends ConsumerStatefulWidget {
   final String surfaceId;
@@ -44,25 +57,54 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   bool _subscribing = true;
   String? _error;
 
-  // Keyboard input
-  final _focusNode = FocusNode();
+  // Keyboard input — onKeyEvent handles hardware/Bluetooth keyboards while
+  // the hidden TextField + _onTextChanged handles soft keyboard IME.
+  late final _focusNode = FocusNode(onKeyEvent: _handleKeyEvent);
+  final _textController = TextEditingController();
+  String _lastText = '';
+
+  // On-screen debug log (temporary — remove after debugging)
+  final List<String> _debugLog = [];
+  void _dlog(String msg) {
+    debugPrint('[TerminalView] $msg');
+    setState(() {
+      _debugLog.add(msg);
+      if (_debugLog.length > 8) _debugLog.removeAt(0);
+    });
+  }
 
   // Cursor state for painting
   int _cursorCol = 0;
   int _cursorRow = 0;
   bool _cursorVisible = true;
 
+  // Cursor blink: 530ms on/530ms off
+  Timer? _blinkTimer;
+  bool _cursorBlinkOn = true;
+
   @override
   void initState() {
     super.initState();
+    _textController.addListener(_onTextChanged);
     _subscribeToSurface();
+    _startBlinkTimer();
   }
 
   @override
   void dispose() {
     _unsubscribe();
+    _textController.dispose();
     _focusNode.dispose();
+    _blinkTimer?.cancel();
     super.dispose();
+  }
+
+  void _startBlinkTimer() {
+    _blinkTimer = Timer.periodic(const Duration(milliseconds: 530), (_) {
+      if (mounted) {
+        setState(() => _cursorBlinkOn = !_cursorBlinkOn);
+      }
+    });
   }
 
   Future<void> _subscribeToSurface() async {
@@ -154,6 +196,9 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     final result = _cellParser.parse(data);
     if (result == null) return;
 
+    // Reset blink phase on new frame (cursor moved or content changed).
+    _cursorBlinkOn = true;
+
     setState(() {
       _cells = result.cells;
       _cols = result.cols;
@@ -181,8 +226,45 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     }
   }
 
+  /// Whether we're programmatically resetting the buffer (ignore listener).
+  bool _resettingBuffer = false;
+
+  /// Handles soft keyboard IME input by diffing the hidden TextField's text.
+  void _onTextChanged() {
+    if (_resettingBuffer) return;
+
+    final newText = _textController.text;
+    _dlog('textChanged: last=${_lastText.length}ch new=${newText.length}ch');
+
+    if (newText.length > _lastText.length) {
+      // Characters were added — extract and send the new portion.
+      final added = newText.substring(_lastText.length);
+      _dlog('IME added: "${added.replaceAll('\n', '\\n')}"');
+      // Convert newlines to carriage returns for terminal.
+      _sendInput(added.replaceAll('\n', '\r'));
+    } else if (newText.length < _lastText.length) {
+      // Characters were deleted — send backspace for each deleted char.
+      final deletedCount = _lastText.length - newText.length;
+      _dlog('IME deleted $deletedCount chars');
+      for (int i = 0; i < deletedCount; i++) {
+        _sendInput('\x7f');
+      }
+    }
+
+    _lastText = newText;
+
+    // Reset buffer if it gets too long to prevent memory bloat.
+    if (_textController.text.length > 100) {
+      _resettingBuffer = true;
+      _textController.text = '';
+      _lastText = '';
+      _resettingBuffer = false;
+    }
+  }
+
   /// Handles key events from the hardware/software keyboard.
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    _dlog('keyEvent: ${event.runtimeType} key=${event.logicalKey.keyLabel} char=${event.character}');
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
@@ -279,43 +361,139 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
     return GestureDetector(
       onTap: () {
+        _dlog('onTap: hasFocus=${_focusNode.hasFocus}');
         _focusNode.requestFocus();
-        SystemChannels.textInput.invokeMethod('TextInput.show');
       },
-      child: Focus(
-        focusNode: _focusNode,
-        onKeyEvent: _handleKeyEvent,
-        autofocus: true,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (_cols == 0 || _rows == 0) {
-              return const Center(
-                child: CircularProgressIndicator(color: AppColors.accentBlue),
-              );
-            }
-
-            final cellWidth = constraints.maxWidth / _cols;
-            final cellHeight = cellWidth * 2.0;
-            final terminalHeight = cellHeight * _rows;
-
-            return SizedBox(
-              width: constraints.maxWidth,
-              height: terminalHeight.clamp(0, constraints.maxHeight),
-              child: CustomPaint(
-                size: Size(constraints.maxWidth,
-                    terminalHeight.clamp(0, constraints.maxHeight)),
-                painter: TerminalPainter(
-                  cells: _cells,
-                  cols: _cols,
-                  rows: _rows,
-                  cursorCol: _cursorCol,
-                  cursorRow: _cursorRow,
-                  cursorVisible: _cursorVisible,
-                ),
-              ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (_cols == 0 || _rows == 0) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.accentBlue),
             );
-          },
-        ),
+          }
+
+          // Derive cell dimensions from width only — stable regardless
+          // of keyboard visibility (adjustResize shrinks height, not width).
+          final cellWidth = constraints.maxWidth / _cols;
+          final cellHeight = cellWidth * _cellAspectRatio;
+          final terminalHeight = cellHeight * _rows;
+
+          // Auto-scroll to keep cursor row visible.
+          final visibleRows = (constraints.maxHeight / cellHeight).floor();
+          final maxScrollRow = (_rows - visibleRows).clamp(0, _rows);
+          final scrollRow = (_cursorRow - visibleRows + 1).clamp(0, maxScrollRow);
+          final scrollOffsetY = scrollRow * cellHeight;
+
+          return ClipRect(
+            child: Stack(
+              children: [
+                // Hidden text input to capture soft keyboard IME events.
+                // Full-size but transparent — ensures Android IME connects
+                // properly. Tapping anywhere focuses this TextField and
+                // opens the soft keyboard. Input flows through
+                // _onTextChanged(). Hardware key events still flow through
+                // _focusNode.onKeyEvent → _handleKeyEvent().
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: 0,
+                    child: TextField(
+                      controller: _textController,
+                      focusNode: _focusNode,
+                      autofocus: true,
+                      maxLines: null,
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.none,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      showCursor: false,
+                      decoration: const InputDecoration.collapsed(hintText: ''),
+                    ),
+                  ),
+                ),
+
+                // Terminal content, translated to scroll cursor into view
+                Transform.translate(
+                  offset: Offset(0, -scrollOffsetY),
+                  child: CustomPaint(
+                    size: Size(constraints.maxWidth, terminalHeight),
+                    painter: TerminalPainter(
+                      cells: _cells,
+                      cols: _cols,
+                      rows: _rows,
+                      cellWidth: cellWidth,
+                      cellHeight: cellHeight,
+                      cursorCol: _cursorCol,
+                      cursorRow: _cursorRow,
+                      cursorVisible: _cursorVisible && _cursorBlinkOn,
+                    ),
+                  ),
+                ),
+
+                // Inner shadow: 3px gradient at terminal top edge — feels recessed
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withAlpha(38), // ~15%
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Subtle vignette: radial gradient for depth
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: Alignment.center,
+                          radius: 1.2,
+                          colors: [
+                            Colors.transparent,
+                            const Color(0xFF080B10).withAlpha(40),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // DEBUG OVERLAY — remove after debugging
+                if (_debugLog.isNotEmpty)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: IgnorePointer(
+                      child: Container(
+                        color: Colors.black.withAlpha(200),
+                        padding: const EdgeInsets.all(6),
+                        child: Text(
+                          _debugLog.join('\n'),
+                          style: const TextStyle(
+                            color: Colors.greenAccent,
+                            fontSize: 10,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -323,13 +501,22 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
 /// CustomPainter that renders the terminal cell grid.
 ///
-/// Each cell is drawn as a colored rectangle (background) with a
-/// character glyph on top. Supports bold, italic, underline,
-/// strikethrough, inverse, and dim attributes.
+/// Cell dimensions are passed in from the layout — never re-derived from
+/// the paint area size. This prevents text shrinking when the keyboard
+/// reduces the visible viewport (adjustResize).
+///
+/// Rendering order:
+///   1. Full background fill (prevents gaps)
+///   2. Per-cell backgrounds
+///   3. Character glyphs (JetBrains Mono)
+///   4. Text decorations (underline, strikethrough, overline)
+///   5. Cursor (filled block with character inversion)
 class TerminalPainter extends CustomPainter {
   final List<CellData> cells;
   final int cols;
   final int rows;
+  final double cellWidth;
+  final double cellHeight;
   final int cursorCol;
   final int cursorRow;
   final bool cursorVisible;
@@ -338,6 +525,8 @@ class TerminalPainter extends CustomPainter {
     required this.cells,
     required this.cols,
     required this.rows,
+    required this.cellWidth,
+    required this.cellHeight,
     required this.cursorCol,
     required this.cursorRow,
     required this.cursorVisible,
@@ -347,9 +536,13 @@ class TerminalPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (cells.isEmpty || cols == 0 || rows == 0) return;
 
-    final cellWidth = size.width / cols;
-    final cellHeight = size.height / rows;
-    final fontSize = cellHeight * 0.75;
+    final fontSize = cellHeight * 0.72;
+
+    // 1. Fill entire canvas with terminal background to prevent gaps.
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = AppColors.terminalBg,
+    );
 
     final bgPaint = Paint();
 
@@ -399,12 +592,18 @@ class TerminalPainter extends CustomPainter {
           canvas.drawRect(Rect.fromLTWH(x, y, charWidth, cellHeight), bgPaint);
         }
 
+        // Determine if this cell is under the cursor (for character inversion).
+        final isCursorCell = cursorVisible && col == cursorCol && row == cursorRow;
+
         // Draw character glyph.
         if (cell.codepoint != 0 && !cell.isInvisible) {
+          // Under cursor: draw character in background color for inversion effect.
+          final charColor = isCursorCell ? AppColors.terminalBg : fg;
+
           final textStyle = ui.TextStyle(
-            color: fg,
+            color: charColor,
             fontSize: fontSize,
-            fontFamily: 'monospace',
+            fontFamily: 'JetBrains Mono',
             fontWeight: cell.isBold ? FontWeight.bold : FontWeight.normal,
             fontStyle: cell.isItalic ? FontStyle.italic : FontStyle.normal,
             decoration: _textDecoration(cell),
@@ -452,16 +651,18 @@ class TerminalPainter extends CustomPainter {
       }
     }
 
-    // Draw cursor.
+    // Draw cursor: filled block with slight transparency and rounded corners.
     if (cursorVisible && cursorCol < cols && cursorRow < rows) {
       final cx = cursorCol * cellWidth;
       final cy = cursorRow * cellHeight;
       final cursorPaint = Paint()
-        ..color = AppColors.terminalCursor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0;
-      canvas.drawRect(
-        Rect.fromLTWH(cx, cy, cellWidth, cellHeight),
+        ..color = AppColors.terminalCursorFill
+        ..style = PaintingStyle.fill;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(cx, cy, cellWidth, cellHeight),
+          const Radius.circular(2),
+        ),
         cursorPaint,
       );
     }
@@ -480,6 +681,8 @@ class TerminalPainter extends CustomPainter {
     return !identical(cells, oldDelegate.cells) ||
         cursorCol != oldDelegate.cursorCol ||
         cursorRow != oldDelegate.cursorRow ||
-        cursorVisible != oldDelegate.cursorVisible;
+        cursorVisible != oldDelegate.cursorVisible ||
+        cellWidth != oldDelegate.cellWidth ||
+        cellHeight != oldDelegate.cellHeight;
   }
 }

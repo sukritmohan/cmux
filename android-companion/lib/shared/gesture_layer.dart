@@ -4,6 +4,10 @@
 ///   - Left edge swipe → open workspace drawer
 ///   - Pinch out → minimap overlay
 ///   - Directional swipe on terminal → arrow key input
+///
+/// Uses only scale gestures (superset of pan) to avoid the Flutter
+/// "Incorrect GestureDetector arguments" error when both pan and scale
+/// are registered on the same GestureDetector.
 library;
 
 import 'package:flutter/material.dart';
@@ -53,15 +57,14 @@ class _GestureLayerState extends State<GestureLayer> {
   bool _pinchTriggered = false;
   static const _pinchThresholdScale = 0.7; // Scale below this triggers minimap
 
+  // Track pointer count to distinguish single-finger pan from two-finger pinch
+  int _pointerCount = 0;
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // Pan gestures for edge swipe and arrow swipe
-      onPanStart: _onPanStart,
-      onPanUpdate: _onPanUpdate,
-      onPanEnd: _onPanEnd,
-
-      // Scale gestures for pinch-to-minimap
+      // Scale gestures handle both single-finger pan (edge swipe, arrow swipe)
+      // and two-finger pinch (minimap). Scale is a superset of pan in Flutter.
       onScaleStart: _onScaleStart,
       onScaleUpdate: _onScaleUpdate,
       onScaleEnd: _onScaleEnd,
@@ -72,22 +75,45 @@ class _GestureLayerState extends State<GestureLayer> {
   }
 
   // ---------------------------------------------------------------------------
-  // Pan (edge swipe + arrow keys)
+  // Unified scale handler (single-finger = pan, two-finger = pinch)
   // ---------------------------------------------------------------------------
 
-  void _onPanStart(DragStartDetails details) {
-    _panStart = details.localPosition;
+  void _onScaleStart(ScaleStartDetails details) {
+    _pointerCount = details.pointerCount;
+    _pinchTriggered = false;
 
-    // Check if this is a left-edge swipe.
-    _isEdgeSwipe = details.localPosition.dx < _edgeThreshold;
+    if (_pointerCount == 1) {
+      // Single finger — treat as pan start.
+      _panStart = details.localFocalPoint;
+      _isEdgeSwipe = details.localFocalPoint.dx < _edgeThreshold;
+    }
   }
 
-  void _onPanUpdate(DragUpdateDetails details) {
-    // Edge swipe is handled on end (velocity check).
+  void _onScaleUpdate(ScaleUpdateDetails details) {
+    if (_pointerCount >= 2) {
+      // Two-finger pinch — check for minimap trigger.
+      if (_pinchTriggered) return;
+      if (details.scale < _pinchThresholdScale) {
+        _pinchTriggered = true;
+        widget.callbacks.onOpenMinimap();
+      }
+    }
+    // Single finger pan updates don't need processing — velocity is checked on end.
   }
 
-  void _onPanEnd(DragEndDetails details) {
-    if (_panStart == null) return;
+  void _onScaleEnd(ScaleEndDetails details) {
+    if (_pointerCount >= 2) {
+      // Pinch ended.
+      _pinchTriggered = false;
+      _pointerCount = 0;
+      return;
+    }
+
+    // Single finger — handle as pan end.
+    if (_panStart == null) {
+      _pointerCount = 0;
+      return;
+    }
 
     final velocity = details.velocity.pixelsPerSecond;
 
@@ -98,45 +124,23 @@ class _GestureLayerState extends State<GestureLayer> {
       }
       _isEdgeSwipe = false;
       _panStart = null;
+      _pointerCount = 0;
       return;
     }
 
     // Arrow swipe detection
-    final dx = details.velocity.pixelsPerSecond.dx;
-    final dy = details.velocity.pixelsPerSecond.dy;
+    final dx = velocity.dx;
+    final dy = velocity.dy;
 
     if (dx.abs() > _swipeVelocity || dy.abs() > _swipeVelocity) {
       if (dx.abs() > dy.abs()) {
-        // Horizontal
         widget.callbacks.onArrowSwipe(dx > 0 ? 'right' : 'left');
       } else {
-        // Vertical
         widget.callbacks.onArrowSwipe(dy > 0 ? 'down' : 'up');
       }
     }
 
     _panStart = null;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Scale (pinch-to-minimap)
-  // ---------------------------------------------------------------------------
-
-  void _onScaleStart(ScaleStartDetails details) {
-    _pinchTriggered = false;
-  }
-
-  void _onScaleUpdate(ScaleUpdateDetails details) {
-    if (_pinchTriggered) return;
-
-    // Pinch-out: scale decreases below threshold.
-    if (details.scale < _pinchThresholdScale) {
-      _pinchTriggered = true;
-      widget.callbacks.onOpenMinimap();
-    }
-  }
-
-  void _onScaleEnd(ScaleEndDetails details) {
-    _pinchTriggered = false;
+    _pointerCount = 0;
   }
 }

@@ -97,7 +97,7 @@ Radii: sm=6, md=10, lg=16, xl=20
 │  (gesture layer wraps this) │
 │                             │
 ├─────────────────────────────┤
-│ [Esc][Ctrl][Alt]  [←↓↑→][⏎]│  52px — ModifierBar
+│ [Esc][Ctrl][Alt]  [←↓↑→][⏎]│  44px — ModifierBar
 └─────────────────────────────┘
 ```
 
@@ -120,11 +120,34 @@ Radii: sm=6, md=10, lg=16, xl=20
 ### Modifier Bar Behavior
 
 - Left group: Esc, Ctrl, Alt, Tab
-- Right group: ← ↓ ↑ → arrow keys + Enter
+- Right group: ← ↓ ↑ → arrow keys (grouped in a pill container) + Enter
 - **Esc and Tab**: Momentary — fire escape sequence on tap
 - **Ctrl and Alt**: Toggle — highlight active until next key, then auto-clear
+- **Bar height**: 44px (reduced from 52px to save terminal space while meeting 44pt touch targets)
 - Key styling: bgTertiary bg, borderSubtle border, 36px height, radiusSm corners
-- Active key: accentBlue bg + blue glow shadow
+- **Arrow key grouping**: Arrows wrapped in a single rounded container (bgTertiary pill) with thin 1px internal dividers — signals "d-pad" as a unit
+- **Enter key accent**: Subtle accentBlue at 15% opacity background to distinguish from regular keys
+- **Active modifier glow**: accentBlue at 12% bg + 80% border + subtle spread shadow (replaces solid blue fill)
+- **Press animation**: Scale 0.95 on tap down via AnimatedScale (80ms duration)
+- **Haptic feedback**: lightImpact on every key press, mediumImpact on modifier toggle
+
+### Terminal Rendering
+
+- **Font**: JetBrains Mono (Regular, Bold, Italic, BoldItalic) — bundled, SIL Open Font License
+- **Cell aspect ratio**: 1.75:1 (width:height) — yields ~15-18 visible rows in portrait
+- **Font sizing**: fontSize = cellHeight * 0.72, tuned for JetBrains Mono's larger x-height
+- **Keyboard stability**: Cell dimensions derived from viewport width only (not height). When the on-screen keyboard appears via adjustResize, height shrinks but width stays constant — text size never changes
+- **Cursor auto-scroll**: When keyboard reduces visible area, the terminal auto-scrolls via clip + translate to keep the cursor row visible
+- **Cursor style**: Filled block with 2px corner radius, ~78% alpha blue (`terminalCursorFill`), slightly transparent
+- **Character inversion**: Character under cursor drawn in terminalBg color for contrast
+- **Cursor blink**: 530ms on/530ms off cycle, resets on new cell frame (content/cursor change)
+- **Background fill**: Painter fills entire canvas with terminalBg first to prevent gaps
+
+### Depth & Atmosphere
+
+- **Top bar shadow**: Soft BoxShadow (black26, blur 4, offset 0,1) replaces hard 1px bottom border
+- **Inner shadow**: 3px gradient at terminal top edge (black at 15% → transparent) — terminal feels recessed below chrome
+- **Subtle vignette**: Radial gradient on terminal content (center = transparent, edges = #080B10 at ~16% alpha) — adds richness
 
 ### Workspace Drawer
 

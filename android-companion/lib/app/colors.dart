@@ -65,4 +65,7 @@ abstract final class AppColors {
   static const terminalFg = Color(0xFFE6EDF3);
   static const terminalBg = Color(0xFF0D1117);
   static const terminalCursor = Color(0xFF58A6FF);
+
+  /// Filled block cursor with ~78% alpha blue.
+  static const terminalCursorFill = Color(0xC858A6FF);
 }

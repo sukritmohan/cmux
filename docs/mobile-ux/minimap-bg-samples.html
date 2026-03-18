@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cmux Minimap — Background Samples</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --d-bg-deep: #0A0A0F;
+    --d-bg-primary: #0E0E14;
+    --d-bg-elevated: #16161E;
+    --d-bg-surface: #1A1A24;
+    --d-border: rgba(255,255,255,0.06);
+    --d-text-primary: #E8E8EE;
+    --d-text-secondary: rgba(232,232,238,0.55);
+    --d-text-muted: rgba(232,232,238,0.30);
+
+    --l-bg-deep: #F5F5F0;
+    --l-bg-primary: #FAFAF7;
+    --l-bg-elevated: #FFFFFF;
+    --l-bg-surface: #F0F0EB;
+    --l-border: rgba(0,0,0,0.07);
+    --l-text-primary: #1A1A1F;
+    --l-text-secondary: rgba(26,26,31,0.55);
+    --l-text-muted: rgba(26,26,31,0.30);
+
+    --accent: #E0A030;
+    --terminal-color: #3ECF7B;
+    --browser-color: #5B9BD5;
+    --files-color: #E0A030;
+
+    --phone-width: 375px;
+    --phone-height: 812px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', -apple-system, system-ui, sans-serif;
+    background: #08080C;
+    color: var(--d-text-primary);
+    -webkit-font-smoothing: antialiased;
+    padding: 60px 40px 120px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .page-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 40px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+  }
+  .subtitle {
+    font-size: 17px;
+    color: var(--d-text-secondary);
+    line-height: 1.6;
+    max-width: 700px;
+    margin-bottom: 64px;
+  }
+
+  /* ── Sample Grid ── */
+  .samples {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    margin-bottom: 80px;
+  }
+  .sample-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .sample-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .sample-desc {
+    font-size: 13px;
+    color: var(--d-text-secondary);
+    text-align: center;
+    max-width: 375px;
+    line-height: 1.5;
+  }
+
+  /* ── Phone Frame ── */
+  .phone-frame {
+    width: var(--phone-width);
+    height: var(--phone-height);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .phone-frame.dark {
+    background: var(--d-bg-deep);
+    box-shadow:
+      0 24px 80px rgba(0,0,0,0.6),
+      0 0 0 1px rgba(255,255,255,0.04) inset;
+    border: 2.5px solid rgba(255,255,255,0.06);
+  }
+  .phone-frame.light {
+    background: var(--l-bg-deep);
+    box-shadow:
+      0 24px 80px rgba(0,0,0,0.3),
+      0 0 0 1px rgba(0,0,0,0.06) inset;
+    border: 2.5px solid rgba(0,0,0,0.08);
+  }
+  .phone-frame::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 120px; height: 34px;
+    background: inherit;
+    border-radius: 0 0 18px 18px;
+    z-index: 100;
+  }
+  .phone-frame.dark::before { background: #000; }
+  .phone-frame.light::before { background: #000; }
+
+  .phone-inner {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Status Bar ── */
+  .status-bar {
+    height: 54px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 28px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+    z-index: 50;
+  }
+  .dark .status-bar { color: var(--d-text-primary); }
+  .light .status-bar { color: var(--l-text-primary); }
+  .status-icons { display: flex; gap: 5px; align-items: center; font-size: 12px; }
+
+  /* ── Workspace Header ── */
+  .minimap-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 20px 12px;
+    flex-shrink: 0;
+  }
+  .ws-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .dark .ws-title { color: var(--d-text-muted); }
+  .light .ws-title { color: var(--l-text-muted); }
+  .ws-name {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  .dark .ws-name { color: var(--d-text-primary); }
+  .light .ws-name { color: var(--l-text-primary); }
+  .ws-branch {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+  }
+  .dark .ws-branch { background: rgba(255,255,255,0.06); color: var(--d-text-secondary); }
+  .light .ws-branch { background: rgba(0,0,0,0.05); color: var(--l-text-secondary); }
+
+  /* ── Minimap Content Area ── */
+  .minimap-content {
+    flex: 1;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+  }
+
+  /* ── Pane Cards ── */
+  .pane-row {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+  }
+  .pane-row.half { flex: 0.5; }
+
+  .pane-card {
+    flex: 1;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .dark .pane-card {
+    background: var(--d-bg-elevated);
+    border: 1px solid var(--d-border);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .light .pane-card {
+    background: var(--l-bg-elevated);
+    border: 1px solid var(--l-border);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+
+  /* Active pane highlight */
+  .pane-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 4px 24px rgba(224,160,48,0.12);
+  }
+
+  .pane-card-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .dark .pane-card-header { border-bottom: 1px solid var(--d-border); }
+  .light .pane-card-header { border-bottom: 1px solid var(--l-border); }
+
+  .pane-type-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .pane-type-dot.terminal { background: var(--terminal-color); }
+  .pane-type-dot.browser { background: var(--browser-color); }
+  .pane-type-dot.files { background: var(--files-color); }
+
+  .pane-card-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dark .pane-card-title { color: var(--d-text-secondary); }
+  .light .pane-card-title { color: var(--l-text-secondary); }
+
+  .pane-card-body {
+    flex: 1;
+    padding: 6px 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+  .dark .pane-card-body { color: var(--d-text-muted); }
+  .light .pane-card-body { color: var(--l-text-muted); }
+
+  .pane-card-body .highlight {
+    color: var(--terminal-color);
+    font-weight: 500;
+  }
+
+  /* ── Stacked card effect (multiple surfaces in one pane) ── */
+  .pane-stack {
+    position: relative;
+    flex: 1;
+  }
+  .pane-stack .pane-card {
+    position: relative;
+  }
+  .pane-stack::before,
+  .pane-stack::after {
+    content: '';
+    position: absolute;
+    border-radius: 12px;
+    pointer-events: none;
+  }
+  /* Second card (behind) */
+  .pane-stack::before {
+    top: -4px; left: 4px; right: 4px;
+    height: 100%;
+  }
+  /* Third card (furthest back) */
+  .pane-stack.triple::after {
+    top: -8px; left: 8px; right: 8px;
+    height: 100%;
+  }
+  .dark .pane-stack::before {
+    background: var(--d-bg-surface);
+    border: 1px solid var(--d-border);
+  }
+  .dark .pane-stack.triple::after {
+    background: var(--d-bg-surface);
+    border: 1px solid var(--d-border);
+    opacity: 0.6;
+  }
+  .light .pane-stack::before {
+    background: var(--l-bg-surface);
+    border: 1px solid var(--l-border);
+  }
+  .light .pane-stack.triple::after {
+    background: var(--l-bg-surface);
+    border: 1px solid var(--l-border);
+    opacity: 0.6;
+  }
+
+  /* Stack count badge */
+  .stack-badge {
+    position: absolute;
+    top: -6px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    z-index: 10;
+    padding: 0 4px;
+  }
+  .dark .stack-badge {
+    background: var(--accent);
+    color: #0E0E14;
+  }
+  .light .stack-badge {
+    background: var(--accent);
+    color: #FFFFFF;
+  }
+
+  /* ── Tap hint ── */
+  .tap-hint {
+    text-align: center;
+    padding: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .dark .tap-hint { color: var(--d-text-muted); }
+  .light .tap-hint { color: var(--l-text-muted); }
+
+  /* ── Home indicator ── */
+  .home-indicator {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .home-indicator::after {
+    content: '';
+    width: 134px; height: 5px;
+    border-radius: 100px;
+  }
+  .dark .home-indicator::after { background: rgba(255,255,255,0.15); }
+  .light .home-indicator::after { background: rgba(0,0,0,0.15); }
+
+  /* ═══════════════════════════════════════════════
+     OPTION A: Deep Blur + Dim
+     ═══════════════════════════════════════════════ */
+  .minimap-bg-blur {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .minimap-bg-blur .blur-source {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    /* Simulated blurred terminal content */
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(62,207,123,0.08), transparent 50%),
+      radial-gradient(ellipse at 70% 60%, rgba(91,155,213,0.06), transparent 50%);
+    filter: blur(30px);
+    opacity: 0.6;
+  }
+  .dark .minimap-bg-blur .blur-source {
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(62,207,123,0.10), transparent 50%),
+      radial-gradient(ellipse at 70% 60%, rgba(91,155,213,0.08), transparent 50%),
+      var(--d-bg-deep);
+  }
+  .light .minimap-bg-blur .blur-source {
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(62,207,123,0.06), transparent 50%),
+      radial-gradient(ellipse at 70% 60%, rgba(91,155,213,0.05), transparent 50%),
+      var(--l-bg-deep);
+  }
+  .minimap-bg-blur .blur-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    backdrop-filter: blur(20px) saturate(120%);
+    -webkit-backdrop-filter: blur(20px) saturate(120%);
+  }
+  .dark .minimap-bg-blur .blur-overlay {
+    background: rgba(10, 10, 15, 0.75);
+  }
+  .light .minimap-bg-blur .blur-overlay {
+    background: rgba(245, 245, 240, 0.80);
+  }
+
+  /* ═══════════════════════════════════════════════
+     OPTION B: Solid Dark Canvas
+     ═══════════════════════════════════════════════ */
+  /* No extra CSS needed — just the base phone-frame bg */
+
+  /* ═══════════════════════════════════════════════
+     OPTION C: Subtle Dot Grid
+     ═══════════════════════════════════════════════ */
+  .minimap-bg-grid {
+    position: absolute;
+    top: 54px; left: 0; right: 0; bottom: 0;
+    z-index: 0;
+    background-size: 20px 20px;
+  }
+  .dark .minimap-bg-grid {
+    background-image:
+      radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+  }
+  .light .minimap-bg-grid {
+    background-image:
+      radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px);
+  }
+
+  /* ── Ensure content floats above backgrounds ── */
+  .minimap-header,
+  .minimap-content,
+  .tap-hint,
+  .home-indicator,
+  .status-bar {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Section divider ── */
+  .section-break {
+    height: 1px;
+    background: rgba(255,255,255,0.04);
+    margin: 20px 0 60px;
+  }
+
+  h2 {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin-bottom: 8px;
+  }
+  .section-desc {
+    font-size: 15px;
+    color: var(--d-text-secondary);
+    line-height: 1.6;
+    max-width: 600px;
+    margin-bottom: 40px;
+  }
+
+  /* ── Theme pair label ── */
+  .theme-pair {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+</style>
+</head>
+<body>
+
+  <div class="page-title">cmux mobile</div>
+  <h1>Minimap Background — Visual Samples</h1>
+  <p class="subtitle">
+    Three options for the minimap background. Each shown in dark + light mode with the
+    same workspace layout: 2 terminal panes (one with stacked surfaces), 1 browser pane.
+    Pick the one that feels right.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       OPTION A: DEEP BLUR + DIM
+       ═══════════════════════════════════════════════════════════ -->
+  <h2>Option A — Deep Blur + Dim</h2>
+  <p class="section-desc">
+    The workspace fades into a frosted, color-tinted haze. Subtle radial glows from
+    terminal green and browser blue bleed through. Pane cards float above with crisp
+    edges. Immersive — you feel like you're "pulling back" from the workspace.
+  </p>
+
+  <div class="theme-pair">
+    <!-- DARK -->
+    <div class="sample-col">
+      <span class="sample-label">Dark</span>
+      <div class="phone-frame dark">
+        <div class="phone-inner">
+          <div class="minimap-bg-blur">
+            <div class="blur-source"></div>
+            <div class="blur-overlay"></div>
+          </div>
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>WiFi</span>
+              <span>&#9608;&#9608;</span>
+            </div>
+          </div>
+          <div class="minimap-header">
+            <div>
+              <div class="ws-title">Workspace</div>
+              <div class="ws-name">cmux</div>
+            </div>
+            <div class="ws-branch">main</div>
+          </div>
+          <div class="minimap-content">
+            <div class="pane-row">
+              <!-- Pane 1: Terminal with stacked surfaces -->
+              <div class="pane-stack triple">
+                <div class="stack-badge">3</div>
+                <div class="pane-card active">
+                  <div class="pane-card-header">
+                    <div class="pane-type-dot terminal"></div>
+                    <span class="pane-card-title">zsh</span>
+                  </div>
+                  <div class="pane-card-body">
+                    <div><span class="highlight">~/cmux $</span> git status</div>
+                    <div>On branch main</div>
+                    <div>Changes not staged:</div>
+                    <div>&nbsp; modified: Bridge.swift</div>
+                    <div>&nbsp;</div>
+                    <div><span class="highlight">~/cmux $</span> &#9608;</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Pane 2: Single terminal -->
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot terminal"></div>
+                  <span class="pane-card-title">server-log</span>
+                </div>
+                <div class="pane-card-body">
+                  <div>listening on :3000</div>
+                  <div>GET /api/ws 200 12ms</div>
+                  <div>GET /api/ws 200 8ms</div>
+                  <div>WS connected: phone</div>
+                  <div>PTY subscribe: surf-01</div>
+                </div>
+              </div>
+            </div>
+            <div class="pane-row half">
+              <!-- Pane 3: Browser -->
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot browser"></div>
+                  <span class="pane-card-title">localhost:3000</span>
+                </div>
+                <div class="pane-card-body" style="background: rgba(255,255,255,0.02);">
+                  <div style="width: 60%; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; margin-bottom: 4px;"></div>
+                  <div style="width: 100%; height: 24px; background: rgba(255,255,255,0.03); border-radius: 4px; margin-bottom: 4px;"></div>
+                  <div style="width: 80%; height: 6px; background: rgba(255,255,255,0.04); border-radius: 3px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tap-hint">Tap a pane to focus</div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIGHT -->
+    <div class="sample-col">
+      <span class="sample-label">Light</span>
+      <div class="phone-frame light">
+        <div class="phone-inner">
+          <div class="minimap-bg-blur">
+            <div class="blur-source"></div>
+            <div class="blur-overlay"></div>
+          </div>
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>WiFi</span>
+              <span>&#9608;&#9608;</span>
+            </div>
+          </div>
+          <div class="minimap-header">
+            <div>
+              <div class="ws-title">Workspace</div>
+              <div class="ws-name">cmux</div>
+            </div>
+            <div class="ws-branch">main</div>
+          </div>
+          <div class="minimap-content">
+            <div class="pane-row">
+              <div class="pane-stack triple">
+                <div class="stack-badge">3</div>
+                <div class="pane-card active">
+                  <div class="pane-card-header">
+                    <div class="pane-type-dot terminal"></div>
+                    <span class="pane-card-title">zsh</span>
+                  </div>
+                  <div class="pane-card-body">
+                    <div><span class="highlight">~/cmux $</span> git status</div>
+                    <div>On branch main</div>
+                    <div>Changes not staged:</div>
+                    <div>&nbsp; modified: Bridge.swift</div>
+                    <div>&nbsp;</div>
+                    <div><span class="highlight">~/cmux $</span> &#9608;</div>
+                  </div>
+                </div>
+              </div>
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot terminal"></div>
+                  <span class="pane-card-title">server-log</span>
+                </div>
+                <div class="pane-card-body">
+                  <div>listening on :3000</div>
+                  <div>GET /api/ws 200 12ms</div>
+                  <div>GET /api/ws 200 8ms</div>
+                  <div>WS connected: phone</div>
+                  <div>PTY subscribe: surf-01</div>
+                </div>
+              </div>
+            </div>
+            <div class="pane-row half">
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot browser"></div>
+                  <span class="pane-card-title">localhost:3000</span>
+                </div>
+                <div class="pane-card-body" style="background: rgba(0,0,0,0.02);">
+                  <div style="width: 60%; height: 6px; background: rgba(0,0,0,0.06); border-radius: 3px; margin-bottom: 4px;"></div>
+                  <div style="width: 100%; height: 24px; background: rgba(0,0,0,0.04); border-radius: 4px; margin-bottom: 4px;"></div>
+                  <div style="width: 80%; height: 6px; background: rgba(0,0,0,0.04); border-radius: 3px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tap-hint">Tap a pane to focus</div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-break"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       OPTION B: SOLID DARK CANVAS
+       ═══════════════════════════════════════════════════════════ -->
+  <h2>Option B — Solid Canvas</h2>
+  <p class="section-desc">
+    Clean, empty canvas. Nothing competes with the pane cards. Maximum clarity and
+    focus. The workspace name anchors the top. Cards are the only visual elements.
+    Minimal and confident.
+  </p>
+
+  <div class="theme-pair">
+    <!-- DARK -->
+    <div class="sample-col">
+      <span class="sample-label">Dark</span>
+      <div class="phone-frame dark">
+        <div class="phone-inner">
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>WiFi</span>
+              <span>&#9608;&#9608;</span>
+            </div>
+          </div>
+          <div class="minimap-header">
+            <div>
+              <div class="ws-title">Workspace</div>
+              <div class="ws-name">cmux</div>
+            </div>
+            <div class="ws-branch">main</div>
+          </div>
+          <div class="minimap-content">
+            <div class="pane-row">
+              <div class="pane-stack triple">
+                <div class="stack-badge">3</div>
+                <div class="pane-card active">
+                  <div class="pane-card-header">
+                    <div class="pane-type-dot terminal"></div>
+                    <span class="pane-card-title">zsh</span>
+                  </div>
+                  <div class="pane-card-body">
+                    <div><span class="highlight">~/cmux $</span> git status</div>
+                    <div>On branch main</div>
+                    <div>Changes not staged:</div>
+                    <div>&nbsp; modified: Bridge.swift</div>
+                    <div>&nbsp;</div>
+                    <div><span class="highlight">~/cmux $</span> &#9608;</div>
+                  </div>
+                </div>
+              </div>
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot terminal"></div>
+                  <span class="pane-card-title">server-log</span>
+                </div>
+                <div class="pane-card-body">
+                  <div>listening on :3000</div>
+                  <div>GET /api/ws 200 12ms</div>
+                  <div>GET /api/ws 200 8ms</div>
+                  <div>WS connected: phone</div>
+                  <div>PTY subscribe: surf-01</div>
+                </div>
+              </div>
+            </div>
+            <div class="pane-row half">
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot browser"></div>
+                  <span class="pane-card-title">localhost:3000</span>
+                </div>
+                <div class="pane-card-body" style="background: rgba(255,255,255,0.02);">
+                  <div style="width: 60%; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; margin-bottom: 4px;"></div>
+                  <div style="width: 100%; height: 24px; background: rgba(255,255,255,0.03); border-radius: 4px; margin-bottom: 4px;"></div>
+                  <div style="width: 80%; height: 6px; background: rgba(255,255,255,0.04); border-radius: 3px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tap-hint">Tap a pane to focus</div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIGHT -->
+    <div class="sample-col">
+      <span class="sample-label">Light</span>
+      <div class="phone-frame light">
+        <div class="phone-inner">
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>WiFi</span>
+              <span>&#9608;&#9608;</span>
+            </div>
+          </div>
+          <div class="minimap-header">
+            <div>
+              <div class="ws-title">Workspace</div>
+              <div class="ws-name">cmux</div>
+            </div>
+            <div class="ws-branch">main</div>
+          </div>
+          <div class="minimap-content">
+            <div class="pane-row">
+              <div class="pane-stack triple">
+                <div class="stack-badge">3</div>
+                <div class="pane-card active">
+                  <div class="pane-card-header">
+                    <div class="pane-type-dot terminal"></div>
+                    <span class="pane-card-title">zsh</span>
+                  </div>
+                  <div class="pane-card-body">
+                    <div><span class="highlight">~/cmux $</span> git status</div>
+                    <div>On branch main</div>
+                    <div>Changes not staged:</div>
+                    <div>&nbsp; modified: Bridge.swift</div>
+                    <div>&nbsp;</div>
+                    <div><span class="highlight">~/cmux $</span> &#9608;</div>
+                  </div>
+                </div>
+              </div>
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot terminal"></div>
+                  <span class="pane-card-title">server-log</span>
+                </div>
+                <div class="pane-card-body">
+                  <div>listening on :3000</div>
+                  <div>GET /api/ws 200 12ms</div>
+                  <div>GET /api/ws 200 8ms</div>
+                  <div>WS connected: phone</div>
+                  <div>PTY subscribe: surf-01</div>
+                </div>
+              </div>
+            </div>
+            <div class="pane-row half">
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot browser"></div>
+                  <span class="pane-card-title">localhost:3000</span>
+                </div>
+                <div class="pane-card-body" style="background: rgba(0,0,0,0.02);">
+                  <div style="width: 60%; height: 6px; background: rgba(0,0,0,0.06); border-radius: 3px; margin-bottom: 4px;"></div>
+                  <div style="width: 100%; height: 24px; background: rgba(0,0,0,0.04); border-radius: 4px; margin-bottom: 4px;"></div>
+                  <div style="width: 80%; height: 6px; background: rgba(0,0,0,0.04); border-radius: 3px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tap-hint">Tap a pane to focus</div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-break"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       OPTION C: SUBTLE DOT GRID
+       ═══════════════════════════════════════════════════════════ -->
+  <h2>Option C — Subtle Dot Grid</h2>
+  <p class="section-desc">
+    A faint dot grid behind the panes reinforces the spatial/layout nature of the
+    minimap. Feels like a design tool canvas or blueprint. Developer-oriented,
+    intentional, precise.
+  </p>
+
+  <div class="theme-pair">
+    <!-- DARK -->
+    <div class="sample-col">
+      <span class="sample-label">Dark</span>
+      <div class="phone-frame dark">
+        <div class="phone-inner">
+          <div class="minimap-bg-grid"></div>
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>WiFi</span>
+              <span>&#9608;&#9608;</span>
+            </div>
+          </div>
+          <div class="minimap-header">
+            <div>
+              <div class="ws-title">Workspace</div>
+              <div class="ws-name">cmux</div>
+            </div>
+            <div class="ws-branch">main</div>
+          </div>
+          <div class="minimap-content">
+            <div class="pane-row">
+              <div class="pane-stack triple">
+                <div class="stack-badge">3</div>
+                <div class="pane-card active">
+                  <div class="pane-card-header">
+                    <div class="pane-type-dot terminal"></div>
+                    <span class="pane-card-title">zsh</span>
+                  </div>
+                  <div class="pane-card-body">
+                    <div><span class="highlight">~/cmux $</span> git status</div>
+                    <div>On branch main</div>
+                    <div>Changes not staged:</div>
+                    <div>&nbsp; modified: Bridge.swift</div>
+                    <div>&nbsp;</div>
+                    <div><span class="highlight">~/cmux $</span> &#9608;</div>
+                  </div>
+                </div>
+              </div>
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot terminal"></div>
+                  <span class="pane-card-title">server-log</span>
+                </div>
+                <div class="pane-card-body">
+                  <div>listening on :3000</div>
+                  <div>GET /api/ws 200 12ms</div>
+                  <div>GET /api/ws 200 8ms</div>
+                  <div>WS connected: phone</div>
+                  <div>PTY subscribe: surf-01</div>
+                </div>
+              </div>
+            </div>
+            <div class="pane-row half">
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot browser"></div>
+                  <span class="pane-card-title">localhost:3000</span>
+                </div>
+                <div class="pane-card-body" style="background: rgba(255,255,255,0.02);">
+                  <div style="width: 60%; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; margin-bottom: 4px;"></div>
+                  <div style="width: 100%; height: 24px; background: rgba(255,255,255,0.03); border-radius: 4px; margin-bottom: 4px;"></div>
+                  <div style="width: 80%; height: 6px; background: rgba(255,255,255,0.04); border-radius: 3px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tap-hint">Tap a pane to focus</div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIGHT -->
+    <div class="sample-col">
+      <span class="sample-label">Light</span>
+      <div class="phone-frame light">
+        <div class="phone-inner">
+          <div class="minimap-bg-grid"></div>
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>&#9679;</span>
+              <span>WiFi</span>
+              <span>&#9608;&#9608;</span>
+            </div>
+          </div>
+          <div class="minimap-header">
+            <div>
+              <div class="ws-title">Workspace</div>
+              <div class="ws-name">cmux</div>
+            </div>
+            <div class="ws-branch">main</div>
+          </div>
+          <div class="minimap-content">
+            <div class="pane-row">
+              <div class="pane-stack triple">
+                <div class="stack-badge">3</div>
+                <div class="pane-card active">
+                  <div class="pane-card-header">
+                    <div class="pane-type-dot terminal"></div>
+                    <span class="pane-card-title">zsh</span>
+                  </div>
+                  <div class="pane-card-body">
+                    <div><span class="highlight">~/cmux $</span> git status</div>
+                    <div>On branch main</div>
+                    <div>Changes not staged:</div>
+                    <div>&nbsp; modified: Bridge.swift</div>
+                    <div>&nbsp;</div>
+                    <div><span class="highlight">~/cmux $</span> &#9608;</div>
+                  </div>
+                </div>
+              </div>
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot terminal"></div>
+                  <span class="pane-card-title">server-log</span>
+                </div>
+                <div class="pane-card-body">
+                  <div>listening on :3000</div>
+                  <div>GET /api/ws 200 12ms</div>
+                  <div>GET /api/ws 200 8ms</div>
+                  <div>WS connected: phone</div>
+                  <div>PTY subscribe: surf-01</div>
+                </div>
+              </div>
+            </div>
+            <div class="pane-row half">
+              <div class="pane-card">
+                <div class="pane-card-header">
+                  <div class="pane-type-dot browser"></div>
+                  <span class="pane-card-title">localhost:3000</span>
+                </div>
+                <div class="pane-card-body" style="background: rgba(0,0,0,0.02);">
+                  <div style="width: 60%; height: 6px; background: rgba(0,0,0,0.06); border-radius: 3px; margin-bottom: 4px;"></div>
+                  <div style="width: 100%; height: 24px; background: rgba(0,0,0,0.04); border-radius: 4px; margin-bottom: 4px;"></div>
+                  <div style="width: 80%; height: 6px; background: rgba(0,0,0,0.04); border-radius: 3px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tap-hint">Tap a pane to focus</div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

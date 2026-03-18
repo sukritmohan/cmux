@@ -1,0 +1,2386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cmux — Visual Companion</title>
+<style>
+/* ══════════════════════════════════════════════════════════
+   FONT IMPORTS
+   Space Grotesk (display), Instrument Sans (body), JetBrains Mono (code/app)
+   ══════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ══════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   ══════════════════════════════════════════════════════════ */
+:root {
+  /* Backgrounds — warm zinc-tinted blacks */
+  --bg-void: #000000;
+  --bg-primary: #09090B;
+  --bg-elevated: #111318;
+  --bg-surface: #1A1D24;
+
+  /* Text */
+  --text-primary: #F0F2F5;
+  --text-secondary: rgba(240,242,245,0.55);
+  --text-muted: rgba(240,242,245,0.25);
+
+  /* Accents */
+  --accent-cyan: #22D3EE;
+  --accent-green: #00E676;
+  --accent-blue: #448AFF;
+  --accent-orange: #FFAB40;
+  --accent-red: #FF5252;
+  --accent-purple: #B388FF;
+
+  /* Accent glows */
+  --cyan-glow: rgba(34,211,238,0.12);
+  --cyan-glow-strong: rgba(34,211,238,0.22);
+  --green-glow: rgba(0,230,118,0.12);
+
+  /* Motion */
+  --spring: 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring-fast: 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring-snappy: 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: 400ms cubic-bezier(0, 0, 0.2, 1);
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-phone: 48px;
+
+  /* Phone */
+  --phone-width: 375px;
+  --phone-height: 812px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESET & FOUNDATION
+   ══════════════════════════════════════════════════════════ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif;
+  background: var(--bg-void);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ══════════════════════════════════════════════════════════
+   PAGE SECTIONS
+   ══════════════════════════════════════════════════════════ */
+.section {
+  padding: 120px 48px;
+  max-width: 1440px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.section-elevated {
+  background: var(--bg-elevated);
+}
+
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  margin-bottom: 16px;
+}
+
+.section h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.section h2 .accent { color: var(--accent-cyan); }
+
+.section-desc {
+  font-size: 17px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  max-width: 640px;
+}
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0, 0, 0.2, 1), transform 0.8s cubic-bezier(0, 0, 0.2, 1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ══════════════════════════════════════════════════════════
+   HERO
+   ══════════════════════════════════════════════════════════ */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px 48px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(ellipse, rgba(34,211,238,0.08) 0%, rgba(34,211,238,0.02) 40%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-wordmark {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  margin-bottom: 32px;
+}
+
+.hero h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 72px;
+  font-weight: 700;
+  letter-spacing: -2px;
+  line-height: 1.05;
+  margin-bottom: 24px;
+  max-width: 800px;
+}
+
+.hero .subtitle {
+  font-size: 20px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 520px;
+  margin-bottom: 64px;
+}
+
+.hero-phone-wrapper {
+  position: relative;
+  transform: perspective(1200px) rotateY(-2deg) rotateX(1deg);
+  transition: transform var(--spring);
+  animation: heroFloat 6s ease-in-out infinite;
+}
+
+.hero-phone-wrapper:hover {
+  transform: perspective(1200px) rotateY(0deg) rotateX(0deg) translateY(-4px);
+}
+
+@keyframes heroFloat {
+  0%, 100% { transform: perspective(1200px) rotateY(-2deg) rotateX(1deg) translateY(0); }
+  50% { transform: perspective(1200px) rotateY(-2deg) rotateX(1deg) translateY(-10px); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   PHONE FRAME
+   ══════════════════════════════════════════════════════════ */
+.phone-frame {
+  width: var(--phone-width);
+  height: var(--phone-height);
+  border-radius: var(--radius-phone);
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  background: var(--bg-primary);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.06),
+    0 0 0 4px #151519,
+    0 40px 100px rgba(0,0,0,0.6),
+    0 0 120px rgba(34,211,238,0.05);
+  transition: transform var(--spring-fast), box-shadow var(--spring-fast);
+}
+
+.phone-frame:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08),
+    0 0 0 4px #151519,
+    0 48px 120px rgba(0,0,0,0.7),
+    0 0 140px rgba(34,211,238,0.08);
+}
+
+/* Dynamic Island */
+.phone-frame::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 34px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 100;
+}
+
+.phone-inner {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Status Bar */
+.status-bar {
+  height: 54px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 30px 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+  z-index: 50;
+  color: var(--text-primary);
+}
+
+.status-icons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+}
+
+/* Home Indicator */
+.home-indicator {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.home-indicator::after {
+  content: '';
+  width: 134px;
+  height: 5px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.18);
+}
+
+/* ══════════════════════════════════════════════════════════
+   PHONE CONTAINERS
+   ══════════════════════════════════════════════════════════ */
+.phone-row {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  flex-wrap: wrap;
+  margin: 48px 0;
+}
+
+.phone-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.phone-caption {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 4px 12px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Small phone for multi-phone layouts */
+.phone-frame.small {
+  --phone-width: 280px;
+  --phone-height: 607px;
+  width: var(--phone-width);
+  height: var(--phone-height);
+}
+
+.phone-frame.small::before {
+  width: 90px;
+  height: 26px;
+  top: 8px;
+  border-radius: 14px;
+}
+
+.phone-frame.small .status-bar {
+  height: 44px;
+  font-size: 12px;
+  padding: 0 22px 6px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   TOP BAR — Tab Strip + Pane Type Segmented Control
+   ══════════════════════════════════════════════════════════ */
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  flex-shrink: 0;
+  height: 42px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.tab-strip {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  overflow-x: auto;
+  align-items: center;
+  scrollbar-width: none;
+  padding: 5px 0;
+}
+.tab-strip::-webkit-scrollbar { display: none; }
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  position: relative;
+  letter-spacing: 0.2px;
+  cursor: default;
+}
+
+.tab-item.active {
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--accent-cyan);
+  border-radius: 1px;
+}
+
+.tab-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  flex-shrink: 0;
+}
+
+.pane-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+  margin: 0 6px;
+}
+
+/* Pane type icon trigger */
+.pane-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--accent-cyan);
+  background: var(--cyan-glow);
+  transition: background 150ms ease;
+}
+.pane-type-icon:hover {
+  background: var(--cyan-glow-strong);
+}
+
+/* ══════════════════════════════════════════════════════════
+   PANE TYPE SEGMENTED CONTROL (interactive)
+   ══════════════════════════════════════════════════════════ */
+.segmented-control {
+  display: flex;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  margin: 0 12px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.segment {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: calc(var(--radius-md) - 3px);
+  position: relative;
+  z-index: 2;
+  transition: color var(--spring-fast);
+  user-select: none;
+}
+
+.segment.active {
+  color: var(--text-primary);
+}
+
+.segment-indicator {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  height: calc(100% - 6px);
+  border-radius: calc(var(--radius-md) - 3px);
+  background: var(--bg-surface);
+  border: 1px solid rgba(255,255,255,0.08);
+  z-index: 1;
+  transition: transform var(--spring), width var(--spring);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Segment icons color */
+.segment .seg-icon { font-size: 13px; }
+.segment[data-type="terminal"] .seg-icon { color: var(--accent-green); }
+.segment[data-type="browser"] .seg-icon { color: var(--accent-blue); }
+.segment[data-type="files"] .seg-icon { color: var(--accent-orange); }
+.segment[data-type="shell"] .seg-icon { color: var(--accent-purple); }
+
+/* ══════════════════════════════════════════════════════════
+   TERMINAL CONTENT
+   ══════════════════════════════════════════════════════════ */
+.terminal-content {
+  flex: 1;
+  padding: 14px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  line-height: 1.5;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  position: relative;
+}
+
+.terminal-content .prompt { color: var(--accent-green); font-weight: 600; }
+.terminal-content .cmd { color: var(--text-primary); }
+.terminal-content .output { color: var(--text-secondary); }
+.terminal-content .path { color: var(--accent-blue); }
+.terminal-content .string { color: var(--accent-orange); }
+.terminal-content .error { color: var(--accent-red); }
+
+.cursor-block {
+  display: inline-block;
+  width: 9px;
+  height: 17px;
+  background: var(--accent-cyan);
+  vertical-align: text-bottom;
+  animation: blink 1.2s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Content panels for pane type switching */
+.pane-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.pane-panel {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 350ms ease, transform 350ms ease;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.pane-panel.active {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.pane-panel.exiting {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* ══════════════════════════════════════════════════════════
+   BROWSER VIEW
+   ══════════════════════════════════════════════════════════ */
+.url-bar-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  gap: 8px;
+  flex-shrink: 0;
+  background: var(--bg-primary);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.nav-btn {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.nav-btn.disabled { color: var(--text-muted); }
+
+.url-field {
+  flex: 1;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.url-scheme { opacity: 0.4; }
+.url-host { color: var(--text-primary); }
+
+.browser-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.web-bar-mock {
+  height: 8px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  background: var(--bg-surface);
+}
+.web-block-mock {
+  height: 40px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+  background: var(--bg-elevated);
+}
+
+/* ══════════════════════════════════════════════════════════
+   FILES VIEW
+   ══════════════════════════════════════════════════════════ */
+.files-content {
+  flex: 1;
+  padding: 12px;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.file-item:nth-child(odd) { background: rgba(255,255,255,0.02); }
+.file-icon { font-size: 16px; flex-shrink: 0; }
+.file-icon.folder { color: var(--accent-orange); }
+.file-icon.file { color: var(--accent-blue); }
+.file-size {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ══════════════════════════════════════════════════════════
+   SHELL VIEW
+   ══════════════════════════════════════════════════════════ */
+.shell-content {
+  flex: 1;
+  padding: 16px;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.shell-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  background: var(--bg-surface);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  cursor: default;
+}
+.shell-icon {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  background: rgba(179,136,255,0.12);
+  color: var(--accent-purple);
+  flex-shrink: 0;
+}
+.shell-label { color: var(--text-primary); }
+.shell-desc { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+/* ══════════════════════════════════════════════════════════
+   MODIFIER BAR (bottom)
+   ══════════════════════════════════════════════════════════ */
+.modifier-bar {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  gap: 6px;
+  flex-shrink: 0;
+  background: var(--bg-primary);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.mod-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform var(--spring-snappy), background 150ms ease;
+  user-select: none;
+}
+
+.mod-key:active {
+  transform: scale(0.92);
+  background: rgba(255,255,255,0.08);
+}
+
+.mod-key.accent-key {
+  background: var(--cyan-glow);
+  color: var(--accent-cyan);
+  border-color: rgba(34,211,238,0.2);
+}
+
+.arrow-cluster {
+  display: flex;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.arrow-key {
+  width: 32px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-xs);
+  font-size: 14px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer;
+  transition: transform var(--spring-snappy);
+  user-select: none;
+}
+
+.arrow-key:active { transform: scale(0.92); }
+.arrow-key[data-dir="left"]:active { transform: translateX(-1px) scale(0.92); }
+.arrow-key[data-dir="right"]:active { transform: translateX(1px) scale(0.92); }
+.arrow-key[data-dir="up"]:active { transform: translateY(-1px) scale(0.92); }
+.arrow-key[data-dir="down"]:active { transform: translateY(1px) scale(0.92); }
+
+.enter-key {
+  width: 48px;
+  padding: 0 8px;
+  margin-left: 4px;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+}
+
+/* Bottom bar variants per pane type */
+.bottom-bar-terminal { /* default modifier bar */ }
+
+.bottom-bar-browser {
+  justify-content: space-around;
+}
+.browser-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px; height: 34px;
+  border-radius: var(--radius-sm);
+  font-size: 18px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.bottom-bar-files {
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 8px 16px;
+}
+
+.files-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer;
+}
+
+/* ══════════════════════════════════════════════════════════
+   KEYBOARD SECTION
+   ══════════════════════════════════════════════════════════ */
+.keyboard-area {
+  flex-shrink: 0;
+  background: #1C1C1E;
+  padding: 8px 4px 4px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.keyboard-row {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.kb-key {
+  height: 42px;
+  min-width: 30px;
+  padding: 0 6px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 400;
+  background: #3A3A3C;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: transform var(--spring-snappy), background 100ms ease;
+  user-select: none;
+}
+
+.kb-key:active {
+  transform: scale(0.92);
+  background: #4A4A4C;
+}
+
+.kb-key.dark-key {
+  background: #2C2C2E;
+  color: #ACACAE;
+  font-size: 13px;
+}
+
+.kb-key.space {
+  flex: 1;
+  max-width: 180px;
+}
+
+.kb-key.special {
+  background: rgba(34,211,238,0.15);
+  color: var(--accent-cyan);
+  font-size: 16px;
+}
+
+/* Extra special keys row */
+.extra-keys-row {
+  display: flex;
+  gap: 5px;
+  padding: 4px 4px 0;
+  margin-bottom: 4px;
+}
+
+.extra-key {
+  flex: 1;
+  height: 36px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 500;
+  background: rgba(34,211,238,0.1);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(34,211,238,0.15);
+  cursor: pointer;
+  transition: transform var(--spring-snappy);
+}
+
+.extra-key:active { transform: scale(0.92); }
+
+/* ══════════════════════════════════════════════════════════
+   DESIGN SYSTEM SECTION
+   ══════════════════════════════════════════════════════════ */
+.design-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 48px;
+  margin-top: 48px;
+}
+
+.design-card h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+
+/* Color swatches */
+.color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.swatch-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.1);
+}
+
+.swatch-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+/* Typography samples */
+.type-sample {
+  margin-bottom: 20px;
+}
+
+.type-sample .sample-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+/* Motion curves */
+.motion-demos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.motion-demo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.motion-track {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.motion-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  position: absolute;
+  top: -4px;
+  left: 0;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+.motion-dot.spring { animation: motionSpring 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite alternate; }
+.motion-dot.spring-fast { animation: motionSpring 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite alternate; }
+.motion-dot.snappy { animation: motionSpring 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate; }
+
+@keyframes motionSpring {
+  0% { left: 0; }
+  100% { left: calc(100% - 12px); }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes checkPop { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+.motion-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  width: 80px;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════
+   ONBOARDING / PAIRING FLOW
+   ══════════════════════════════════════════════════════════ */
+/* QR Viewfinder */
+.qr-viewfinder {
+  width: 200px;
+  height: 200px;
+  margin: 40px auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-bracket {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-color: var(--accent-cyan);
+  border-style: solid;
+  border-width: 0;
+  transition: all var(--spring);
+}
+.qr-bracket.tl { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; border-radius: 4px 0 0 0; }
+.qr-bracket.tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; border-radius: 0 4px 0 0; }
+.qr-bracket.bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; border-radius: 0 0 0 4px; }
+.qr-bracket.br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; border-radius: 0 0 4px 0; }
+
+/* QR detected state — brackets contract */
+.qr-viewfinder.detected .qr-bracket.tl { top: 30px; left: 30px; }
+.qr-viewfinder.detected .qr-bracket.tr { top: 30px; right: 30px; }
+.qr-viewfinder.detected .qr-bracket.bl { bottom: 30px; left: 30px; }
+.qr-viewfinder.detected .qr-bracket.br { bottom: 30px; right: 30px; }
+.qr-viewfinder.detected .qr-bracket { border-color: var(--accent-green); }
+
+.qr-sweep {
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+  animation: qrSweep 2s ease-in-out infinite;
+  opacity: 0.8;
+}
+
+@keyframes qrSweep {
+  0%, 100% { top: 10%; }
+  50% { top: 85%; }
+}
+
+.qr-viewfinder.detected .qr-sweep { display: none; }
+
+.qr-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: var(--text-muted);
+}
+
+/* Pairing status text */
+.pairing-status {
+  text-align: center;
+  padding: 20px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.pairing-status .status-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.pairing-status .status-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+/* Stepper dots */
+.stepper-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 32px;
+}
+
+.stepper-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: all var(--spring-fast);
+}
+
+.stepper-dot.active {
+  background: var(--accent-cyan);
+  width: 24px;
+  border-radius: 4px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   WORKSPACE DRAWER
+   ══════════════════════════════════════════════════════════ */
+.drawer-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--spring-fast);
+  margin: 24px auto;
+  display: flex;
+  justify-content: center;
+}
+
+.drawer-trigger:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.drawer-phone-wrapper {
+  position: relative;
+  overflow: visible;
+}
+
+.drawer-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10;
+  opacity: 0;
+  transition: opacity var(--spring-fast);
+  pointer-events: none;
+  border-radius: var(--radius-phone);
+  cursor: pointer;
+}
+
+.drawer-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer-panel {
+  position: absolute;
+  top: 54px; bottom: 34px;
+  left: 0;
+  width: 280px;
+  background: var(--bg-elevated);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  z-index: 20;
+  padding: 20px 12px;
+  transform: translateX(-100%);
+  transition: transform var(--spring);
+  overflow-y: auto;
+  border-radius: 0;
+}
+
+.drawer-panel.open {
+  transform: translateX(0);
+}
+
+.drawer-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 8px 16px;
+}
+
+.workspace-card {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background 150ms ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.workspace-card:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.workspace-card.active {
+  background: rgba(34,211,238,0.06);
+}
+
+.workspace-card.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent-cyan);
+  animation: breathe 3s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.ws-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.ws-branch {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--accent-cyan);
+  margin-bottom: 6px;
+}
+
+.ws-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.ws-activity {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.activity-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-green);
+}
+
+.workspace-card.active .activity-dot:nth-child(1) { animation: activityPulse 1.5s ease-in-out 0s infinite; }
+.workspace-card.active .activity-dot:nth-child(2) { animation: activityPulse 1.5s ease-in-out 0.2s infinite; }
+.workspace-card.active .activity-dot:nth-child(3) { animation: activityPulse 1.5s ease-in-out 0.4s infinite; }
+
+@keyframes activityPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   MINIMAP VIEW
+   ══════════════════════════════════════════════════════════ */
+.minimap-container {
+  flex: 1;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+}
+
+.minimap-grid {
+  width: 100%;
+  max-width: 320px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr 0.7fr;
+}
+
+.minimap-pane {
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 8px;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  overflow: hidden;
+  transition: all var(--spring-fast);
+  cursor: pointer;
+}
+
+.minimap-pane:hover {
+  border-color: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.04);
+}
+
+.minimap-pane.active {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 20px rgba(34,211,238,0.15);
+}
+
+.minimap-pane.wide {
+  grid-column: span 2;
+}
+
+.minimap-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.minimap-hint {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 16px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   CONNECTION STATES
+   ══════════════════════════════════════════════════════════ */
+.connection-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  position: relative;
+}
+
+.connection-indicator.connected { background: var(--accent-green); }
+.connection-indicator.reconnecting { background: var(--accent-orange); }
+.connection-indicator.disconnected { background: var(--accent-red); opacity: 0.5; }
+
+.connection-indicator.connected::after,
+.connection-indicator.reconnecting::after {
+  content: '';
+  position: absolute;
+  top: -4px; left: -4px;
+  right: -4px; bottom: -4px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: connectionPulse 2s ease-out infinite;
+}
+
+.connection-indicator.connected::after { border-color: var(--accent-green); }
+.connection-indicator.reconnecting::after { border-color: var(--accent-orange); }
+
+@keyframes connectionPulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.connection-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.connection-status-bar.connected { background: rgba(0,230,118,0.06); color: var(--accent-green); }
+.connection-status-bar.reconnecting { background: rgba(255,171,64,0.06); color: var(--accent-orange); }
+.connection-status-bar.disconnected { background: rgba(255,82,82,0.06); color: var(--accent-red); }
+
+/* ══════════════════════════════════════════════════════════
+   GESTURE REFERENCE
+   ══════════════════════════════════════════════════════════ */
+.gesture-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 48px;
+}
+
+.gesture-card {
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  transition: all var(--spring-fast);
+}
+
+.gesture-card:hover {
+  border-color: rgba(34,211,238,0.2);
+  background: rgba(255,255,255,0.03);
+}
+
+.gesture-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--cyan-glow);
+  color: var(--accent-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.gesture-info h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.gesture-info p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 1200px) {
+  .design-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  .hero h1 { font-size: 48px; }
+  .section h2 { font-size: 36px; }
+  .section { padding: 80px 24px; }
+  .phone-row { gap: 32px; }
+  .design-grid { grid-template-columns: 1fr; }
+  .gesture-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .hero h1 { font-size: 36px; letter-spacing: -1px; }
+  .hero .subtitle { font-size: 16px; }
+  .section { padding: 60px 16px; }
+  .phone-frame.small {
+    --phone-width: 240px;
+    --phone-height: 520px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 1: HERO
+     ═══════════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-wordmark">cmux</div>
+  <h1>Your Mac,<br>in your pocket.</h1>
+  <p class="subtitle">Full terminal. Live workspaces. Instant pairing. The Android companion for the world's fastest terminal multiplexer.</p>
+
+  <div class="hero-phone-wrapper">
+    <div class="phone-frame" style="box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 0 0 4px #151519, 0 40px 100px rgba(0,0,0,0.6), 0 0 160px rgba(34,211,238,0.08);">
+      <div class="phone-inner">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-icons">
+            <span>⬤⬤⬤⬤</span>
+            <span>▐█▌</span>
+          </div>
+        </div>
+        <div class="top-bar">
+          <div class="tab-strip">
+            <div class="tab-item active"><span class="tab-status-dot"></span> cmux</div>
+            <div class="pane-dot"></div>
+            <div class="tab-item">server</div>
+            <div class="tab-item">api</div>
+          </div>
+          <div class="pane-type-icon">▸</div>
+        </div>
+        <div class="terminal-content" style="flex:1;">
+          <div><span class="prompt">~/cmux $</span> <span class="cmd">git status</span></div>
+          <div><span class="output">On branch main</span></div>
+          <div><span class="output">Changes not staged for commit:</span></div>
+          <div>&nbsp;</div>
+          <div><span class="output">&nbsp;&nbsp;modified: &nbsp;<span class="string">Sources/App/ContentView.swift</span></span></div>
+          <div><span class="output">&nbsp;&nbsp;modified: &nbsp;<span class="string">Sources/Terminal/Surface.swift</span></span></div>
+          <div>&nbsp;</div>
+          <div><span class="prompt">~/cmux $</span> <span class="cmd">swift build</span></div>
+          <div><span class="output">Build complete! (42 targets)</span></div>
+          <div>&nbsp;</div>
+          <div><span class="prompt">~/cmux $</span> <span class="cursor-block"></span></div>
+        </div>
+        <div class="modifier-bar">
+          <div class="mod-key" style="padding:0 8px;">esc</div>
+          <div class="mod-key" style="padding:0 8px;">ctrl</div>
+          <div class="mod-key" style="padding:0 8px;">alt</div>
+          <div class="mod-key accent-key" style="padding:0 8px;">tab</div>
+          <div class="arrow-cluster">
+            <div class="arrow-key" data-dir="left">←</div>
+            <div class="arrow-key" data-dir="up">↑</div>
+            <div class="arrow-key" data-dir="down">↓</div>
+            <div class="arrow-key" data-dir="right">→</div>
+          </div>
+          <div class="mod-key enter-key">⏎</div>
+        </div>
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 2: DESIGN SYSTEM
+     ═══════════════════════════════════════════════════════ -->
+<section class="section section-elevated reveal">
+  <div class="section-label">Design System</div>
+  <h2>Built on <span class="accent">precision</span></h2>
+  <p class="section-desc">Every pixel serves a purpose. Warm blacks, electric accents, and a monospace-first identity that feels unmistakably cmux.</p>
+
+  <div class="design-grid">
+    <!-- Colors -->
+    <div class="design-card">
+      <h3>Color Palette</h3>
+      <div class="color-swatches">
+        <div class="swatch">
+          <div class="swatch-circle" style="background: #09090B; border-color: rgba(255,255,255,0.2);"></div>
+          <span class="swatch-label">Primary</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background: #111318;"></div>
+          <span class="swatch-label">Elevated</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background: #1A1D24;"></div>
+          <span class="swatch-label">Surface</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background: #22D3EE;"></div>
+          <span class="swatch-label">Cyan</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background: #00E676;"></div>
+          <span class="swatch-label">Green</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background: #448AFF;"></div>
+          <span class="swatch-label">Blue</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background: #FFAB40;"></div>
+          <span class="swatch-label">Orange</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background: #B388FF;"></div>
+          <span class="swatch-label">Purple</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background: #FF5252;"></div>
+          <span class="swatch-label">Red</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Typography -->
+    <div class="design-card">
+      <h3>Typography</h3>
+      <div class="type-sample">
+        <div class="sample-label">Display — Space Grotesk 700</div>
+        <div style="font-family: 'Space Grotesk'; font-size: 28px; font-weight: 700; letter-spacing: -1px;">The quick brown fox</div>
+      </div>
+      <div class="type-sample">
+        <div class="sample-label">Body — Instrument Sans 400</div>
+        <div style="font-family: 'Instrument Sans'; font-size: 16px;">The quick brown fox jumps over the lazy dog.</div>
+      </div>
+      <div class="type-sample">
+        <div class="sample-label">Mono — JetBrains Mono 500</div>
+        <div style="font-family: 'JetBrains Mono'; font-size: 14px; font-weight: 500; color: var(--accent-cyan);">~/cmux $ swift build</div>
+      </div>
+    </div>
+
+    <!-- Motion -->
+    <div class="design-card">
+      <h3>Motion</h3>
+      <div class="motion-demos">
+        <div class="motion-demo">
+          <span class="motion-label">spring</span>
+          <div class="motion-track"><div class="motion-dot spring"></div></div>
+        </div>
+        <div class="motion-demo">
+          <span class="motion-label">spring-fast</span>
+          <div class="motion-track"><div class="motion-dot spring-fast"></div></div>
+        </div>
+        <div class="motion-demo">
+          <span class="motion-label">snappy</span>
+          <div class="motion-track"><div class="motion-dot snappy"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 3: ONBOARDING / PAIRING FLOW
+     ═══════════════════════════════════════════════════════ -->
+<section class="section reveal" id="pairing-section">
+  <div class="section-label">Pairing</div>
+  <h2>Speed is the <span class="accent">magic</span></h2>
+  <p class="section-desc">Scan the QR code on your Mac. Connected in under a second. No accounts, no cloud, no friction.</p>
+
+  <div class="phone-row" id="pairing-flow">
+    <!-- Step 1: Welcome -->
+    <div class="phone-column">
+      <div class="phone-frame small" id="pair-step-1">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-icons"><span>⬤⬤⬤⬤</span><span>▐█▌</span></div></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px; text-align:center;">
+            <div style="font-family:'JetBrains Mono'; font-size:32px; font-weight:700; color:var(--accent-cyan); margin-bottom:24px;">cmux</div>
+            <div style="font-family:'JetBrains Mono'; font-size:16px; font-weight:600; color:var(--text-primary); margin-bottom:8px;">Welcome</div>
+            <div style="font-size:13px; color:var(--text-secondary); line-height:1.5; margin-bottom:32px;">Connect to your Mac terminal in one scan.</div>
+            <div style="padding:12px 32px; border-radius:var(--radius-md); background:var(--accent-cyan); color:#000; font-family:'JetBrains Mono'; font-size:13px; font-weight:600;">Scan QR Code</div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+      <div class="phone-caption">Welcome</div>
+    </div>
+
+    <!-- Step 2: Scanning -->
+    <div class="phone-column">
+      <div class="phone-frame small" id="pair-step-2">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-icons"><span>⬤⬤⬤⬤</span><span>▐█▌</span></div></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0.9);">
+            <div class="qr-viewfinder" id="qr-viewfinder">
+              <div class="qr-bracket tl"></div>
+              <div class="qr-bracket tr"></div>
+              <div class="qr-bracket bl"></div>
+              <div class="qr-bracket br"></div>
+              <div class="qr-sweep"></div>
+              <div class="qr-placeholder">⣿</div>
+            </div>
+            <div style="font-family:'JetBrains Mono'; font-size:12px; color:var(--text-secondary); margin-top:16px;">Point at QR code on your Mac</div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+      <div class="phone-caption">Scanning</div>
+    </div>
+
+    <!-- Step 3: Connecting -->
+    <div class="phone-column">
+      <div class="phone-frame small" id="pair-step-3">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-icons"><span>⬤⬤⬤⬤</span><span>▐█▌</span></div></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px;">
+            <div style="width:64px; height:64px; border-radius:50%; border:3px solid var(--accent-cyan); border-top-color:transparent; animation:spin 0.8s linear infinite; margin-bottom:24px;"></div>
+            <div style="font-family:'JetBrains Mono'; font-size:14px; font-weight:600; color:var(--text-primary); margin-bottom:4px;">Connecting…</div>
+            <div style="font-family:'JetBrains Mono'; font-size:11px; color:var(--text-muted);">Establishing secure link</div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+      <div class="phone-caption">Connecting</div>
+    </div>
+
+    <!-- Step 4: Connected -->
+    <div class="phone-column">
+      <div class="phone-frame small" id="pair-step-4">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-icons"><span>⬤⬤⬤⬤</span><span>▐█▌</span></div></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px;">
+            <div class="connected-check" style="width:72px; height:72px; border-radius:50%; background:rgba(0,230,118,0.12); display:flex; align-items:center; justify-content:center; margin-bottom:24px;">
+              <span style="font-size:36px; color:var(--accent-green); animation:checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both; animation-delay:0.3s;">✓</span>
+            </div>
+            <div style="font-family:'JetBrains Mono'; font-size:14px; font-weight:600; color:var(--accent-green); margin-bottom:4px;">Connected</div>
+            <div style="font-family:'JetBrains Mono'; font-size:11px; color:var(--text-secondary);">MacBook Pro · 3 workspaces</div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+      <div class="phone-caption">Connected</div>
+    </div>
+  </div>
+
+  <div class="stepper-dots" id="pairing-stepper">
+    <div class="stepper-dot active" data-step="0"></div>
+    <div class="stepper-dot" data-step="1"></div>
+    <div class="stepper-dot" data-step="2"></div>
+    <div class="stepper-dot" data-step="3"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 4: TERMINAL VIEW (interactive pane type switcher)
+     ═══════════════════════════════════════════════════════ -->
+<section class="section section-elevated reveal">
+  <div class="section-label">Terminal</div>
+  <h2>Readability <span class="accent">first</span></h2>
+  <p class="section-desc">15px JetBrains Mono. Generous line-height. Every character earns its place. Switch between pane types with the segmented control.</p>
+
+  <div class="phone-row">
+    <div class="phone-column">
+      <div class="phone-frame" id="terminal-phone">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-icons"><span>⬤⬤⬤⬤</span><span>▐█▌</span></div></div>
+          <div class="top-bar">
+            <div class="tab-strip">
+              <div class="tab-item active"><span class="tab-status-dot"></span> cmux</div>
+              <div class="pane-dot"></div>
+              <div class="tab-item">server</div>
+            </div>
+            <div class="pane-type-icon">▸</div>
+          </div>
+
+          <!-- Segmented Control -->
+          <div class="segmented-control" id="pane-switcher">
+            <div class="segment-indicator" id="segment-indicator"></div>
+            <div class="segment active" data-type="terminal" onclick="switchPane('terminal')">
+              <span class="seg-icon">▸</span> Term
+            </div>
+            <div class="segment" data-type="browser" onclick="switchPane('browser')">
+              <span class="seg-icon">◉</span> Web
+            </div>
+            <div class="segment" data-type="files" onclick="switchPane('files')">
+              <span class="seg-icon">▤</span> Files
+            </div>
+            <div class="segment" data-type="shell" onclick="switchPane('shell')">
+              <span class="seg-icon">⌘</span> Shell
+            </div>
+          </div>
+
+          <!-- Pane Content Area -->
+          <div class="pane-content" id="pane-content">
+            <!-- Terminal Panel -->
+            <div class="pane-panel active" data-panel="terminal">
+              <div class="terminal-content" style="flex:1;">
+                <div><span class="prompt">~/cmux $</span> <span class="cmd">git log --oneline -5</span></div>
+                <div><span class="output"><span class="string">2185b5b</span> feat: Android companion visual polish</span></div>
+                <div><span class="output"><span class="string">6da00fe</span> fix: allow QR scanner when paired</span></div>
+                <div><span class="output"><span class="string">5b65469</span> Update ghostty submodule</span></div>
+                <div><span class="output"><span class="string">96a5c87</span> docs: update mobile companion status</span></div>
+                <div><span class="output"><span class="string">3ede32a</span> Merge feature/cmux-bridge into main</span></div>
+                <div>&nbsp;</div>
+                <div><span class="prompt">~/cmux $</span> <span class="cmd">swift test</span></div>
+                <div><span class="output">Test Suite 'All tests' passed.</span></div>
+                <div><span class="output">&nbsp;&nbsp;Executed 127 tests, 0 failures</span></div>
+                <div>&nbsp;</div>
+                <div><span class="prompt">~/cmux $</span> <span class="cursor-block"></span></div>
+              </div>
+            </div>
+
+            <!-- Browser Panel -->
+            <div class="pane-panel" data-panel="browser">
+              <div class="url-bar-row">
+                <div class="nav-btn disabled">‹</div>
+                <div class="nav-btn">›</div>
+                <div class="url-field">
+                  <span class="url-scheme">https://</span><span class="url-host">localhost</span>:3000/dashboard
+                </div>
+              </div>
+              <div class="browser-content">
+                <div class="web-bar-mock" style="width:60%;"></div>
+                <div class="web-block-mock"></div>
+                <div class="web-block-mock" style="height:80px;"></div>
+                <div class="web-bar-mock" style="width:40%;"></div>
+                <div class="web-block-mock" style="height:60px;"></div>
+                <div class="web-block-mock"></div>
+              </div>
+            </div>
+
+            <!-- Files Panel -->
+            <div class="pane-panel" data-panel="files">
+              <div class="files-content">
+                <div class="file-item"><span class="file-icon folder">📁</span> Sources <span class="file-size">12 items</span></div>
+                <div class="file-item"><span class="file-icon folder">📁</span> Tests <span class="file-size">8 items</span></div>
+                <div class="file-item"><span class="file-icon folder">📁</span> Resources <span class="file-size">5 items</span></div>
+                <div class="file-item"><span class="file-icon file">📄</span> Package.swift <span class="file-size">2.4 KB</span></div>
+                <div class="file-item"><span class="file-icon file">📄</span> CLAUDE.md <span class="file-size">8.1 KB</span></div>
+                <div class="file-item"><span class="file-icon file">📄</span> README.md <span class="file-size">3.2 KB</span></div>
+                <div class="file-item"><span class="file-icon file">📄</span> .gitmodules <span class="file-size">0.4 KB</span></div>
+                <div class="file-item"><span class="file-icon folder">📁</span> docs <span class="file-size">6 items</span></div>
+                <div class="file-item"><span class="file-icon folder">📁</span> scripts <span class="file-size">4 items</span></div>
+              </div>
+            </div>
+
+            <!-- Shell Panel -->
+            <div class="pane-panel" data-panel="shell">
+              <div class="shell-content">
+                <div class="shell-item">
+                  <div class="shell-icon">▸</div>
+                  <div><div class="shell-label">New Terminal</div><div class="shell-desc">Open a new shell session</div></div>
+                </div>
+                <div class="shell-item">
+                  <div class="shell-icon" style="background:rgba(68,138,255,0.12); color:var(--accent-blue);">⌘</div>
+                  <div><div class="shell-label">Run Command</div><div class="shell-desc">Execute a quick command</div></div>
+                </div>
+                <div class="shell-item">
+                  <div class="shell-icon" style="background:rgba(255,171,64,0.12); color:var(--accent-orange);">⏱</div>
+                  <div><div class="shell-label">Recent Commands</div><div class="shell-desc">Browse command history</div></div>
+                </div>
+                <div class="shell-item">
+                  <div class="shell-icon" style="background:rgba(0,230,118,0.12); color:var(--accent-green);">⚙</div>
+                  <div><div class="shell-label">SSH Sessions</div><div class="shell-desc">Manage remote connections</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom bar (morphs per pane type) -->
+          <div id="bottom-bar-container">
+            <div class="modifier-bar bottom-bar-terminal" id="bottom-terminal" style="display:flex;">
+              <div class="mod-key" style="padding:0 8px;">esc</div>
+              <div class="mod-key" style="padding:0 8px;">ctrl</div>
+              <div class="mod-key" style="padding:0 8px;">alt</div>
+              <div class="mod-key accent-key" style="padding:0 8px;">tab</div>
+              <div class="arrow-cluster">
+                <div class="arrow-key" data-dir="left">←</div>
+                <div class="arrow-key" data-dir="up">↑</div>
+                <div class="arrow-key" data-dir="down">↓</div>
+                <div class="arrow-key" data-dir="right">→</div>
+              </div>
+              <div class="mod-key enter-key">⏎</div>
+            </div>
+            <div class="modifier-bar bottom-bar-browser" id="bottom-browser" style="display:none;">
+              <div class="browser-nav-btn">‹</div>
+              <div class="browser-nav-btn">›</div>
+              <div class="browser-nav-btn">⟲</div>
+              <div class="browser-nav-btn">⊕</div>
+              <div class="browser-nav-btn">≡</div>
+            </div>
+            <div class="modifier-bar bottom-bar-files" id="bottom-files" style="display:none;">
+              <div class="files-action-btn">▤ Sort</div>
+              <div class="files-action-btn">⊕ New</div>
+              <div class="files-action-btn" style="margin-left:auto;">⋯</div>
+            </div>
+            <div class="modifier-bar" id="bottom-shell" style="display:none;">
+              <div class="mod-key" style="padding:0 8px;">esc</div>
+              <div class="mod-key" style="padding:0 8px; flex:1; max-width:200px; color:var(--text-muted);">Search commands…</div>
+              <div class="mod-key enter-key" style="margin-left:auto;">⏎</div>
+            </div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 5: TERMINAL + KEYBOARD
+     ═══════════════════════════════════════════════════════ -->
+<section class="section reveal">
+  <div class="section-label">Input</div>
+  <h2>Keys that <span class="accent">matter</span></h2>
+  <p class="section-desc">Modifier bar floats above the keyboard. Extra special keys appear in the freed space. Every key developers actually need, zero bloat.</p>
+
+  <div class="phone-row">
+    <div class="phone-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-icons"><span>⬤⬤⬤⬤</span><span>▐█▌</span></div></div>
+          <div class="top-bar">
+            <div class="tab-strip">
+              <div class="tab-item active"><span class="tab-status-dot"></span> cmux</div>
+            </div>
+            <div class="pane-type-icon">▸</div>
+          </div>
+          <div class="terminal-content" style="flex:1; font-size:13px;">
+            <div><span class="prompt">~ $</span> <span class="cmd">echo "Hello" | grep -o "ll"</span></div>
+            <div><span class="output">ll</span></div>
+            <div><span class="prompt">~ $</span> <span class="cmd">ls ~/projects/</span></div>
+            <div><span class="output">cmux/&nbsp;&nbsp;api/&nbsp;&nbsp;web/</span></div>
+            <div><span class="prompt">~ $</span> <span class="cursor-block" style="width:7px;height:14px;"></span></div>
+          </div>
+
+          <!-- Modifier bar above keyboard -->
+          <div class="modifier-bar">
+            <div class="mod-key" style="padding:0 8px;">esc</div>
+            <div class="mod-key" style="padding:0 8px;">ctrl</div>
+            <div class="mod-key" style="padding:0 8px;">alt</div>
+            <div class="mod-key accent-key" style="padding:0 8px;">tab</div>
+            <div class="arrow-cluster">
+              <div class="arrow-key" data-dir="left">←</div>
+              <div class="arrow-key" data-dir="up">↑</div>
+              <div class="arrow-key" data-dir="down">↓</div>
+              <div class="arrow-key" data-dir="right">→</div>
+            </div>
+            <div class="mod-key enter-key">⏎</div>
+          </div>
+
+          <!-- Extra special keys -->
+          <div class="extra-keys-row">
+            <div class="extra-key">|</div>
+            <div class="extra-key">~</div>
+            <div class="extra-key">/</div>
+            <div class="extra-key">-</div>
+            <div class="extra-key">_</div>
+            <div class="extra-key">`</div>
+          </div>
+
+          <!-- Keyboard -->
+          <div class="keyboard-area">
+            <div class="keyboard-row">
+              <div class="kb-key">q</div><div class="kb-key">w</div><div class="kb-key">e</div>
+              <div class="kb-key">r</div><div class="kb-key">t</div><div class="kb-key">y</div>
+              <div class="kb-key">u</div><div class="kb-key">i</div><div class="kb-key">o</div>
+              <div class="kb-key">p</div>
+            </div>
+            <div class="keyboard-row">
+              <div class="kb-key">a</div><div class="kb-key">s</div><div class="kb-key">d</div>
+              <div class="kb-key">f</div><div class="kb-key">g</div><div class="kb-key">h</div>
+              <div class="kb-key">j</div><div class="kb-key">k</div><div class="kb-key">l</div>
+            </div>
+            <div class="keyboard-row">
+              <div class="kb-key dark-key" style="min-width:42px;">⇧</div>
+              <div class="kb-key">z</div><div class="kb-key">x</div><div class="kb-key">c</div>
+              <div class="kb-key">v</div><div class="kb-key">b</div><div class="kb-key">n</div>
+              <div class="kb-key">m</div>
+              <div class="kb-key dark-key" style="min-width:42px;">⌫</div>
+            </div>
+            <div class="keyboard-row">
+              <div class="kb-key dark-key" style="min-width:52px; font-size:11px;">123</div>
+              <div class="kb-key dark-key" style="min-width:36px;">🌐</div>
+              <div class="kb-key space"></div>
+              <div class="kb-key dark-key" style="min-width:80px; font-size:12px;">return</div>
+            </div>
+          </div>
+          <div class="home-indicator" style="background:#1C1C1E;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 6: WORKSPACE DRAWER (interactive)
+     ═══════════════════════════════════════════════════════ -->
+<section class="section section-elevated reveal">
+  <div class="section-label">Workspaces</div>
+  <h2>Every project, <span class="accent">organized</span></h2>
+  <p class="section-desc">Slide open the workspace drawer to switch between projects. Frosted glass overlay. Live activity indicators. One tap to focus.</p>
+
+  <div style="text-align:center;">
+    <button class="drawer-trigger" id="drawer-btn" onclick="toggleDrawer()">
+      ☰ &nbsp;Try the workspace drawer
+    </button>
+  </div>
+
+  <div class="phone-row">
+    <div class="phone-column">
+      <div class="phone-frame drawer-phone-wrapper" id="drawer-phone">
+        <div class="drawer-overlay" id="drawer-overlay" onclick="toggleDrawer()"></div>
+        <div class="drawer-panel" id="drawer-panel">
+          <div class="drawer-title">Workspaces</div>
+          <div class="workspace-card active" onclick="toggleDrawer()">
+            <div class="ws-name">cmux</div>
+            <div class="ws-branch">⎇ main</div>
+            <div class="ws-meta">
+              <span>5 panes</span>
+              <div class="ws-activity">
+                <div class="activity-dot"></div>
+                <div class="activity-dot"></div>
+                <div class="activity-dot"></div>
+              </div>
+            </div>
+          </div>
+          <div class="workspace-card" onclick="toggleDrawer()">
+            <div class="ws-name">api-server</div>
+            <div class="ws-branch">⎇ feat/auth-v2</div>
+            <div class="ws-meta"><span>3 panes</span></div>
+          </div>
+          <div class="workspace-card" onclick="toggleDrawer()">
+            <div class="ws-name">website</div>
+            <div class="ws-branch">⎇ redesign</div>
+            <div class="ws-meta"><span>2 panes</span></div>
+          </div>
+          <div class="workspace-card" onclick="toggleDrawer()">
+            <div class="ws-name">infrastructure</div>
+            <div class="ws-branch">⎇ main</div>
+            <div class="ws-meta"><span>1 pane</span></div>
+          </div>
+        </div>
+        <div class="phone-inner" style="z-index:5;">
+          <div class="status-bar"><span>9:41</span><div class="status-icons"><span>⬤⬤⬤⬤</span><span>▐█▌</span></div></div>
+          <div class="top-bar">
+            <div class="tab-strip">
+              <div class="tab-item active"><span class="tab-status-dot"></span> cmux</div>
+              <div class="pane-dot"></div>
+              <div class="tab-item">server</div>
+            </div>
+            <div class="pane-type-icon">▸</div>
+          </div>
+          <div class="terminal-content" style="flex:1;">
+            <div><span class="prompt">~/cmux $</span> <span class="cmd">swift build</span></div>
+            <div><span class="output">Building for debugging…</span></div>
+            <div><span class="output">Build complete! (42 targets)</span></div>
+            <div>&nbsp;</div>
+            <div><span class="prompt">~/cmux $</span> <span class="cursor-block"></span></div>
+          </div>
+          <div class="modifier-bar">
+            <div class="mod-key" style="padding:0 8px;">esc</div>
+            <div class="mod-key" style="padding:0 8px;">ctrl</div>
+            <div class="mod-key" style="padding:0 8px;">alt</div>
+            <div class="mod-key accent-key" style="padding:0 8px;">tab</div>
+            <div class="arrow-cluster">
+              <div class="arrow-key">←</div>
+              <div class="arrow-key">↑</div>
+              <div class="arrow-key">↓</div>
+              <div class="arrow-key">→</div>
+            </div>
+            <div class="mod-key enter-key">⏎</div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 7: MINIMAP VIEW
+     ═══════════════════════════════════════════════════════ -->
+<section class="section reveal">
+  <div class="section-label">Spatial</div>
+  <h2>See <span class="accent">everything</span></h2>
+  <p class="section-desc">Pinch out to reveal the minimap — a spatial overview of every pane, matching your desktop layout. Tap any pane to dive in.</p>
+
+  <div class="phone-row">
+    <div class="phone-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-icons"><span>⬤⬤⬤⬤</span><span>▐█▌</span></div></div>
+          <div class="minimap-container">
+            <div class="minimap-grid">
+              <div class="minimap-pane active">
+                <div class="minimap-label">Terminal</div>
+                <div>$ git status<br>On branch main<br>Changes staged…</div>
+              </div>
+              <div class="minimap-pane">
+                <div class="minimap-label">Server</div>
+                <div>$ npm run dev<br>listening :3000<br>GET /api/…</div>
+              </div>
+              <div class="minimap-pane">
+                <div class="minimap-label">Tests</div>
+                <div>$ swift test<br>127 tests passed<br>0 failures</div>
+              </div>
+              <div class="minimap-pane">
+                <div class="minimap-label">Logs</div>
+                <div>$ tail -f log<br>[INFO] request<br>[DEBUG] cache</div>
+              </div>
+              <div class="minimap-pane wide">
+                <div class="minimap-label">Browser</div>
+                <div>localhost:3000/dashboard — API Status: Connected</div>
+              </div>
+            </div>
+            <div class="minimap-hint">Tap a pane to focus</div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 8: CONNECTION STATES
+     ═══════════════════════════════════════════════════════ -->
+<section class="section section-elevated reveal">
+  <div class="section-label">Connection</div>
+  <h2>Always <span class="accent">aware</span></h2>
+  <p class="section-desc">Clear, unambiguous connection feedback. Animated pulses for active states, static indicators for disconnected. You always know where you stand.</p>
+
+  <div class="phone-row">
+    <!-- Connected -->
+    <div class="phone-column">
+      <div class="phone-frame small">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-icons"><span>⬤⬤⬤⬤</span><span>▐█▌</span></div></div>
+          <div class="connection-status-bar connected">
+            <div class="connection-indicator connected"></div>
+            <span>Connected — MacBook Pro</span>
+          </div>
+          <div class="terminal-content" style="flex:1;">
+            <div><span class="prompt">~ $</span> <span class="cmd">uptime</span></div>
+            <div><span class="output">14:23 up 3 days, 2:41</span></div>
+            <div><span class="prompt">~ $</span> <span class="cursor-block"></span></div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+      <div class="phone-caption">Connected</div>
+    </div>
+
+    <!-- Reconnecting -->
+    <div class="phone-column">
+      <div class="phone-frame small">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-icons"><span>⬤⬤⬤⬤</span><span>▐█▌</span></div></div>
+          <div class="connection-status-bar reconnecting">
+            <div class="connection-indicator reconnecting"></div>
+            <span>Reconnecting…</span>
+          </div>
+          <div class="terminal-content" style="flex:1; opacity:0.5;">
+            <div><span class="prompt">~ $</span> <span class="cmd">uptime</span></div>
+            <div><span class="output">14:23 up 3 days, 2:41</span></div>
+            <div><span class="prompt">~ $</span></div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+      <div class="phone-caption">Reconnecting</div>
+    </div>
+
+    <!-- Disconnected -->
+    <div class="phone-column">
+      <div class="phone-frame small">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-icons"><span>⬤⬤⬤⬤</span><span>▐█▌</span></div></div>
+          <div class="connection-status-bar disconnected">
+            <div class="connection-indicator disconnected"></div>
+            <span>Disconnected</span>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px;">
+            <div style="font-size:48px; margin-bottom:16px; opacity:0.3;">⊘</div>
+            <div style="font-family:'JetBrains Mono'; font-size:13px; color:var(--text-secondary); text-align:center; margin-bottom:20px;">Mac is not reachable</div>
+            <div style="padding:10px 24px; border-radius:var(--radius-md); background:var(--bg-surface); border:1px solid rgba(255,255,255,0.08); font-family:'JetBrains Mono'; font-size:12px; color:var(--text-primary); cursor:pointer;">Reconnect</div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+      <div class="phone-caption">Disconnected</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 9: GESTURE REFERENCE
+     ═══════════════════════════════════════════════════════ -->
+<section class="section reveal">
+  <div class="section-label">Gestures</div>
+  <h2>Touch <span class="accent">native</span></h2>
+  <p class="section-desc">Every gesture maps to a terminal action. No menus, no modes — direct manipulation of your development environment.</p>
+
+  <div class="gesture-grid">
+    <div class="gesture-card">
+      <div class="gesture-icon">↔</div>
+      <div class="gesture-info">
+        <h4>Swipe Left/Right</h4>
+        <p>Switch between panes in the current workspace</p>
+      </div>
+    </div>
+    <div class="gesture-card">
+      <div class="gesture-icon">←</div>
+      <div class="gesture-info">
+        <h4>Edge Swipe Right</h4>
+        <p>Open the workspace drawer from the left edge</p>
+      </div>
+    </div>
+    <div class="gesture-card">
+      <div class="gesture-icon">⇕</div>
+      <div class="gesture-info">
+        <h4>Two-Finger Scroll</h4>
+        <p>Scroll terminal output up and down</p>
+      </div>
+    </div>
+    <div class="gesture-card">
+      <div class="gesture-icon">⤢</div>
+      <div class="gesture-info">
+        <h4>Pinch Out</h4>
+        <p>Zoom out to minimap — spatial overview of all panes</p>
+      </div>
+    </div>
+    <div class="gesture-card">
+      <div class="gesture-icon">⤡</div>
+      <div class="gesture-info">
+        <h4>Pinch In</h4>
+        <p>Zoom back into the focused pane from minimap</p>
+      </div>
+    </div>
+    <div class="gesture-card">
+      <div class="gesture-icon">⇥</div>
+      <div class="gesture-info">
+        <h4>Swipe Tabs</h4>
+        <p>Swipe horizontally on the tab strip to scroll tabs</p>
+      </div>
+    </div>
+    <div class="gesture-card">
+      <div class="gesture-icon">⊞</div>
+      <div class="gesture-info">
+        <h4>Long Press</h4>
+        <p>Context menu for copy, paste, and terminal actions</p>
+      </div>
+    </div>
+    <div class="gesture-card">
+      <div class="gesture-icon">⇤</div>
+      <div class="gesture-info">
+        <h4>Double Tap</h4>
+        <p>Select word under cursor for quick copy</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════════════════════ -->
+<footer style="text-align:center; padding:80px 48px; border-top:1px solid rgba(255,255,255,0.04);">
+  <div style="font-family:'JetBrains Mono'; font-size:14px; font-weight:700; letter-spacing:4px; text-transform:uppercase; color:var(--accent-cyan); margin-bottom:12px;">cmux</div>
+  <div style="font-size:15px; color:var(--text-muted);">Android Companion — Visual Design Spec</div>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════
+     JAVASCRIPT — Vanilla, no dependencies
+     ═══════════════════════════════════════════════════════ -->
+<script>
+/* ── Scroll Reveal ── */
+(function() {
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+
+  reveals.forEach(el => observer.observe(el));
+})();
+
+/* ── Pane Type Switcher ── */
+let currentPane = 'terminal';
+
+function switchPane(type) {
+  if (type === currentPane) return;
+
+  const switcher = document.getElementById('pane-switcher');
+  const segments = switcher.querySelectorAll('.segment');
+  const indicator = document.getElementById('segment-indicator');
+  const panels = document.querySelectorAll('#pane-content .pane-panel');
+
+  // Update segments
+  segments.forEach(seg => seg.classList.remove('active'));
+  const activeSegment = switcher.querySelector(`[data-type="${type}"]`);
+  activeSegment.classList.add('active');
+
+  // Move indicator
+  updateIndicator(activeSegment, indicator, switcher);
+
+  // Crossfade panels
+  const currentPanel = document.querySelector(`[data-panel="${currentPane}"]`);
+  const nextPanel = document.querySelector(`[data-panel="${type}"]`);
+
+  currentPanel.classList.add('exiting');
+  currentPanel.classList.remove('active');
+
+  nextPanel.classList.add('active');
+
+  setTimeout(() => {
+    currentPanel.classList.remove('exiting');
+  }, 350);
+
+  // Switch bottom bar
+  document.getElementById('bottom-terminal').style.display = type === 'terminal' ? 'flex' : 'none';
+  document.getElementById('bottom-browser').style.display = type === 'browser' ? 'flex' : 'none';
+  document.getElementById('bottom-files').style.display = type === 'files' ? 'flex' : 'none';
+  document.getElementById('bottom-shell').style.display = type === 'shell' ? 'flex' : 'none';
+
+  currentPane = type;
+}
+
+function updateIndicator(segment, indicator, container) {
+  const containerRect = container.getBoundingClientRect();
+  const segRect = segment.getBoundingClientRect();
+
+  const left = segRect.left - containerRect.left;
+  const width = segRect.width;
+
+  indicator.style.width = width + 'px';
+  indicator.style.transform = `translateX(${left - 3}px)`;
+}
+
+// Initialize indicator position
+window.addEventListener('load', () => {
+  const switcher = document.getElementById('pane-switcher');
+  if (!switcher) return;
+  const activeSegment = switcher.querySelector('.segment.active');
+  const indicator = document.getElementById('segment-indicator');
+  if (activeSegment && indicator) {
+    // Small delay so layout is computed
+    requestAnimationFrame(() => {
+      updateIndicator(activeSegment, indicator, switcher);
+    });
+  }
+});
+
+window.addEventListener('resize', () => {
+  const switcher = document.getElementById('pane-switcher');
+  if (!switcher) return;
+  const activeSegment = switcher.querySelector('.segment.active');
+  const indicator = document.getElementById('segment-indicator');
+  if (activeSegment && indicator) {
+    updateIndicator(activeSegment, indicator, switcher);
+  }
+});
+
+/* ── Workspace Drawer ── */
+let drawerOpen = false;
+
+function toggleDrawer() {
+  drawerOpen = !drawerOpen;
+  document.getElementById('drawer-overlay').classList.toggle('open', drawerOpen);
+  document.getElementById('drawer-panel').classList.toggle('open', drawerOpen);
+  document.getElementById('drawer-btn').textContent = drawerOpen ? '✕  Close drawer' : '☰  Try the workspace drawer';
+}
+
+/* ── Pairing Stepper ── */
+(function() {
+  const dots = document.querySelectorAll('.stepper-dot');
+  const steps = ['pair-step-1', 'pair-step-2', 'pair-step-3', 'pair-step-4'];
+  let currentStep = 0;
+  let autoInterval;
+
+  function goToStep(idx) {
+    currentStep = idx;
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+
+    // Highlight active phone
+    steps.forEach((id, i) => {
+      const phone = document.getElementById(id);
+      if (phone) {
+        phone.style.opacity = i === idx ? '1' : '0.4';
+        phone.style.transform = i === idx ? 'scale(1.02)' : 'scale(0.98)';
+        phone.style.transition = 'all 0.5s cubic-bezier(0.2,0.8,0.2,1)';
+      }
+    });
+
+    // QR lock-on for step 2
+    const viewfinder = document.getElementById('qr-viewfinder');
+    if (viewfinder) {
+      viewfinder.classList.toggle('detected', idx >= 2);
+    }
+  }
+
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      goToStep(parseInt(dot.dataset.step));
+      clearInterval(autoInterval);
+      startAuto();
+    });
+  });
+
+  function startAuto() {
+    autoInterval = setInterval(() => {
+      goToStep((currentStep + 1) % 4);
+    }, 3000);
+  }
+
+  goToStep(0);
+  startAuto();
+})();
+
+/* ── QR Viewfinder Periodic Animation ── */
+(function() {
+  // The viewfinder animation is handled by the pairing stepper
+  // The sweep animation runs continuously via CSS
+})();
+</script>
+
+</body>
+</html>
