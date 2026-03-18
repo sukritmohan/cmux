@@ -15,6 +15,14 @@ import Network
 final class BridgeServer: @unchecked Sendable {
     static let shared = BridgeServer()
 
+    /// Posted when a device successfully authenticates over WebSocket.
+    /// `userInfo`: `["deviceId": UUID, "deviceName": String]`
+    static let deviceConnected = Notification.Name("bridgeDeviceConnected")
+
+    /// Posted when an authenticated device disconnects.
+    /// `userInfo`: `["deviceId": UUID]`
+    static let deviceDisconnected = Notification.Name("bridgeDeviceDisconnected")
+
     // MARK: - State
 
     /// Active WebSocket connections keyed by their unique ID.
@@ -75,7 +83,15 @@ final class BridgeServer: @unchecked Sendable {
         let wsOptions = NWProtocolWebSocket.Options()
         wsOptions.autoReplyPing = true
 
+        // TCP keepalive to prevent Tailscale/WireGuard tunnel from dropping idle connections.
+        let tcpOptions = NWProtocolTCP.Options()
+        tcpOptions.enableKeepalive = true
+        tcpOptions.keepaliveInterval = 10
+        tcpOptions.keepaliveCount = 3
+        tcpOptions.connectionTimeout = 10
+
         let params = NWParameters(tls: nil)
+        params.defaultProtocolStack.transportProtocol = tcpOptions
         params.defaultProtocolStack.applicationProtocols.insert(wsOptions, at: 0)
 
         let newListener: NWListener
@@ -131,8 +147,16 @@ final class BridgeServer: @unchecked Sendable {
         currentListener?.cancel()
 
         for (_, conn) in activeConnections {
+            if let deviceId = conn.deviceId {
+                NotificationCenter.default.post(
+                    name: BridgeServer.deviceDisconnected,
+                    object: nil,
+                    userInfo: ["deviceId": deviceId]
+                )
+            }
             conn.connection.cancel()
             BridgePTYStream.shared.removeAllSubscriptions(forConnection: conn.id)
+            BridgeCellStream.shared.removeAllSubscriptions(forConnection: conn.id)
         }
 
         NSLog("[BridgeServer] Stopped")
@@ -148,12 +172,28 @@ final class BridgeServer: @unchecked Sendable {
     /// - Parameter id: The UUID of the connection to remove.
     func removeConnection(_ id: UUID) {
         lock.lock()
-        connections.removeValue(forKey: id)
+        let connection = connections.removeValue(forKey: id)
         lock.unlock()
+
+        if let deviceId = connection?.deviceId {
+            NotificationCenter.default.post(
+                name: BridgeServer.deviceDisconnected,
+                object: nil,
+                userInfo: ["deviceId": deviceId]
+            )
+        }
 
         #if DEBUG
         NSLog("[BridgeServer] Connection removed: %@", id.uuidString)
         #endif
+    }
+
+    /// Returns device IDs of all currently authenticated connections.
+    func connectedDeviceIds() -> Set<UUID> {
+        lock.lock()
+        let ids = Set(connections.values.compactMap { $0.isAuthenticated ? $0.deviceId : nil })
+        lock.unlock()
+        return ids
     }
 
     // MARK: - Broadcasting
@@ -204,6 +244,23 @@ final class BridgeServer: @unchecked Sendable {
 
         for conn in recipients {
             conn.sendBinary(frame)
+        }
+    }
+
+    /// Sends a binary WebSocket frame to specific connections by their IDs.
+    ///
+    /// Used by BridgeCellStream to send cell data frames to subscribed connections.
+    ///
+    /// - Parameters:
+    ///   - connectionIds: The set of connection UUIDs to send to.
+    ///   - data: The binary data to send (already includes channel ID prefix).
+    func broadcastBinaryToConnections(connectionIds: Set<UUID>, data: Data) {
+        lock.lock()
+        let recipients = connectionIds.compactMap { connections[$0] }
+        lock.unlock()
+
+        for conn in recipients {
+            conn.sendBinary(data)
         }
     }
 

@@ -75,11 +75,19 @@ final class BridgeConnection {
                 #endif
                 break
             default:
+                NSLog("[BridgeConnection] %@ unexpected state: %@", self.id.uuidString, "\(state)")
                 break
             }
         }
         connection.start(queue: queue)
         readNextMessage()
+
+        // Auth timeout: disconnect if not authenticated within 10 seconds.
+        DispatchQueue.global().asyncAfter(deadline: .now() + 10) { [weak self] in
+            guard let self, !self.isAuthenticated else { return }
+            NSLog("[BridgeConnection] %@ auth timeout, disconnecting", self.id.uuidString)
+            self.disconnect()
+        }
     }
 
     /// Cancels the underlying connection and cleans up subscriptions.
@@ -87,8 +95,10 @@ final class BridgeConnection {
     /// Removes all PTY subscriptions for this connection and deregisters from
     /// `BridgeServer.connections`. Safe to call multiple times.
     func disconnect() {
+        NSLog("[BridgeConnection] %@ disconnect() called", id.uuidString)
         connection.cancel()
         BridgePTYStream.shared.removeAllSubscriptions(forConnection: id)
+        BridgeCellStream.shared.removeAllSubscriptions(forConnection: id)
         BridgeServer.shared.removeConnection(id)
     }
 
@@ -202,13 +212,21 @@ final class BridgeConnection {
             guard let context,
                   let metadata = context.protocolMetadata(definition: NWProtocolWebSocket.definition)
                       as? NWProtocolWebSocket.Metadata else {
-                // Not a WebSocket frame — disconnect.
+                NSLog("[BridgeConnection] %@ no WebSocket metadata, content=%d bytes, context=%@, isComplete=%d",
+                      self.id.uuidString,
+                      content?.count ?? 0,
+                      context?.identifier ?? "nil",
+                      isComplete ? 1 : 0)
                 self.disconnect()
                 return
             }
 
             switch metadata.opcode {
             case .close:
+                NSLog("[BridgeConnection] %@ received close frame, closeCode=%@, content=%d bytes",
+                      self.id.uuidString,
+                      "\(metadata.closeCode)",
+                      content?.count ?? 0)
                 self.disconnect()
                 return
             case .text:
@@ -242,6 +260,8 @@ final class BridgeConnection {
     ///
     /// - Parameter text: The raw JSON text from the WebSocket frame.
     private func handleTextMessage(_ text: String) {
+        NSLog("[BridgeConnection] %@ handleTextMessage: %@", self.id.uuidString, text)
+
         // Parse JSON envelope.
         guard let data = text.data(using: .utf8),
               let object = try? JSONSerialization.jsonObject(with: data, options: []),
@@ -281,6 +301,10 @@ final class BridgeConnection {
             handlePTYWrite(id: id, params: params)
         case "surface.pty.resize":
             handlePTYResize(id: id, params: params)
+        case "surface.cells.subscribe":
+            handleCellsSubscribe(id: id, params: params)
+        case "surface.cells.unsubscribe":
+            handleCellsUnsubscribe(id: id, params: params)
         case "system.subscribe_events":
             subscribedToEvents = true
             sendText(encodeOk(id: id, result: ["subscribed": true]))
@@ -305,12 +329,15 @@ final class BridgeConnection {
     ///   - params: Must contain `"token"` string.
     private func handleAuthPair(id: Any?, params: [String: Any]) {
         guard let token = params["token"] as? String, !token.isEmpty else {
+            NSLog("[BridgeConnection] %@ auth.pair missing token", self.id.uuidString)
             sendText(encodeError(id: id, code: "invalid_params", message: "Missing token"))
             disconnect()
             return
         }
 
+        NSLog("[BridgeConnection] %@ auth.pair validating token (%d chars)", self.id.uuidString, token.count)
         guard let device = BridgeAuth.shared.validateToken(token) else {
+            NSLog("[BridgeConnection] %@ auth.pair token rejected", self.id.uuidString)
             sendText(encodeError(id: id, code: "auth_failed", message: "Invalid pairing token"))
             disconnect()
             return
@@ -319,6 +346,12 @@ final class BridgeConnection {
         isAuthenticated = true
         deviceId = device.id
         BridgeAuth.shared.touchDevice(id: device.id)
+
+        NotificationCenter.default.post(
+            name: BridgeServer.deviceConnected,
+            object: nil,
+            userInfo: ["deviceId": device.id, "deviceName": device.name]
+        )
 
         sendText(encodeOk(id: id, result: [
             "authenticated": true,
@@ -489,6 +522,59 @@ final class BridgeConnection {
                 "desktop_rows": desktopRows,
             ]))
         }
+    }
+
+    // MARK: - Cell Stream Subscription Handlers
+
+    /// Subscribes this connection to cell-based screen output for a terminal surface.
+    ///
+    /// Cell streaming sends rendered cell data (colors, attributes, codepoints) instead
+    /// of raw PTY bytes. The mobile client renders cells directly without needing a
+    /// VT parser. Returns the channel ID for binary frame demultiplexing.
+    ///
+    /// - Parameters:
+    ///   - id: The JSON-RPC request ID.
+    ///   - params: Must contain `"surface_id"` as a UUID string.
+    private func handleCellsSubscribe(id: Any?, params: [String: Any]) {
+        guard let surfaceIdString = params["surface_id"] as? String,
+              let surfaceId = UUID(uuidString: surfaceIdString) else {
+            sendText(encodeError(id: id, code: "invalid_params", message: "Missing or invalid surface_id"))
+            return
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            guard let panel = resolveTerminalPanel(surfaceId: surfaceId),
+                  panel.surface.surface != nil else {
+                self.sendText(self.encodeError(id: id, code: "not_found",
+                                               message: "Surface not found: \(surfaceId.uuidString)"))
+                return
+            }
+
+            BridgeCellStream.shared.addSubscriber(connectionId: self.id, surfaceId: surfaceId)
+
+            self.sendText(self.encodeOk(id: id, result: [
+                "subscribed": true,
+                "surface_id": surfaceId.uuidString,
+                "channel": surfaceId.channelId,
+            ]))
+        }
+    }
+
+    /// Unsubscribes this connection from cell output for a terminal surface.
+    ///
+    /// - Parameters:
+    ///   - id: The JSON-RPC request ID.
+    ///   - params: Must contain `"surface_id"` as a UUID string.
+    private func handleCellsUnsubscribe(id: Any?, params: [String: Any]) {
+        guard let surfaceIdString = params["surface_id"] as? String,
+              let surfaceId = UUID(uuidString: surfaceIdString) else {
+            sendText(encodeError(id: id, code: "invalid_params", message: "Missing or invalid surface_id"))
+            return
+        }
+
+        BridgeCellStream.shared.removeSubscriber(connectionId: self.id, surfaceId: surfaceId)
+        sendText(encodeOk(id: id, result: ["unsubscribed": true, "surface_id": surfaceId.uuidString]))
     }
 
     // MARK: - Terminal Controller Dispatch

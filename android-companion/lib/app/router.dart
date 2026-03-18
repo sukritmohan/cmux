@@ -1,22 +1,20 @@
 /// GoRouter configuration for the cmux companion app.
 ///
 /// Routes:
-///   /pair     - QR code scanning (shown if unpaired)
-///   /home     - Workspace list + connection status
-///   /terminal/:surfaceId - Full-screen terminal view
+///   /pair      - QR code scanning (shown if unpaired)
+///   /terminal  - Main terminal screen (workspace tabs, modifier bar, drawer)
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../home/home_screen.dart';
 import '../onboarding/pairing_screen.dart';
-import '../terminal/terminal_view.dart';
+import '../terminal/terminal_screen.dart';
 import 'providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/home',
+    initialLocation: '/terminal',
     redirect: (context, state) async {
       final isPaired = await ref.read(pairingServiceProvider).isPaired();
 
@@ -30,7 +28,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isPaired &&
           state.uri.path == '/pair' &&
           state.uri.queryParameters['rescan'] != 'true') {
-        return '/home';
+        return '/terminal';
+      }
+
+      // Legacy /home route → redirect to /terminal.
+      if (state.uri.path == '/home') {
+        return '/terminal';
       }
 
       return null;
@@ -43,15 +46,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: '/home',
-        builder: (context, state) => const HomeScreen(),
-      ),
-      GoRoute(
-        path: '/terminal/:surfaceId',
-        builder: (context, state) {
-          final surfaceId = state.pathParameters['surfaceId']!;
-          return TerminalView(surfaceId: surfaceId);
-        },
+        path: '/terminal',
+        builder: (context, state) => const TerminalScreen(),
       ),
     ],
   );

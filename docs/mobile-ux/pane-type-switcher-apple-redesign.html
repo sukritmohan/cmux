@@ -1,0 +1,2146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cmux Mobile: Pane Type Switcher -- Apple Redesign</title>
+<style>
+  /* ══════════════════════════════════════════════════════════
+     DESIGN TOKENS -- Apple iOS 17+ Dark Theme
+     ══════════════════════════════════════════════════════════ */
+  :root {
+    --bg-deep: #000000;
+    --bg-primary: #0A0A0A;
+    --bg-elevated: #1C1C1E;
+    --bg-secondary: #2C2C2E;
+    --bg-tertiary: #3A3A3C;
+    --glass: rgba(255,255,255,0.06);
+    --glass-border: rgba(255,255,255,0.08);
+    --glass-heavy: rgba(255,255,255,0.12);
+
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(255,255,255,0.6);
+    --text-tertiary: rgba(255,255,255,0.3);
+
+    --accent-green: #30D158;
+    --accent-blue: #0A84FF;
+    --accent-orange: #FF9F0A;
+    --accent-purple: #BF5AF2;
+    --accent-red: #FF453A;
+    --accent-teal: #64D2FF;
+
+    --segment-active: rgba(255,255,255,0.18);
+    --segment-text-active: #FFFFFF;
+    --segment-text-inactive: rgba(255,255,255,0.45);
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 22px;
+    --radius-pill: 100px;
+
+    --shadow-soft: 0 2px 12px rgba(0,0,0,0.3);
+    --shadow-elevated: 0 8px 32px rgba(0,0,0,0.5);
+    --shadow-float: 0 4px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.06);
+
+    --spring: 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    --spring-fast: 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    --phone-width: 375px;
+    --phone-height: 812px;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     PAGE LAYOUT -- Apple Product Page Aesthetic
+     ══════════════════════════════════════════════════════════ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    background: #000;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .design-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 80px 48px 120px;
+  }
+
+  /* ── Hero Header ── */
+  .hero {
+    text-align: center;
+    margin-bottom: 96px;
+  }
+  .hero-eyebrow {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--accent-blue);
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: 56px;
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1.08;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero .subtitle {
+    font-size: 19px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* ── Section Headers ── */
+  .section-header {
+    margin: 96px 0 48px;
+  }
+  .section-header h2 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.8px;
+    line-height: 1.15;
+    margin-bottom: 12px;
+  }
+  .section-header p {
+    font-size: 17px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: 680px;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     PHONE FRAME -- Refined Bezel
+     ══════════════════════════════════════════════════════════ */
+  .phone-frame {
+    width: var(--phone-width);
+    height: var(--phone-height);
+    background: var(--bg-deep);
+    border-radius: 50px;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.06),
+      0 24px 80px rgba(0,0,0,0.6),
+      0 0 0 4px #1a1a1a,
+      inset 0 0 0 1px rgba(255,255,255,0.03);
+  }
+  /* Dynamic Island */
+  .phone-frame::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 34px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 100;
+  }
+  .phone-inner {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Status Bar ── */
+  .status-bar {
+    height: 54px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 32px 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex-shrink: 0;
+    z-index: 50;
+  }
+  .status-icons {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  /* ── Home Indicator ── */
+  .home-indicator {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: transparent;
+  }
+  .home-indicator::after {
+    content: '';
+    width: 134px;
+    height: 5px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 100px;
+  }
+  .home-indicator.light::after {
+    background: rgba(0,0,0,0.2);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     SEGMENTED CONTROL -- The Star of the Show
+     ══════════════════════════════════════════════════════════ */
+  .segmented-control {
+    display: flex;
+    align-items: center;
+    margin: 0 16px;
+    padding: 3px;
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: var(--radius-pill);
+    border: 0.5px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+    position: relative;
+    height: 36px;
+  }
+  .segment {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 30px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--segment-text-inactive);
+    position: relative;
+    z-index: 2;
+    transition: color var(--spring-fast);
+    cursor: pointer;
+  }
+  .segment.active {
+    color: var(--segment-text-active);
+    font-weight: 600;
+  }
+  .segment .seg-icon {
+    font-size: 14px;
+    line-height: 1;
+  }
+  .segment .seg-label {
+    font-size: 12px;
+    letter-spacing: 0.1px;
+  }
+  /* Sliding pill behind active segment */
+  .segment-pill {
+    position: absolute;
+    height: 30px;
+    border-radius: var(--radius-pill);
+    background: var(--segment-active);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    z-index: 1;
+    top: 3px;
+    transition: left var(--spring), width var(--spring);
+  }
+  /* Position helpers for static mockup */
+  .segment-pill.pos-0 { left: 3px; width: calc(25% - 1.5px); }
+  .segment-pill.pos-1 { left: calc(25% + 1.5px); width: calc(25% - 1.5px); }
+  .segment-pill.pos-2 { left: calc(50%); width: calc(25% - 1.5px); }
+  .segment-pill.pos-3 { left: calc(75% - 1.5px); width: calc(25%); }
+  /* Mid-transition state */
+  .segment-pill.transitioning {
+    left: calc(12.5% + 1px);
+    width: calc(37% - 2px);
+    opacity: 0.7;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     TAB STRIP -- Soft Pills
+     ══════════════════════════════════════════════════════════ */
+  .tab-strip {
+    display: flex;
+    gap: 6px;
+    padding: 8px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex-shrink: 0;
+  }
+  .tab-strip::-webkit-scrollbar { display: none; }
+  .tab-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all var(--spring-fast);
+    background: transparent;
+  }
+  .tab-pill.active {
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.1);
+    font-weight: 600;
+  }
+  .tab-pill .pill-icon {
+    font-size: 11px;
+    opacity: 0.5;
+  }
+  .tab-pill.active .pill-icon {
+    opacity: 0.8;
+  }
+  .tab-pill .pill-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    flex-shrink: 0;
+  }
+  .tab-add-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 16px;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+    transition: all var(--spring-fast);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     TERMINAL CONTENT
+     ══════════════════════════════════════════════════════════ */
+  .terminal-content {
+    flex: 1;
+    padding: 12px 16px;
+    font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-primary);
+    overflow: hidden;
+    background: var(--bg-deep);
+    position: relative;
+  }
+  .terminal-content .prompt { color: var(--accent-green); font-weight: 500; }
+  .terminal-content .path { color: var(--accent-blue); }
+  .terminal-content .cmd { color: var(--text-primary); }
+  .terminal-content .output { color: var(--text-secondary); }
+  .terminal-content .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 16px;
+    background: var(--accent-green);
+    vertical-align: text-bottom;
+    animation: cursor-blink 1s step-end infinite;
+    margin-left: 2px;
+    border-radius: 1px;
+  }
+  @keyframes cursor-blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     FLOATING TOOLBAR -- Frosted Glass Modifier Bar
+     ══════════════════════════════════════════════════════════ */
+  .floating-toolbar {
+    display: flex;
+    gap: 6px;
+    padding: 8px 12px;
+    margin: 0 12px 8px;
+    background: rgba(255,255,255,0.07);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-radius: var(--radius-xl);
+    border: 0.5px solid rgba(255,255,255,0.1);
+    box-shadow: var(--shadow-float);
+    flex-shrink: 0;
+    align-items: center;
+  }
+  .mod-key {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0 10px;
+    background: rgba(255,255,255,0.08);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+    flex-shrink: 0;
+    min-width: 34px;
+    transition: all 120ms ease;
+  }
+  .mod-key.wide { flex: 1; }
+  .arrow-cluster {
+    display: flex;
+    gap: 3px;
+    margin-left: auto;
+  }
+  .arrow-key {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    background: rgba(255,255,255,0.08);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     BROWSER VIEW
+     ══════════════════════════════════════════════════════════ */
+  .browser-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #f2f2f7;
+  }
+  .browser-body {
+    flex: 1;
+    background: #fff;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .browser-placeholder {
+    height: 11px;
+    background: #e8e8ed;
+    border-radius: 6px;
+  }
+  .browser-placeholder.heading {
+    height: 18px;
+    width: 65%;
+    background: #d1d1d6;
+    border-radius: 6px;
+    margin-bottom: 4px;
+  }
+  .browser-placeholder.short { width: 50%; }
+  .browser-placeholder.med { width: 78%; }
+  .browser-placeholder.long { width: 100%; }
+  .browser-placeholder.img {
+    height: 120px;
+    width: 100%;
+    background: #e8e8ed;
+    border-radius: var(--radius-md);
+    margin: 4px 0;
+  }
+
+  /* Browser floating toolbar */
+  .browser-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin: 0 12px 8px;
+    background: rgba(44,44,46,0.85);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-radius: var(--radius-xl);
+    border: 0.5px solid rgba(255,255,255,0.1);
+    box-shadow: var(--shadow-float);
+    flex-shrink: 0;
+  }
+  .browser-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    font-size: 17px;
+    color: var(--accent-blue);
+    flex-shrink: 0;
+  }
+  .browser-nav-btn.disabled { color: var(--text-tertiary); }
+  .url-capsule {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    background: rgba(255,255,255,0.1);
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    overflow: hidden;
+  }
+  .url-capsule .lock-icon {
+    font-size: 11px;
+    color: var(--accent-green);
+    flex-shrink: 0;
+  }
+  .url-capsule .url-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .browser-share-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    color: var(--accent-blue);
+    flex-shrink: 0;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     FILE EXPLORER VIEW
+     ══════════════════════════════════════════════════════════ */
+  .file-explorer-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-deep);
+  }
+
+  /* Breadcrumb pills */
+  .breadcrumb-strip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 0;
+  }
+  .breadcrumb-strip::-webkit-scrollbar { display: none; }
+  .crumb-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .crumb-pill.current {
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.1);
+    font-weight: 600;
+  }
+  .crumb-sep {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+
+  /* File list -- Apple grouped inset style */
+  .file-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px;
+  }
+  .file-group {
+    background: var(--bg-elevated);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+  }
+  .file-row + .file-row {
+    border-top: 0.5px solid rgba(255,255,255,0.06);
+    margin-left: 56px;
+    padding-left: 0;
+  }
+  /* Reset margin trick for separator alignment */
+  .file-row + .file-row {
+    margin-left: 0;
+    padding-left: 16px;
+    border-top: none;
+    position: relative;
+  }
+  .file-row + .file-row::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 56px;
+    right: 0;
+    height: 0.5px;
+    background: rgba(255,255,255,0.06);
+  }
+  .file-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .file-icon.folder { background: rgba(10,132,255,0.15); color: var(--accent-blue); }
+  .file-icon.swift { background: rgba(255,69,58,0.15); color: var(--accent-red); }
+  .file-icon.json { background: rgba(255,159,10,0.15); color: var(--accent-orange); }
+  .file-icon.md { background: rgba(48,209,88,0.15); color: var(--accent-green); }
+  .file-icon.generic { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+  .file-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .file-name {
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .file-meta {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    margin-top: 1px;
+  }
+  .file-chevron {
+    font-size: 14px;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+
+  /* File explorer floating toolbar */
+  .file-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin: 0 12px 8px;
+    background: rgba(255,255,255,0.07);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-radius: var(--radius-xl);
+    border: 0.5px solid rgba(255,255,255,0.1);
+    box-shadow: var(--shadow-float);
+    flex-shrink: 0;
+  }
+  .file-action-capsule {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    background: rgba(255,255,255,0.08);
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+    flex-shrink: 0;
+  }
+  .file-action-capsule .fa-icon { font-size: 14px; }
+  .file-spacer { flex: 1; }
+  .file-sort-capsule {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--accent-blue);
+    font-weight: 500;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     WORKSPACE DRAWER -- Frosted Glass Sidebar
+     ══════════════════════════════════════════════════════════ */
+  .drawer-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 80;
+  }
+  .workspace-drawer {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 300px;
+    background: rgba(28,28,30,0.92);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    border-right: 0.5px solid rgba(255,255,255,0.08);
+    box-shadow: 20px 0 60px rgba(0,0,0,0.5);
+  }
+  .drawer-header {
+    padding: 68px 20px 20px;
+  }
+  .drawer-header h3 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+    margin: 0 0 16px 0;
+  }
+  .drawer-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.06);
+    border-radius: var(--radius-md);
+    color: var(--text-tertiary);
+    font-size: 15px;
+    border: 0.5px solid rgba(255,255,255,0.06);
+  }
+  .drawer-section {
+    padding: 8px 0;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .drawer-section-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 16px 20px 8px;
+  }
+  .ws-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 20px;
+    margin: 2px 8px;
+    border-radius: var(--radius-lg);
+    transition: background var(--spring-fast);
+  }
+  .ws-card.active {
+    background: rgba(255,255,255,0.08);
+  }
+  .ws-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .ws-icon.terminal { background: rgba(48,209,88,0.15); color: var(--accent-green); }
+  .ws-icon.branch { background: rgba(191,90,242,0.15); color: var(--accent-purple); }
+  .ws-icon.pr { background: rgba(10,132,255,0.15); color: var(--accent-blue); }
+  .ws-info { flex: 1; min-width: 0; }
+  .ws-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ws-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .ws-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(255,69,58,0.2);
+    color: var(--accent-red);
+  }
+  .drawer-bottom {
+    padding: 12px 16px;
+    flex-shrink: 0;
+  }
+  .new-ws-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    background: rgba(255,255,255,0.06);
+    border-radius: var(--radius-lg);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border: 0.5px solid rgba(255,255,255,0.06);
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     LAYOUT CONTAINERS
+     ══════════════════════════════════════════════════════════ */
+  .mockup-grid {
+    display: flex;
+    gap: 56px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .mockup-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .mockup-label {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    max-width: var(--phone-width);
+    letter-spacing: -0.2px;
+  }
+  .mockup-sublabel {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: var(--phone-width);
+    line-height: 1.5;
+  }
+
+  /* ── Annotation Callouts ── */
+  .annotation-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--accent-orange);
+    background: rgba(255,159,10,0.12);
+    border: 0.5px solid rgba(255,159,10,0.25);
+    padding: 3px 9px;
+    border-radius: 6px;
+    white-space: nowrap;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* ── Transition Diagram ── */
+  .transition-flow {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 32px 0;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .flow-node {
+    padding: 12px 20px;
+    background: var(--bg-elevated);
+    border: 0.5px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .flow-node.blue { border-color: rgba(10,132,255,0.3); background: rgba(10,132,255,0.08); color: var(--accent-blue); }
+  .flow-node.green { border-color: rgba(48,209,88,0.3); background: rgba(48,209,88,0.08); color: var(--accent-green); }
+  .flow-node.orange { border-color: rgba(255,159,10,0.3); background: rgba(255,159,10,0.08); color: var(--accent-orange); }
+  .flow-node.purple { border-color: rgba(191,90,242,0.3); background: rgba(191,90,242,0.08); color: var(--accent-purple); }
+  .flow-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .flow-arrow .arrow-line {
+    font-size: 20px;
+    color: var(--text-tertiary);
+  }
+  .flow-arrow .arrow-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent-orange);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  /* ── Info Cards ── */
+  .cards-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 32px 0;
+  }
+  .info-card {
+    flex: 1;
+    min-width: 280px;
+    padding: 28px;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--glass-border);
+  }
+  .info-card h4 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+    letter-spacing: -0.2px;
+  }
+  .info-card p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin: 0;
+  }
+
+  /* ── Side-by-Side Comparison ── */
+  .comparison-grid {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 32px 0;
+  }
+  .comparison-card {
+    flex: 1;
+    min-width: 240px;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--glass-border);
+    overflow: hidden;
+  }
+  .comparison-header {
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 0.5px solid var(--glass-border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .comparison-body {
+    padding: 0;
+  }
+
+  /* ── Spec Table ── */
+  .spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .spec-table th {
+    text-align: left;
+    padding: 10px 16px;
+    border-bottom: 0.5px solid rgba(255,255,255,0.08);
+    color: var(--text-tertiary);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .spec-table td {
+    padding: 10px 16px;
+    border-bottom: 0.5px solid rgba(255,255,255,0.04);
+    color: var(--text-secondary);
+    vertical-align: top;
+  }
+  .spec-table td:first-child {
+    color: var(--text-primary);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .spec-table code {
+    background: rgba(255,255,255,0.06);
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    color: var(--accent-teal);
+  }
+
+  /* ── Divider ── */
+  .section-divider {
+    height: 0.5px;
+    background: rgba(255,255,255,0.06);
+    margin: 48px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="design-page">
+
+  <!-- ════════════════════════════════════════════════════════
+       HERO
+       ════════════════════════════════════════════════════════ -->
+  <div class="hero">
+    <div class="hero-eyebrow">cmux Mobile Companion</div>
+    <h1>Pane Type Switcher</h1>
+    <p class="subtitle">
+      A segmented control replaces the dropdown menu. All four pane types are visible at a glance --
+      one tap to switch, zero cognitive overhead. Frosted glass surfaces, floating toolbars,
+      and spring-physics transitions make every interaction feel physical and alive.
+    </p>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════
+       UPDATED INTERACTION MODEL
+       ════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <h2>Interaction Model</h2>
+    <p>The segmented control makes all pane types visible at once. No dropdown, no hidden menu. The sliding pill provides instant spatial feedback -- you always know where you are and where you can go.</p>
+  </div>
+
+  <div class="transition-flow">
+    <div class="flow-node green">Terminal</div>
+    <div class="flow-arrow">
+      <span class="arrow-label">Tap segment</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="flow-node blue">Browser</div>
+    <div class="flow-arrow">
+      <span class="arrow-label">Tap segment</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="flow-node orange">Files</div>
+    <div class="flow-arrow">
+      <span class="arrow-label">Tap segment</span>
+      <span class="arrow-line">&rarr;</span>
+    </div>
+    <div class="flow-node purple">Shell</div>
+  </div>
+
+  <div class="cards-row">
+    <div class="info-card">
+      <h4>Segmented Control</h4>
+      <p>A frosted-glass pill at the top with 4 segments. The active segment has a sliding white pill background that animates with spring physics (tension 0.2, friction 0.8). Icons in each segment; the active one optionally reveals a text label. One tap to switch -- no intermediary menu.</p>
+    </div>
+    <div class="info-card">
+      <h4>Tab Strip Adapts</h4>
+      <p>Below the segmented control, a context-sensitive tab strip appears. Terminal and Browser show scrollable pill-shaped tabs. File Explorer shows breadcrumb pills. Shell shows session tabs. The strip cross-fades when switching pane types.</p>
+    </div>
+    <div class="info-card">
+      <h4>Floating Toolbar</h4>
+      <p>The bottom bar is a floating frosted-glass pill, not a hard-edged bar. It hovers above the bottom edge with rounded corners, backdrop blur, and soft shadow. Each pane type swaps in its own controls with a subtle spring animation.</p>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════
+       STATE 1: TERMINAL VIEW (DEFAULT)
+       ════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <h2>State 1: Terminal View</h2>
+    <p>The resting state. True black terminal fills the screen. Segmented control at the top with Terminal active. Pill-shaped terminal tabs below. Floating modifier bar at the bottom with frosted glass.</p>
+  </div>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <!-- Status bar -->
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="white"><rect x="0" y="4" width="3" height="8" rx="1" opacity="0.4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" opacity="0.6"/><rect x="9" y="1" width="3" height="11" rx="1" opacity="0.8"/><rect x="13.5" y="0" width="2.5" height="12" rx="1"/></svg>
+              <svg width="15" height="12" viewBox="0 0 15 12" fill="white"><path d="M7.5 3.6c1.8 0 3.4.7 4.6 1.9l1.3-1.3C11.7 2.5 9.7 1.6 7.5 1.6S3.3 2.5 1.6 4.2L2.9 5.5C4.1 4.3 5.7 3.6 7.5 3.6z" opacity="0.5"/><path d="M7.5 7.2c1 0 2 .4 2.7 1.1l1.3-1.3c-1-1-2.4-1.8-4-1.8s-3 .7-4 1.8l1.3 1.3c.7-.7 1.7-1.1 2.7-1.1z" opacity="0.75"/><circle cx="7.5" cy="10.5" r="1.5"/></svg>
+              <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="white" stroke-opacity="0.4"/><rect x="1" y="2" width="19" height="8" rx="1.5" fill="white"/><path d="M23 4.5v3a1.5 1.5 0 000-3z" fill="white" opacity="0.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Segmented Control -->
+          <div class="segmented-control">
+            <div class="segment-pill pos-0"></div>
+            <div class="segment active">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12.5v-9zm2 1v7.5h8V4.5H4zm1 1h2v1H5v-1zm0 2h4v1H5v-1z"/></svg>
+              </span>
+              <span class="seg-label">Terminal</span>
+            </div>
+            <div class="segment">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3zm1.5.5v2h9v-2h-9zM3.5 7v5.5h9V7h-9z"/></svg>
+              </span>
+            </div>
+            <div class="segment">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2A1.75 1.75 0 000 3.75v.5C0 5.216.784 6 1.75 6h4.5C7.216 6 8 5.216 8 4.25v-.5A1.75 1.75 0 006.25 2h-4.5zM1.5 3.75a.25.25 0 01.25-.25h4.5a.25.25 0 01.25.25v.5a.25.25 0 01-.25.25h-4.5a.25.25 0 01-.25-.25v-.5zM1.75 7.75A1.75 1.75 0 000 9.5v.5c0 .966.784 1.75 1.75 1.75h12.5A1.75 1.75 0 0016 10v-.5a1.75 1.75 0 00-1.75-1.75H1.75zM1.5 9.5a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25v-.5z"/></svg>
+              </span>
+            </div>
+            <div class="segment">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4.72 3.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06L5.78 10.78a.75.75 0 01-1.06-1.06L7.44 7 4.72 4.28a.75.75 0 010-1.06zm4 0a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L11.44 7 8.72 4.28a.75.75 0 010-1.06z"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <!-- Tab Strip -->
+          <div class="tab-strip">
+            <div class="tab-pill active">
+              <span class="pill-icon">&#9679;</span>
+              zsh
+              <span class="pill-dot"></span>
+            </div>
+            <div class="tab-pill">
+              <span class="pill-icon">&#9679;</span>
+              node server
+            </div>
+            <div class="tab-pill">
+              <span class="pill-icon">&#9679;</span>
+              logs
+            </div>
+            <div class="tab-add-pill">+</div>
+          </div>
+
+          <!-- Terminal content -->
+          <div class="terminal-content">
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ git status</span></div>
+            <div class="output">On branch main</div>
+            <div class="output">Your branch is up to date with 'origin/main'.</div>
+            <div class="output">&nbsp;</div>
+            <div class="output">Changes not staged for commit:</div>
+            <div class="output">&nbsp; modified: Sources/App/ContentView.swift</div>
+            <div class="output">&nbsp; modified: Sources/Panels/TerminalPanelView.swift</div>
+            <div class="output">&nbsp;</div>
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ swift build</span></div>
+            <div class="output">Building for debugging...</div>
+            <div class="output">[142/142] Linking cmux</div>
+            <div class="output" style="color: var(--accent-green);">Build complete! (14.2s)</div>
+            <div class="output">&nbsp;</div>
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ </span><span class="cursor"></span></div>
+          </div>
+
+          <!-- Floating Modifier Bar -->
+          <div class="floating-toolbar">
+            <div class="mod-key">esc</div>
+            <div class="mod-key">ctrl</div>
+            <div class="mod-key">alt</div>
+            <div class="mod-key">cmd</div>
+            <div class="mod-key">tab</div>
+            <div class="arrow-cluster">
+              <div class="arrow-key">&larr;</div>
+              <div class="arrow-key">&darr;</div>
+              <div class="arrow-key">&uarr;</div>
+              <div class="arrow-key">&rarr;</div>
+            </div>
+          </div>
+
+          <!-- Home indicator -->
+          <div class="home-indicator"></div>
+
+          <!-- Annotations -->
+          <div style="position: absolute; top: 58px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label">Segmented control (frosted glass pill)</div>
+          </div>
+          <div style="position: absolute; bottom: 62px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label">Floating toolbar (backdrop blur)</div>
+          </div>
+
+        </div>
+      </div>
+      <div class="mockup-label">Terminal View -- Default State</div>
+      <div class="mockup-sublabel">Segmented control shows all 4 pane types at once. Pill-shaped tabs below.<br>Floating frosted modifier bar at bottom. True black terminal content.</div>
+    </div>
+  </div>
+
+
+  <div class="section-divider"></div>
+
+
+  <!-- ════════════════════════════════════════════════════════
+       STATE 2: PANE TYPE TRANSITION (CONCEPTUAL)
+       ════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <h2>State 2: Segment Transition</h2>
+    <p>When tapping a new segment, the pill slides with spring physics. Content cross-fades beneath. The entire transition completes in under 350ms. No intermediary menu -- the switch is direct and physical.</p>
+  </div>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="white"><rect x="0" y="4" width="3" height="8" rx="1" opacity="0.4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" opacity="0.6"/><rect x="9" y="1" width="3" height="11" rx="1" opacity="0.8"/><rect x="13.5" y="0" width="2.5" height="12" rx="1"/></svg>
+              <svg width="15" height="12" viewBox="0 0 15 12" fill="white"><path d="M7.5 3.6c1.8 0 3.4.7 4.6 1.9l1.3-1.3C11.7 2.5 9.7 1.6 7.5 1.6S3.3 2.5 1.6 4.2L2.9 5.5C4.1 4.3 5.7 3.6 7.5 3.6z" opacity="0.5"/><path d="M7.5 7.2c1 0 2 .4 2.7 1.1l1.3-1.3c-1-1-2.4-1.8-4-1.8s-3 .7-4 1.8l1.3 1.3c.7-.7 1.7-1.1 2.7-1.1z" opacity="0.75"/><circle cx="7.5" cy="10.5" r="1.5"/></svg>
+              <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="white" stroke-opacity="0.4"/><rect x="1" y="2" width="19" height="8" rx="1.5" fill="white"/><path d="M23 4.5v3a1.5 1.5 0 000-3z" fill="white" opacity="0.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Segmented Control -- mid-transition -->
+          <div class="segmented-control">
+            <div class="segment-pill transitioning"></div>
+            <div class="segment" style="color: rgba(255,255,255,0.35);">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12.5v-9zm2 1v7.5h8V4.5H4zm1 1h2v1H5v-1zm0 2h4v1H5v-1z"/></svg>
+              </span>
+            </div>
+            <div class="segment" style="color: rgba(255,255,255,0.7);">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3zm1.5.5v2h9v-2h-9zM3.5 7v5.5h9V7h-9z"/></svg>
+              </span>
+              <span class="seg-label" style="opacity: 0.6;">Browser</span>
+            </div>
+            <div class="segment">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2A1.75 1.75 0 000 3.75v.5C0 5.216.784 6 1.75 6h4.5C7.216 6 8 5.216 8 4.25v-.5A1.75 1.75 0 006.25 2h-4.5zM1.5 3.75a.25.25 0 01.25-.25h4.5a.25.25 0 01.25.25v.5a.25.25 0 01-.25.25h-4.5a.25.25 0 01-.25-.25v-.5zM1.75 7.75A1.75 1.75 0 000 9.5v.5c0 .966.784 1.75 1.75 1.75h12.5A1.75 1.75 0 0016 10v-.5a1.75 1.75 0 00-1.75-1.75H1.75zM1.5 9.5a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25v-.5z"/></svg>
+              </span>
+            </div>
+            <div class="segment">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4.72 3.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06L5.78 10.78a.75.75 0 01-1.06-1.06L7.44 7 4.72 4.28a.75.75 0 010-1.06zm4 0a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L11.44 7 8.72 4.28a.75.75 0 010-1.06z"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <!-- Content area -- crossfade visualization -->
+          <div style="flex: 1; position: relative; overflow: hidden;">
+            <!-- Outgoing terminal (fading left) -->
+            <div class="terminal-content" style="position: absolute; inset: 0; opacity: 0.3; transform: translateX(-12px);">
+              <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+              <div><span class="cmd">$ git status</span></div>
+              <div class="output">On branch main</div>
+              <div class="output">Your branch is up to date...</div>
+            </div>
+            <!-- Incoming browser (fading in from right) -->
+            <div style="position: absolute; inset: 0; opacity: 0.5; transform: translateX(8px); background: #f2f2f7; display: flex; flex-direction: column;">
+              <div style="flex: 1; background: #fff; padding: 20px 16px; display: flex; flex-direction: column; gap: 12px;">
+                <div style="height: 18px; width: 65%; background: #d1d1d6; border-radius: 6px;"></div>
+                <div style="height: 11px; width: 100%; background: #e8e8ed; border-radius: 6px;"></div>
+                <div style="height: 11px; width: 78%; background: #e8e8ed; border-radius: 6px;"></div>
+                <div style="height: 120px; width: 100%; background: #e8e8ed; border-radius: 12px;"></div>
+                <div style="height: 11px; width: 100%; background: #e8e8ed; border-radius: 6px;"></div>
+                <div style="height: 11px; width: 50%; background: #e8e8ed; border-radius: 6px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floating toolbar (mid-transition) -->
+          <div class="floating-toolbar" style="opacity: 0.5;">
+            <div class="mod-key">esc</div>
+            <div class="mod-key">ctrl</div>
+            <div class="mod-key">alt</div>
+            <div class="mod-key">cmd</div>
+          </div>
+
+          <div class="home-indicator"></div>
+
+          <!-- Annotations -->
+          <div style="position: absolute; top: 58px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label">Pill slides with spring physics</div>
+          </div>
+          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 200; pointer-events: none;">
+            <div class="annotation-label">Content cross-fades</div>
+          </div>
+
+        </div>
+      </div>
+      <div class="mockup-label">Mid-Transition -- Terminal to Browser</div>
+      <div class="mockup-sublabel">The sliding pill stretches slightly during spring animation.<br>Outgoing content fades left, incoming content fades in from right.</div>
+    </div>
+  </div>
+
+
+  <div class="section-divider"></div>
+
+
+  <!-- ════════════════════════════════════════════════════════
+       STATE 3: BROWSER VIEW
+       ════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <h2>State 3: Browser View</h2>
+    <p>Browser segment active. Tab strip shows browser tabs as pills. Content shows the webpage. The floating toolbar swaps to browser navigation -- back, forward, URL capsule, share -- all in the same frosted glass pill shape.</p>
+  </div>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="white"><rect x="0" y="4" width="3" height="8" rx="1" opacity="0.4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" opacity="0.6"/><rect x="9" y="1" width="3" height="11" rx="1" opacity="0.8"/><rect x="13.5" y="0" width="2.5" height="12" rx="1"/></svg>
+              <svg width="15" height="12" viewBox="0 0 15 12" fill="white"><path d="M7.5 3.6c1.8 0 3.4.7 4.6 1.9l1.3-1.3C11.7 2.5 9.7 1.6 7.5 1.6S3.3 2.5 1.6 4.2L2.9 5.5C4.1 4.3 5.7 3.6 7.5 3.6z" opacity="0.5"/><path d="M7.5 7.2c1 0 2 .4 2.7 1.1l1.3-1.3c-1-1-2.4-1.8-4-1.8s-3 .7-4 1.8l1.3 1.3c.7-.7 1.7-1.1 2.7-1.1z" opacity="0.75"/><circle cx="7.5" cy="10.5" r="1.5"/></svg>
+              <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="white" stroke-opacity="0.4"/><rect x="1" y="2" width="19" height="8" rx="1.5" fill="white"/><path d="M23 4.5v3a1.5 1.5 0 000-3z" fill="white" opacity="0.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Segmented Control -- Browser active -->
+          <div class="segmented-control">
+            <div class="segment-pill pos-1"></div>
+            <div class="segment">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12.5v-9zm2 1v7.5h8V4.5H4zm1 1h2v1H5v-1zm0 2h4v1H5v-1z"/></svg>
+              </span>
+            </div>
+            <div class="segment active">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3zm1.5.5v2h9v-2h-9zM3.5 7v5.5h9V7h-9z"/></svg>
+              </span>
+              <span class="seg-label">Browser</span>
+            </div>
+            <div class="segment">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2A1.75 1.75 0 000 3.75v.5C0 5.216.784 6 1.75 6h4.5C7.216 6 8 5.216 8 4.25v-.5A1.75 1.75 0 006.25 2h-4.5zM1.5 3.75a.25.25 0 01.25-.25h4.5a.25.25 0 01.25.25v.5a.25.25 0 01-.25.25h-4.5a.25.25 0 01-.25-.25v-.5zM1.75 7.75A1.75 1.75 0 000 9.5v.5c0 .966.784 1.75 1.75 1.75h12.5A1.75 1.75 0 0016 10v-.5a1.75 1.75 0 00-1.75-1.75H1.75zM1.5 9.5a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25v-.5z"/></svg>
+              </span>
+            </div>
+            <div class="segment">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4.72 3.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06L5.78 10.78a.75.75 0 01-1.06-1.06L7.44 7 4.72 4.28a.75.75 0 010-1.06zm4 0a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L11.44 7 8.72 4.28a.75.75 0 010-1.06z"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <!-- Browser Tab Strip -->
+          <div class="tab-strip">
+            <div class="tab-pill active">
+              <span class="pill-icon">&#9679;</span>
+              localhost:3000
+            </div>
+            <div class="tab-pill">
+              <span class="pill-icon">&#9679;</span>
+              GitHub PR #1505
+            </div>
+            <div class="tab-pill">
+              <span class="pill-icon">&#9679;</span>
+              Stack Overflow
+            </div>
+            <div class="tab-add-pill">+</div>
+          </div>
+
+          <!-- Browser content -->
+          <div class="browser-content">
+            <div class="browser-body">
+              <div class="browser-placeholder heading"></div>
+              <div class="browser-placeholder long"></div>
+              <div class="browser-placeholder med"></div>
+              <div class="browser-placeholder short"></div>
+              <div class="browser-placeholder img"></div>
+              <div class="browser-placeholder long"></div>
+              <div class="browser-placeholder med"></div>
+              <div class="browser-placeholder short"></div>
+              <div class="browser-placeholder long"></div>
+              <div class="browser-placeholder med"></div>
+            </div>
+          </div>
+
+          <!-- Browser floating toolbar -->
+          <div class="browser-toolbar">
+            <div class="browser-nav-btn disabled">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"/></svg>
+            </div>
+            <div class="browser-nav-btn">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"/></svg>
+            </div>
+            <div class="url-capsule">
+              <span class="lock-icon">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 1a2.5 2.5 0 00-2.5 2.5V5h-.25A1.25 1.25 0 002 6.25v3.5C2 10.44 2.56 11 3.25 11h5.5c.69 0 1.25-.56 1.25-1.25v-3.5C10 5.56 9.44 5 8.75 5H8.5V3.5A2.5 2.5 0 006 1zm1 4V3.5a1 1 0 10-2 0V5h2z"/></svg>
+              </span>
+              <span class="url-text">localhost:3000</span>
+            </div>
+            <div class="browser-share-btn">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M9 2.25a.75.75 0 01.75.75v6.44l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V3a.75.75 0 01.75-.75zM3.75 12a.75.75 0 01.75.75v1.5h9v-1.5a.75.75 0 011.5 0v2.25a.75.75 0 01-.75.75H3.75a.75.75 0 01-.75-.75v-2.25a.75.75 0 01.75-.75z"/></svg>
+            </div>
+          </div>
+
+          <div class="home-indicator"></div>
+
+          <!-- Annotations -->
+          <div style="position: absolute; top: 58px; right: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label">Browser segment active</div>
+          </div>
+          <div style="position: absolute; bottom: 62px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label">Browser nav in floating pill</div>
+          </div>
+
+        </div>
+      </div>
+      <div class="mockup-label">Browser View</div>
+      <div class="mockup-sublabel">Browser segment highlighted in segmented control. Browser tabs as pills below.<br>Floating toolbar shows back/forward, URL capsule, share button.</div>
+    </div>
+  </div>
+
+
+  <div class="section-divider"></div>
+
+
+  <!-- ════════════════════════════════════════════════════════
+       STATE 4: FILE EXPLORER VIEW
+       ════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <h2>State 4: File Explorer View</h2>
+    <p>Files segment active. Breadcrumb path as gentle pill segments replaces the tab strip. File list uses Apple-style grouped inset rows with rounded corners and subtle separators. File icons with soft colored backgrounds.</p>
+  </div>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="white"><rect x="0" y="4" width="3" height="8" rx="1" opacity="0.4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" opacity="0.6"/><rect x="9" y="1" width="3" height="11" rx="1" opacity="0.8"/><rect x="13.5" y="0" width="2.5" height="12" rx="1"/></svg>
+              <svg width="15" height="12" viewBox="0 0 15 12" fill="white"><path d="M7.5 3.6c1.8 0 3.4.7 4.6 1.9l1.3-1.3C11.7 2.5 9.7 1.6 7.5 1.6S3.3 2.5 1.6 4.2L2.9 5.5C4.1 4.3 5.7 3.6 7.5 3.6z" opacity="0.5"/><path d="M7.5 7.2c1 0 2 .4 2.7 1.1l1.3-1.3c-1-1-2.4-1.8-4-1.8s-3 .7-4 1.8l1.3 1.3c.7-.7 1.7-1.1 2.7-1.1z" opacity="0.75"/><circle cx="7.5" cy="10.5" r="1.5"/></svg>
+              <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="white" stroke-opacity="0.4"/><rect x="1" y="2" width="19" height="8" rx="1.5" fill="white"/><path d="M23 4.5v3a1.5 1.5 0 000-3z" fill="white" opacity="0.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Segmented Control -- Files active -->
+          <div class="segmented-control">
+            <div class="segment-pill pos-2"></div>
+            <div class="segment">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12.5v-9zm2 1v7.5h8V4.5H4zm1 1h2v1H5v-1zm0 2h4v1H5v-1z"/></svg>
+              </span>
+            </div>
+            <div class="segment">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3zm1.5.5v2h9v-2h-9zM3.5 7v5.5h9V7h-9z"/></svg>
+              </span>
+            </div>
+            <div class="segment active">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2A1.75 1.75 0 000 3.75v.5C0 5.216.784 6 1.75 6h4.5C7.216 6 8 5.216 8 4.25v-.5A1.75 1.75 0 006.25 2h-4.5zM1.5 3.75a.25.25 0 01.25-.25h4.5a.25.25 0 01.25.25v.5a.25.25 0 01-.25.25h-4.5a.25.25 0 01-.25-.25v-.5zM1.75 7.75A1.75 1.75 0 000 9.5v.5c0 .966.784 1.75 1.75 1.75h12.5A1.75 1.75 0 0016 10v-.5a1.75 1.75 0 00-1.75-1.75H1.75zM1.5 9.5a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25v-.5z"/></svg>
+              </span>
+              <span class="seg-label">Files</span>
+            </div>
+            <div class="segment">
+              <span class="seg-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4.72 3.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06L5.78 10.78a.75.75 0 01-1.06-1.06L7.44 7 4.72 4.28a.75.75 0 010-1.06zm4 0a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L11.44 7 8.72 4.28a.75.75 0 010-1.06z"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <!-- Breadcrumb Strip -->
+          <div class="breadcrumb-strip">
+            <div class="crumb-pill">~</div>
+            <div class="crumb-sep">
+              <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor"><path d="M2.5 1.5l5 4.5-5 4.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="crumb-pill">cmux</div>
+            <div class="crumb-sep">
+              <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor"><path d="M2.5 1.5l5 4.5-5 4.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="crumb-pill current">Sources</div>
+          </div>
+
+          <!-- File list -->
+          <div class="file-explorer-content">
+            <div class="file-list">
+              <!-- Folders group -->
+              <div class="file-group">
+                <div class="file-row">
+                  <div class="file-icon folder">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M1 3.5A1.5 1.5 0 012.5 2h3.879a1.5 1.5 0 011.06.44l1.122 1.12A1.5 1.5 0 009.622 4H15.5A1.5 1.5 0 0117 5.5v9a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 011 14.5v-11z"/></svg>
+                  </div>
+                  <div class="file-info">
+                    <div class="file-name">App</div>
+                    <div class="file-meta">12 items</div>
+                  </div>
+                  <div class="file-chevron">
+                    <svg width="8" height="14" viewBox="0 0 8 14" fill="currentColor"><path d="M1.5 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                </div>
+                <div class="file-row">
+                  <div class="file-icon folder">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M1 3.5A1.5 1.5 0 012.5 2h3.879a1.5 1.5 0 011.06.44l1.122 1.12A1.5 1.5 0 009.622 4H15.5A1.5 1.5 0 0117 5.5v9a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 011 14.5v-11z"/></svg>
+                  </div>
+                  <div class="file-info">
+                    <div class="file-name">Panels</div>
+                    <div class="file-meta">8 items</div>
+                  </div>
+                  <div class="file-chevron">
+                    <svg width="8" height="14" viewBox="0 0 8 14" fill="currentColor"><path d="M1.5 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                </div>
+                <div class="file-row">
+                  <div class="file-icon folder">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M1 3.5A1.5 1.5 0 012.5 2h3.879a1.5 1.5 0 011.06.44l1.122 1.12A1.5 1.5 0 009.622 4H15.5A1.5 1.5 0 0117 5.5v9a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 011 14.5v-11z"/></svg>
+                  </div>
+                  <div class="file-info">
+                    <div class="file-name">Bonsplit</div>
+                    <div class="file-meta">15 items</div>
+                  </div>
+                  <div class="file-chevron">
+                    <svg width="8" height="14" viewBox="0 0 8 14" fill="currentColor"><path d="M1.5 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                </div>
+                <div class="file-row">
+                  <div class="file-icon folder">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M1 3.5A1.5 1.5 0 012.5 2h3.879a1.5 1.5 0 011.06.44l1.122 1.12A1.5 1.5 0 009.622 4H15.5A1.5 1.5 0 0117 5.5v9a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 011 14.5v-11z"/></svg>
+                  </div>
+                  <div class="file-info">
+                    <div class="file-name">Resources</div>
+                    <div class="file-meta">4 items</div>
+                  </div>
+                  <div class="file-chevron">
+                    <svg width="8" height="14" viewBox="0 0 8 14" fill="currentColor"><path d="M1.5 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Files group -->
+              <div class="file-group">
+                <div class="file-row">
+                  <div class="file-icon swift">S</div>
+                  <div class="file-info">
+                    <div class="file-name">ContentView.swift</div>
+                    <div class="file-meta">24.3 KB -- modified 2h ago</div>
+                  </div>
+                </div>
+                <div class="file-row">
+                  <div class="file-icon swift">S</div>
+                  <div class="file-info">
+                    <div class="file-name">AppDelegate.swift</div>
+                    <div class="file-meta">18.1 KB -- modified 1d ago</div>
+                  </div>
+                </div>
+                <div class="file-row">
+                  <div class="file-icon json">{}</div>
+                  <div class="file-info">
+                    <div class="file-name">Package.swift</div>
+                    <div class="file-meta">2.8 KB -- modified 3d ago</div>
+                  </div>
+                </div>
+                <div class="file-row">
+                  <div class="file-icon md">#</div>
+                  <div class="file-info">
+                    <div class="file-name">README.md</div>
+                    <div class="file-meta">1.2 KB -- modified 5d ago</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- File explorer floating toolbar -->
+          <div class="file-toolbar">
+            <div class="file-action-capsule">
+              <span class="fa-icon">+</span>
+              New File
+            </div>
+            <div class="file-action-capsule">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M1 2.5A1.5 1.5 0 012.5 1h3.1a1.5 1.5 0 011.06.44l.9.9A1.5 1.5 0 008.62 2.8H11.5A1.5 1.5 0 0113 4.3v7.2a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 011 11.5v-9z"/></svg>
+              Folder
+            </div>
+            <div class="file-spacer"></div>
+            <div class="file-sort-capsule">
+              Sort
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5l3 4 3-4H2z"/></svg>
+            </div>
+          </div>
+
+          <div class="home-indicator"></div>
+
+          <!-- Annotations -->
+          <div style="position: absolute; top: 94px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label">Breadcrumb pills replace tab strip</div>
+          </div>
+          <div style="position: absolute; top: 160px; right: 10px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label">Apple grouped inset rows</div>
+          </div>
+
+        </div>
+      </div>
+      <div class="mockup-label">File Explorer View</div>
+      <div class="mockup-sublabel">Breadcrumb path as pill segments. Files in Apple grouped inset rows.<br>Floating toolbar with New File, Folder, and Sort capsules.</div>
+    </div>
+  </div>
+
+
+  <div class="section-divider"></div>
+
+
+  <!-- ════════════════════════════════════════════════════════
+       STATE 5: WORKSPACE DRAWER
+       ════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <h2>State 5: Workspace Drawer</h2>
+    <p>Left edge swipe reveals the workspace drawer. Frosted glass sidebar with generous spacing and soft rounded cards. Workspaces only -- no pane type actions here. Those live in the segmented control now.</p>
+  </div>
+
+  <div class="mockup-grid">
+    <div class="mockup-column">
+      <div class="phone-frame">
+        <div class="phone-inner">
+
+          <div class="status-bar" style="z-index: 95;">
+            <span>9:41</span>
+            <div class="status-icons">
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="white"><rect x="0" y="4" width="3" height="8" rx="1" opacity="0.4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" opacity="0.6"/><rect x="9" y="1" width="3" height="11" rx="1" opacity="0.8"/><rect x="13.5" y="0" width="2.5" height="12" rx="1"/></svg>
+              <svg width="15" height="12" viewBox="0 0 15 12" fill="white"><path d="M7.5 3.6c1.8 0 3.4.7 4.6 1.9l1.3-1.3C11.7 2.5 9.7 1.6 7.5 1.6S3.3 2.5 1.6 4.2L2.9 5.5C4.1 4.3 5.7 3.6 7.5 3.6z" opacity="0.5"/><path d="M7.5 7.2c1 0 2 .4 2.7 1.1l1.3-1.3c-1-1-2.4-1.8-4-1.8s-3 .7-4 1.8l1.3 1.3c.7-.7 1.7-1.1 2.7-1.1z" opacity="0.75"/><circle cx="7.5" cy="10.5" r="1.5"/></svg>
+              <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="white" stroke-opacity="0.4"/><rect x="1" y="2" width="19" height="8" rx="1.5" fill="white"/><path d="M23 4.5v3a1.5 1.5 0 000-3z" fill="white" opacity="0.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Background content (dimmed) -->
+          <div class="segmented-control" style="z-index: 1; opacity: 0.3;">
+            <div class="segment-pill pos-0"></div>
+            <div class="segment active"><span class="seg-icon" style="font-size: 14px;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12.5v-9zm2 1v7.5h8V4.5H4zm1 1h2v1H5v-1zm0 2h4v1H5v-1z"/></svg>
+            </span></div>
+            <div class="segment"><span class="seg-icon" style="font-size: 14px;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3z"/></svg>
+            </span></div>
+            <div class="segment"><span class="seg-icon" style="font-size: 14px;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2A1.75 1.75 0 000 3.75v.5C0 5.216.784 6 1.75 6h4.5C7.216 6 8 5.216 8 4.25v-.5z"/></svg>
+            </span></div>
+            <div class="segment"><span class="seg-icon" style="font-size: 14px;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4.72 3.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06L5.78 10.78z"/></svg>
+            </span></div>
+          </div>
+          <div class="terminal-content" style="z-index: 1; opacity: 0.15;">
+            <div><span class="prompt">~/cmux</span> <span class="path">main</span></div>
+            <div><span class="cmd">$ </span><span class="cursor" style="animation: none; opacity: 0.3;"></span></div>
+          </div>
+          <div class="floating-toolbar" style="z-index: 1; opacity: 0.15;">
+            <div class="mod-key">esc</div>
+            <div class="mod-key">ctrl</div>
+          </div>
+          <div class="home-indicator" style="z-index: 1;"></div>
+
+          <!-- Drawer overlay -->
+          <div class="drawer-overlay"></div>
+
+          <!-- Workspace drawer -->
+          <div class="workspace-drawer">
+            <div class="drawer-header">
+              <h3>Workspaces</h3>
+              <div class="drawer-search">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" opacity="0.4"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="10" y1="10" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                Search workspaces...
+              </div>
+            </div>
+
+            <div class="drawer-section">
+              <div class="drawer-section-label">Active</div>
+
+              <div class="ws-card active">
+                <div class="ws-icon terminal">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 013.5 2h11A1.5 1.5 0 0116 3.5v11a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 012 14.5v-11zm2 1v9h10V4.5H4zm1.5 1.5l2.5 2-2.5 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="ws-info">
+                  <div class="ws-name">cmux</div>
+                  <div class="ws-meta">
+                    <span>main</span>
+                    <span style="opacity: 0.4;">&#8226;</span>
+                    <span>3 panes</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ws-card">
+                <div class="ws-icon branch">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><circle cx="5" cy="5" r="2" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="13" cy="13" r="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M5 7v2c0 2.2 1.8 4 4 4h2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+                </div>
+                <div class="ws-info">
+                  <div class="ws-name">feature/mobile-companion</div>
+                  <div class="ws-meta">
+                    <span>mobile-v2</span>
+                    <span style="opacity: 0.4;">&#8226;</span>
+                    <span>2 panes</span>
+                  </div>
+                </div>
+                <div class="ws-badge">3</div>
+              </div>
+
+              <div class="ws-card">
+                <div class="ws-icon pr">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M5 4v10M13 4v10" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><circle cx="5" cy="4" r="2" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="13" cy="14" r="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M5 6c0 3 3 4 6 4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+                </div>
+                <div class="ws-info">
+                  <div class="ws-name">fix/sidebar-drop</div>
+                  <div class="ws-meta">
+                    <span>PR #1505</span>
+                    <span style="opacity: 0.4;">&#8226;</span>
+                    <span>1 pane</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="drawer-section-label" style="margin-top: 12px;">Recent</div>
+
+              <div class="ws-card">
+                <div class="ws-icon terminal">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 013.5 2h11A1.5 1.5 0 0116 3.5v11a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 012 14.5v-11zm2 1v9h10V4.5H4zm1.5 1.5l2.5 2-2.5 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="ws-info">
+                  <div class="ws-name">ghostty-fork</div>
+                  <div class="ws-meta">
+                    <span>main</span>
+                    <span style="opacity: 0.4;">&#8226;</span>
+                    <span>2 panes</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ws-card">
+                <div class="ws-icon branch">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><circle cx="5" cy="5" r="2" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="13" cy="13" r="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M5 7v2c0 2.2 1.8 4 4 4h2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+                </div>
+                <div class="ws-info">
+                  <div class="ws-name">docs/api-migration</div>
+                  <div class="ws-meta">
+                    <span>docs-v2</span>
+                    <span style="opacity: 0.4;">&#8226;</span>
+                    <span>1 pane</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="drawer-bottom">
+              <div class="new-ws-btn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+                New Workspace
+              </div>
+            </div>
+          </div>
+
+          <!-- Annotations -->
+          <div style="position: absolute; top: 58px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label">Frosted glass sidebar</div>
+          </div>
+          <div style="position: absolute; bottom: 80px; left: 16px; z-index: 200; pointer-events: none;">
+            <div class="annotation-label">Workspaces only -- no pane actions</div>
+          </div>
+
+        </div>
+      </div>
+      <div class="mockup-label">Workspace Drawer</div>
+      <div class="mockup-sublabel">Frosted glass sidebar with backdrop blur. Workspaces as rounded cards.<br>Pane type switching moved to segmented control. New Workspace at bottom.</div>
+    </div>
+  </div>
+
+
+  <div class="section-divider"></div>
+
+
+  <!-- ════════════════════════════════════════════════════════
+       STATE 6: SIDE-BY-SIDE COMPARISONS
+       ════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <h2>Side-by-Side: Segmented Control Across Views</h2>
+    <p>The segmented control stays in the same position across all pane types. The sliding pill indicates the current view. Only the active segment reveals its text label -- the rest are icons only to save space.</p>
+  </div>
+
+  <div class="comparison-grid">
+    <div class="comparison-card">
+      <div class="comparison-header">Terminal Active</div>
+      <div class="comparison-body">
+        <div style="padding: 12px;">
+          <div class="segmented-control" style="margin: 0;">
+            <div class="segment-pill pos-0"></div>
+            <div class="segment active">
+              <span class="seg-icon">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12.5v-9zm2 1v7.5h8V4.5H4zm1 1h2v1H5v-1zm0 2h4v1H5v-1z"/></svg>
+              </span>
+              <span class="seg-label">Terminal</span>
+            </div>
+            <div class="segment"><span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3zm1.5.5v2h9v-2h-9zM3.5 7v5.5h9V7h-9z"/></svg></span></div>
+            <div class="segment"><span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2A1.75 1.75 0 000 3.75v.5C0 5.216.784 6 1.75 6h4.5C7.216 6 8 5.216 8 4.25v-.5A1.75 1.75 0 006.25 2h-4.5z"/></svg></span></div>
+            <div class="segment"><span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4.72 3.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06L5.78 10.78a.75.75 0 01-1.06-1.06L7.44 7 4.72 4.28a.75.75 0 010-1.06z"/></svg></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="comparison-card">
+      <div class="comparison-header">Browser Active</div>
+      <div class="comparison-body">
+        <div style="padding: 12px;">
+          <div class="segmented-control" style="margin: 0;">
+            <div class="segment-pill pos-1"></div>
+            <div class="segment"><span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12.5v-9z"/></svg></span></div>
+            <div class="segment active">
+              <span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3zm1.5.5v2h9v-2h-9zM3.5 7v5.5h9V7h-9z"/></svg></span>
+              <span class="seg-label">Browser</span>
+            </div>
+            <div class="segment"><span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2A1.75 1.75 0 000 3.75v.5C0 5.216.784 6 1.75 6h4.5C7.216 6 8 5.216 8 4.25v-.5A1.75 1.75 0 006.25 2h-4.5z"/></svg></span></div>
+            <div class="segment"><span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4.72 3.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06L5.78 10.78a.75.75 0 01-1.06-1.06L7.44 7 4.72 4.28a.75.75 0 010-1.06z"/></svg></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="comparison-card">
+      <div class="comparison-header">Files Active</div>
+      <div class="comparison-body">
+        <div style="padding: 12px;">
+          <div class="segmented-control" style="margin: 0;">
+            <div class="segment-pill pos-2"></div>
+            <div class="segment"><span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12.5v-9z"/></svg></span></div>
+            <div class="segment"><span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3z"/></svg></span></div>
+            <div class="segment active">
+              <span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2A1.75 1.75 0 000 3.75v.5C0 5.216.784 6 1.75 6h4.5C7.216 6 8 5.216 8 4.25v-.5A1.75 1.75 0 006.25 2h-4.5zM1.5 3.75a.25.25 0 01.25-.25h4.5a.25.25 0 01.25.25v.5a.25.25 0 01-.25.25h-4.5a.25.25 0 01-.25-.25v-.5z"/></svg></span>
+              <span class="seg-label">Files</span>
+            </div>
+            <div class="segment"><span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4.72 3.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06L5.78 10.78a.75.75 0 01-1.06-1.06L7.44 7 4.72 4.28a.75.75 0 010-1.06z"/></svg></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="comparison-card">
+      <div class="comparison-header">Shell Active</div>
+      <div class="comparison-body">
+        <div style="padding: 12px;">
+          <div class="segmented-control" style="margin: 0;">
+            <div class="segment-pill pos-3"></div>
+            <div class="segment"><span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 12.5v-9z"/></svg></span></div>
+            <div class="segment"><span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3z"/></svg></span></div>
+            <div class="segment"><span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2A1.75 1.75 0 000 3.75v.5C0 5.216.784 6 1.75 6h4.5C7.216 6 8 5.216 8 4.25v-.5A1.75 1.75 0 006.25 2h-4.5z"/></svg></span></div>
+            <div class="segment active">
+              <span class="seg-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4.72 3.22a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06L5.78 10.78a.75.75 0 01-1.06-1.06L7.44 7 4.72 4.28a.75.75 0 010-1.06zm4 0a.75.75 0 011.06 0l3.25 3.25a.75.75 0 010 1.06l-3.25 3.25a.75.75 0 01-1.06-1.06L11.44 7 8.72 4.28a.75.75 0 010-1.06z"/></svg></span>
+              <span class="seg-label">Shell</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="section-header" style="margin-top: 64px;">
+    <h2>Side-by-Side: Floating Toolbars</h2>
+    <p>Each pane type has a purpose-built floating toolbar. Same frosted glass pill shape, different controls inside. The toolbar swaps with a subtle spring animation when switching pane types.</p>
+  </div>
+
+  <div class="comparison-grid">
+    <div class="comparison-card">
+      <div class="comparison-header">Terminal -- Modifier Keys</div>
+      <div class="comparison-body">
+        <div style="padding: 12px;">
+          <div class="floating-toolbar" style="margin: 0;">
+            <div class="mod-key">esc</div>
+            <div class="mod-key">ctrl</div>
+            <div class="mod-key">alt</div>
+            <div class="mod-key">cmd</div>
+            <div class="mod-key">tab</div>
+            <div class="arrow-cluster">
+              <div class="arrow-key">&larr;</div>
+              <div class="arrow-key">&darr;</div>
+              <div class="arrow-key">&uarr;</div>
+              <div class="arrow-key">&rarr;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="comparison-card">
+      <div class="comparison-header">Browser -- Navigation</div>
+      <div class="comparison-body">
+        <div style="padding: 12px;">
+          <div class="browser-toolbar" style="margin: 0;">
+            <div class="browser-nav-btn disabled">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"/></svg>
+            </div>
+            <div class="browser-nav-btn">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"/></svg>
+            </div>
+            <div class="url-capsule">
+              <span class="lock-icon" style="color: var(--accent-green);">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 1a2.5 2.5 0 00-2.5 2.5V5h-.25A1.25 1.25 0 002 6.25v3.5C2 10.44 2.56 11 3.25 11h5.5c.69 0 1.25-.56 1.25-1.25v-3.5C10 5.56 9.44 5 8.75 5H8.5V3.5A2.5 2.5 0 006 1zm1 4V3.5a1 1 0 10-2 0V5h2z"/></svg>
+              </span>
+              <span class="url-text">localhost:3000/dashboard</span>
+            </div>
+            <div class="browser-share-btn">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M9 2.25a.75.75 0 01.75.75v6.44l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V3a.75.75 0 01.75-.75z"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="comparison-card">
+      <div class="comparison-header">Files -- Actions</div>
+      <div class="comparison-body">
+        <div style="padding: 12px;">
+          <div class="file-toolbar" style="margin: 0;">
+            <div class="file-action-capsule">
+              <span class="fa-icon">+</span>
+              New File
+            </div>
+            <div class="file-action-capsule">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M1 2.5A1.5 1.5 0 012.5 1h3.1a1.5 1.5 0 011.06.44l.9.9A1.5 1.5 0 008.62 2.8H11.5A1.5 1.5 0 0113 4.3v7.2a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 011 11.5v-9z"/></svg>
+              Folder
+            </div>
+            <div class="file-spacer"></div>
+            <div class="file-sort-capsule">
+              Sort
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5l3 4 3-4H2z"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="comparison-card">
+      <div class="comparison-header">Shell -- Modifier Keys</div>
+      <div class="comparison-body">
+        <div style="padding: 12px;">
+          <div class="floating-toolbar" style="margin: 0;">
+            <div class="mod-key">esc</div>
+            <div class="mod-key">ctrl</div>
+            <div class="mod-key">alt</div>
+            <div class="mod-key">cmd</div>
+            <div class="mod-key">tab</div>
+            <div class="arrow-cluster">
+              <div class="arrow-key">&larr;</div>
+              <div class="arrow-key">&darr;</div>
+              <div class="arrow-key">&uarr;</div>
+              <div class="arrow-key">&rarr;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="section-divider"></div>
+
+
+  <!-- ════════════════════════════════════════════════════════
+       COMPONENT SPECIFICATIONS
+       ════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <h2>Component Specifications</h2>
+    <p>Detailed specs for implementation. All dimensions in logical points. All animations use spring curves for physical feel.</p>
+  </div>
+
+  <table class="spec-table">
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>Property</th>
+        <th>Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Segmented Control</td>
+        <td>Height</td>
+        <td><code>36px</code> (3px padding + 30px segments)</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Background</td>
+        <td><code>rgba(255,255,255,0.06)</code> + <code>backdrop-filter: blur(20px)</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Border</td>
+        <td><code>0.5px solid rgba(255,255,255,0.08)</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Corner Radius</td>
+        <td><code>100px</code> (pill)</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Margin</td>
+        <td><code>0 16px</code> (horizontal inset)</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Segments</td>
+        <td>4 equal-width: Terminal, Browser, Files, Shell</td>
+      </tr>
+      <tr>
+        <td>Sliding Pill</td>
+        <td>Background</td>
+        <td><code>rgba(255,255,255,0.18)</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Shadow</td>
+        <td><code>0 1px 4px rgba(0,0,0,0.2)</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Animation</td>
+        <td><code>500ms cubic-bezier(0.2, 0.8, 0.2, 1)</code> -- spring curve</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Stretch behavior</td>
+        <td>Pill width expands ~12% mid-transition, settles to target width</td>
+      </tr>
+      <tr>
+        <td>Segment Item</td>
+        <td>Active state</td>
+        <td>Icon + label visible, <code>font-weight: 600</code>, color <code>#fff</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Inactive state</td>
+        <td>Icon only, color <code>rgba(255,255,255,0.45)</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Touch target</td>
+        <td>Full height (36px), equal width (25% of control)</td>
+      </tr>
+      <tr>
+        <td>Tab Pills</td>
+        <td>Padding</td>
+        <td><code>6px 14px</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Corner Radius</td>
+        <td><code>100px</code> (pill)</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Active background</td>
+        <td><code>rgba(255,255,255,0.1)</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Font</td>
+        <td>13px / weight 500, active weight 600</td>
+      </tr>
+      <tr>
+        <td>Floating Toolbar</td>
+        <td>Background</td>
+        <td><code>rgba(255,255,255,0.07)</code> + <code>backdrop-filter: blur(24px) saturate(180%)</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Corner Radius</td>
+        <td><code>22px</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Shadow</td>
+        <td><code>0 4px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.06)</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Margin</td>
+        <td><code>0 12px 8px</code> (floats above home indicator)</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Key capsules</td>
+        <td>34px height, <code>rgba(255,255,255,0.08)</code> background, 8px radius</td>
+      </tr>
+      <tr>
+        <td>Breadcrumb Strip</td>
+        <td>Position</td>
+        <td>Replaces tab strip when Files is active</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Pill style</td>
+        <td>Current segment: filled <code>rgba(255,255,255,0.1)</code>, pill radius</td>
+      </tr>
+      <tr>
+        <td>File List</td>
+        <td>Style</td>
+        <td>Apple grouped inset: <code>var(--bg-elevated)</code> cards, 16px radius, 16px horizontal margin</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Separators</td>
+        <td><code>0.5px rgba(255,255,255,0.06)</code>, inset from left icon edge</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Row height</td>
+        <td>~56px (12px padding + 32px icon)</td>
+      </tr>
+      <tr>
+        <td>Workspace Drawer</td>
+        <td>Width</td>
+        <td><code>300px</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Background</td>
+        <td><code>rgba(28,28,30,0.92)</code> + <code>backdrop-filter: blur(40px) saturate(180%)</code></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Workspace cards</td>
+        <td>Rounded <code>16px</code>, active: <code>rgba(255,255,255,0.08)</code> fill</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>Change from original</td>
+        <td>Removed Browser/Files/Shell buttons. Workspaces only + New Workspace.</td>
+      </tr>
+    </tbody>
+  </table>
+
+
+  <div class="section-divider"></div>
+
+
+  <!-- ════════════════════════════════════════════════════════
+       TRANSITION ANIMATION SPEC
+       ════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <h2>Transition Animations</h2>
+    <p>Every transition uses spring physics. No linear or ease-in-out curves. The goal is a physical, haptic-feel interface where elements have mass and momentum.</p>
+  </div>
+
+  <div class="cards-row">
+    <div class="info-card">
+      <h4>Segment Switch</h4>
+      <p>Sliding pill animates with spring curve (<code>500ms cubic-bezier(0.2, 0.8, 0.2, 1)</code>). The pill width stretches ~12% at the midpoint of travel, creating an elastic, physical feel. Content area cross-fades: outgoing fades to 0 + translates 12px in the swipe direction (150ms), incoming fades from 0 + translates from 12px opposite (200ms, 50ms delay). Tab strip cross-fades in place (150ms). Floating toolbar slides up 4px and cross-fades (200ms). Total perceived transition: under 350ms.</p>
+    </div>
+    <div class="info-card">
+      <h4>Workspace Drawer Open</h4>
+      <p>Drawer slides in from left with spring curve (400ms). Background content scales to 0.95 and dims. Scrim fades in with backdrop blur (200ms). Drawer items stagger with 40ms delay each. Close: drawer slides out (300ms, faster for responsive feel), content scales back to 1.0.</p>
+    </div>
+    <div class="info-card">
+      <h4>Haptic Feedback Points</h4>
+      <p>Light impact on segment tap (before animation starts). Medium impact when sliding pill reaches destination. Light impact on workspace card tap. Selection feedback on tab pill tap. All haptics pair with the visual moment -- never before, never after.</p>
+    </div>
+  </div>
+
+
+</div>
+
+</body>
+</html>

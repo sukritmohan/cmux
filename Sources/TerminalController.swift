@@ -3305,7 +3305,15 @@ class TerminalController {
                     "listening_ports": ws.listeningPorts,
                     "remote": ws.remoteStatusPayload(),
                     "current_directory": v2OrNull(ws.currentDirectory),
-                    "custom_color": v2OrNull(ws.customColor)
+                    "custom_color": v2OrNull(ws.customColor),
+                    "surface_id": v2OrNull(ws.focusedPanelId?.uuidString),
+                    "panels": self.orderedPanels(in: ws).map { panel in
+                        [
+                            "id": panel.id.uuidString,
+                            "type": panel.panelType.rawValue,
+                            "title": panel.displayTitle
+                        ] as [String: Any]
+                    }
                 ]
             }
         }

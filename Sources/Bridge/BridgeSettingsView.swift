@@ -9,6 +9,8 @@ struct BridgeSettingsView: View {
     @AppStorage(BridgeSettings.enabledKey) private var isEnabled = BridgeSettings.defaultEnabled
     @AppStorage(BridgeSettings.portKey) private var port = BridgeSettings.defaultPort
 
+    @ObservedObject private var connectionStatus = BridgeConnectionStatus.shared
+
     @State private var devices: [BridgeAuth.PairedDevice] = []
     @State private var showPairingSheet = false
     @State private var pairingDevice: BridgeAuth.PairedDevice?
@@ -57,6 +59,47 @@ struct BridgeSettingsView: View {
                 Button(String(localized: "settings.bridge.pairDevice.button", defaultValue: "Pair…")) {
                     showPairingSheet = true
                 }
+                .popover(isPresented: $showPairingSheet) {
+                    pairingSheet
+                }
+            }
+
+            if !connectionStatus.deviceStates.isEmpty {
+                SettingsCardDivider()
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(String(localized: "settings.bridge.connectedDevices",
+                               defaultValue: "Connected Devices"))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 4)
+
+                    TimelineView(.periodic(from: .now, by: 30)) { _ in
+                        ForEach(
+                            Array(connectionStatus.deviceStates.values)
+                                .sorted(by: { $0.deviceName < $1.deviceName }),
+                            id: \.deviceId
+                        ) { state in
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(statusColor(for: state))
+                                    .frame(width: 8, height: 8)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(state.deviceName)
+                                        .font(.body)
+                                    Text(statusText(for: state))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Spacer()
+                            }
+                            .padding(.horizontal, 4)
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
             }
 
             if !devices.isEmpty {
@@ -160,6 +203,29 @@ struct BridgeSettingsView: View {
         devices = BridgeAuth.shared.listDevices()
     }
 
+    /// Returns the status dot color for a device based on its connection state.
+    /// Green = connected, yellow = disconnected < 5 min, gray = disconnected >= 5 min.
+    private func statusColor(for state: BridgeConnectionStatus.DeviceState) -> Color {
+        if state.isConnected { return .green }
+        guard let disconnectedAt = state.disconnectedAt else { return .gray }
+        let elapsed = Date().timeIntervalSince(disconnectedAt)
+        return elapsed < 300 ? .yellow : .gray
+    }
+
+    /// Returns a human-readable status string for a device.
+    private func statusText(for state: BridgeConnectionStatus.DeviceState) -> String {
+        if state.isConnected {
+            return String(localized: "settings.bridge.status.connected",
+                         defaultValue: "Connected")
+        }
+        guard let disconnectedAt = state.disconnectedAt else {
+            return String(localized: "settings.bridge.status.disconnected",
+                         defaultValue: "Disconnected")
+        }
+        return String(localized: "settings.bridge.status.disconnectedAgo",
+                     defaultValue: "Disconnected \(disconnectedAt.formatted(.relative(presentation: .named)))")
+    }
+
     private func updateBridgeState() {
         if isEnabled {
             BridgeServer.shared.start()
@@ -246,10 +312,11 @@ extension BridgeSettingsView {
     /// attach the sheet presentation. Returns a modified view.
     func withPairingSheet() -> some View {
         self
-            .sheet(isPresented: $showPairingSheet) {
-                pairingSheet
-            }
             .onAppear {
+                refreshDevices()
+                connectionStatus.refreshFromServer()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: BridgeServer.deviceConnected)) { _ in
                 refreshDevices()
             }
     }

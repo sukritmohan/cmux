@@ -1122,6 +1122,24 @@ bool ghostty_surface_read_text(ghostty_surface_t,
                                ghostty_text_s*);
 void ghostty_surface_free_text(ghostty_surface_t, ghostty_text_s*);
 
+// Cell data for screen reading — matches CCell layout in terminal/c/terminal.zig
+typedef struct {
+  uint32_t codepoint;
+  uint8_t grapheme_len;
+  uint8_t fg_r, fg_g, fg_b;
+  bool fg_is_default;
+  uint8_t bg_r, bg_g, bg_b;
+  bool bg_is_default;
+  uint8_t ul_r, ul_g, ul_b;
+  bool ul_is_default;
+  uint8_t underline_style;
+  uint16_t flags;
+} ghostty_cell_s;
+
+size_t ghostty_surface_read_screen(ghostty_surface_t, ghostty_cell_s* buf, size_t buf_len);
+bool ghostty_surface_cursor_pos(ghostty_surface_t, uint16_t* col, uint16_t* row);
+bool ghostty_surface_cursor_visible(ghostty_surface_t);
+
 typedef void (*ghostty_io_output_observer_cb)(void* userdata, const uint8_t* data, size_t len);
 void ghostty_surface_set_output_observer(ghostty_surface_t, ghostty_io_output_observer_cb, void*);
 

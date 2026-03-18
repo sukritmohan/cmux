@@ -119,6 +119,112 @@ BridgeEventRelay registers NotificationCenter observers in `start()` for 11 even
 
 Returns all discovered listening ports across workspaces. Accepts optional `workspace_id` filter. Response: `{"ports": [{"port": 3000, "workspace_id": "...", "surface_id": "..."}]}`.
 
+## Android Companion — App Architecture
+
+### Component Hierarchy
+
+```
+CmuxCompanionApp (MaterialApp.router)
+├── PairingScreen          — QR scanning, credential storage
+└── TerminalScreen         — Main post-pairing screen (orchestrator)
+    ├── TopBar             — Tab strip + pane type dropdown
+    │   ├── TabBarStrip    — Scrollable surface tabs
+    │   └── PaneTypeDropdown — Terminal/Browser/Files/Shell selector
+    ├── GestureLayer       — Edge swipe, pinch, arrow swipe detection
+    │   └── TerminalView   — Pure cell renderer (CustomPainter)
+    ├── ModifierBar        — Esc/Ctrl/Alt/Tab + arrow keys + Enter
+    ├── WorkspaceDrawer    — Left-edge drawer with workspace list
+    │   └── WorkspaceTile  — Single workspace item
+    ├── MinimapView        — Pinch-out overlay showing pane layout
+    │   └── MinimapPane    — Proportional pane rectangle
+    └── ConnectionOverlay  — Connecting/reconnecting/disconnected states
+```
+
+### Riverpod State Architecture
+
+| Provider | Type | Purpose |
+|----------|------|---------|
+| `connectionManagerProvider` | `Provider<ConnectionManager>` | Singleton WebSocket connection lifecycle |
+| `pairingServiceProvider` | `Provider<PairingService>` | Keychain credential management |
+| `connectionStatusProvider` | `StreamProvider<ConnectionStatus>` | Reactive connection state stream |
+| `isPairedProvider` | `FutureProvider<bool>` | Whether device has stored credentials |
+| `workspaceProvider` | `StateNotifierProvider<WorkspaceNotifier, WorkspaceState>` | Workspace list + active workspace |
+| `surfaceProvider` | `StateNotifierProvider<SurfaceNotifier, SurfaceState>` | Surfaces (tabs) in active workspace + focus |
+| `paneProvider` | `StateNotifierProvider<PaneNotifier, PaneState>` | Pane layout for minimap |
+| `eventHandlerProvider` | `Provider<EventHandler>` | Routes bridge events to notifiers |
+
+### Event Flow
+
+```
+Mac Bridge → WebSocket → ConnectionManager.eventStream
+                             ↓
+                       EventHandler._onEvent()
+                             ↓
+              ┌──────────────┼──────────────┐
+              ↓              ↓              ↓
+      WorkspaceNotifier  SurfaceNotifier  PaneNotifier
+              ↓              ↓              ↓
+        WorkspaceDrawer   TabBarStrip    MinimapView
+```
+
+Events dispatched: `workspace.{created,closed,title_changed,selected}`, `surface.{focused,closed,title_changed,moved,reordered}`, `pane.{focused,split,closed}`.
+
+### File Structure
+
+```
+lib/
+├── app/
+│   ├── colors.dart         — Design tokens (AppColors)
+│   ├── theme.dart          — ThemeData + named text styles
+│   ├── router.dart         — GoRouter: /pair, /terminal
+│   └── providers.dart      — Connection-layer Riverpod providers
+├── connection/
+│   ├── connection_manager.dart  — WebSocket lifecycle + reconnection
+│   ├── connection_state.dart    — ConnectionStatus enum
+│   ├── message_protocol.dart    — BridgeRequest/Response/Event/Error
+│   ├── pairing_service.dart     — QR parsing + secure storage
+│   ├── pty_demuxer.dart         — Binary frame channel demux
+│   └── request_tracker.dart     — Request/response ID tracking
+├── state/
+│   ├── workspace_provider.dart  — Workspace list + selection
+│   ├── surface_provider.dart    — Surface (tab) tracking + focus
+│   ├── pane_provider.dart       — Pane layout for minimap
+│   └── event_handler.dart       — Event → notifier dispatch
+├── terminal/
+│   ├── terminal_screen.dart     — Orchestrator (top bar + view + bar)
+│   ├── terminal_view.dart       — Pure cell renderer (CustomPainter)
+│   ├── cell_frame_parser.dart   — Binary cell frame parser
+│   ├── top_bar.dart             — Tab bar + pane type trigger
+│   ├── tab_bar_strip.dart       — Scrollable surface tabs
+│   └── modifier_bar.dart        — Esc/Ctrl/Alt/Tab + arrows
+├── workspace/
+│   ├── workspace_drawer.dart    — Left-edge workspace drawer
+│   └── workspace_tile.dart      — Single workspace item
+├── minimap/
+│   ├── minimap_view.dart        — Full-screen minimap overlay
+│   └── minimap_pane.dart        — Proportional pane tile
+├── shared/
+│   ├── connection_overlay.dart  — Connection state overlays
+│   ├── gesture_layer.dart       — Gesture recognizers
+│   └── pane_type_dropdown.dart  — Pane type selector dropdown
+├── onboarding/
+│   └── pairing_screen.dart      — Branded QR pairing screen
+├── native/
+│   ├── ghostty_vt.dart          — GhosttyKit terminal C API wrapper
+│   └── ghostty_vt_bindings.dart — FFI bindings
+└── main.dart                    — App entry point
+```
+
+### Key Design Decisions
+
+**TerminalScreen as orchestrator:** The terminal screen owns the connection init, workspace fetch, surface sync, and input routing. TerminalView is a pure renderer that only subscribes to cell streams and paints — no navigation or state management.
+
+**Gesture layer wraps terminal content:** GestureLayer sits between the Column layout and the TerminalView, intercepting edge swipes (drawer), pinches (minimap), and directional swipes (arrow keys) without interfering with the terminal's own tap-to-focus and keyboard handling.
+
+**Pane type dropdown uses Overlay:** The dropdown is rendered as an OverlayEntry anchored via CompositedTransformTarget/Follower, so it floats above the tab bar without being clipped by the top bar's bounds.
+
+**Connection overlay as Stack layer:** Connection states (connecting, reconnecting, disconnected) are overlaid on top of the terminal screen's Stack, not as separate routes. This means the terminal view stays mounted and can resume rendering immediately when connection is restored.
+
 ## Phase 3 (Planned)
 
 - Mobile-specific rendering hints using stored mobile dimensions
