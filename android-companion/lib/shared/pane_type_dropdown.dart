@@ -1,7 +1,8 @@
 /// Pane type dropdown anchored to the right side of the top bar.
 ///
-/// Shows available pane types (Terminal, Browser, Files, Shell) with
-/// the active type highlighted. Non-terminal types show "Coming soon".
+/// Shows available pane types (Terminal, Browser, Files, Overview) with
+/// the active type highlighted. Dropdown: 200px wide, 14px radius,
+/// colored icon + label + checkmark per item.
 library;
 
 import 'package:flutter/material.dart';
@@ -10,16 +11,31 @@ import '../app/colors.dart';
 
 /// Available pane types and their visual properties.
 enum PaneType {
-  terminal(icon: Icons.terminal, label: 'Terminal', color: AppColors.accentGreen),
-  browser(icon: Icons.language, label: 'Browser', color: AppColors.accentBlue),
-  files(icon: Icons.folder_outlined, label: 'Files', color: AppColors.accentOrange),
-  shell(icon: Icons.code, label: 'Shell', color: AppColors.accentPurple);
+  terminal(icon: Icons.terminal, label: 'Terminal'),
+  browser(icon: Icons.language, label: 'Browser'),
+  files(icon: Icons.folder_outlined, label: 'Files'),
+  overview(icon: Icons.grid_view_rounded, label: 'Overview');
 
   final IconData icon;
   final String label;
-  final Color color;
 
-  const PaneType({required this.icon, required this.label, required this.color});
+  const PaneType({required this.icon, required this.label});
+
+  /// Returns the type-specific color from the current theme's color scheme.
+  Color color(AppColorScheme c) => switch (this) {
+        PaneType.terminal => c.terminalColor,
+        PaneType.browser => c.browserColor,
+        PaneType.files => c.filesColor,
+        PaneType.overview => c.overviewColor,
+      };
+
+  /// Returns the type-specific tinted background from the color scheme.
+  Color bgColor(AppColorScheme c) => switch (this) {
+        PaneType.terminal => c.terminalBg,
+        PaneType.browser => c.browserBg,
+        PaneType.files => c.filesBg,
+        PaneType.overview => c.overviewBg,
+      };
 }
 
 class PaneTypeDropdown extends StatefulWidget {
@@ -89,12 +105,16 @@ class _PaneTypeDropdownState extends State<PaneTypeDropdown>
   OverlayEntry _createOverlay() {
     return OverlayEntry(
       builder: (context) {
+        final c = AppColors.of(context);
+
         return Stack(
           children: [
             // Scrim — tap to dismiss
             GestureDetector(
               onTap: _removeOverlay,
-              child: Container(color: Colors.transparent),
+              child: Container(
+                color: c.drawerScrim,
+              ),
             ),
 
             // Dropdown menu
@@ -111,46 +131,69 @@ class _PaneTypeDropdownState extends State<PaneTypeDropdown>
                   child: Container(
                     width: 200,
                     decoration: BoxDecoration(
-                      color: AppColors.bgSecondary,
-                      borderRadius: BorderRadius.circular(AppColors.radiusMd),
-                      border: Border.all(color: AppColors.borderSubtle),
+                      color: c.bgElevated,
+                      borderRadius: BorderRadius.circular(AppColors.radiusLg),
+                      border: Border.all(color: c.borderStrong),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withAlpha(80),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                          blurRadius: 48,
+                          offset: const Offset(0, 12),
                         ),
                       ],
                     ),
+                    padding: const EdgeInsets.all(4),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: PaneType.values.map((type) {
                         final isActive = type == widget.activeType;
-                        final isAvailable = type == PaneType.terminal;
 
                         return GestureDetector(
-                          onTap: isAvailable ? () => _selectType(type) : null,
+                          onTap: () => _selectType(type),
                           child: Container(
                             height: 44,
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? AppColors.chipBg
+                                  ? c.bgSurface
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(
-                                AppColors.radiusSm,
+                                AppColors.radiusMd,
                               ),
                             ),
                             child: Row(
                               children: [
-                                Icon(
-                                  type.icon,
-                                  size: 16,
-                                  color: isAvailable
-                                      ? type.color
-                                      : AppColors.textMuted,
+                                // Active indicator bar
+                                if (isActive)
+                                  Container(
+                                    width: 3,
+                                    height: 18,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      color: c.accent,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+
+                                // Type icon with colored background
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: type.bgColor(c),
+                                    borderRadius: BorderRadius.circular(
+                                      AppColors.radiusSm,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    type.icon,
+                                    size: 14,
+                                    color: type.color(c),
+                                  ),
                                 ),
                                 const SizedBox(width: 10),
+
+                                // Label
                                 Expanded(
                                   child: Text(
                                     type.label,
@@ -158,26 +201,20 @@ class _PaneTypeDropdownState extends State<PaneTypeDropdown>
                                       fontSize: 13,
                                       fontWeight: isActive
                                           ? FontWeight.w600
-                                          : FontWeight.w400,
-                                      color: isAvailable
-                                          ? AppColors.textPrimary
-                                          : AppColors.textMuted,
+                                          : FontWeight.w500,
+                                      color: isActive
+                                          ? c.textPrimary
+                                          : c.textSecondary,
                                     ),
                                   ),
                                 ),
+
+                                // Checkmark for active item
                                 if (isActive)
-                                  const Icon(
+                                  Icon(
                                     Icons.check,
                                     size: 16,
-                                    color: AppColors.accentBlue,
-                                  )
-                                else if (!isAvailable)
-                                  const Text(
-                                    'Soon',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: AppColors.textMuted,
-                                    ),
+                                    color: c.accentText,
                                   ),
                               ],
                             ),
@@ -197,30 +234,22 @@ class _PaneTypeDropdownState extends State<PaneTypeDropdown>
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final typeColor = widget.activeType.color(c);
+
     return CompositedTransformTarget(
       link: _layerLink,
       child: GestureDetector(
         onTap: _toggleDropdown,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          height: 40,
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(widget.activeType.icon, size: 14, color: widget.activeType.color),
-              const SizedBox(width: 4),
-              Text(
-                widget.activeType.label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(width: 2),
-              const Icon(Icons.expand_more, size: 14, color: AppColors.textMuted),
-            ],
+          width: 36,
+          height: 36,
+          margin: const EdgeInsets.only(right: 10),
+          decoration: BoxDecoration(
+            color: widget.activeType.bgColor(c),
+            borderRadius: BorderRadius.circular(AppColors.radiusMd),
           ),
+          child: Icon(widget.activeType.icon, size: 16, color: typeColor),
         ),
       ),
     );

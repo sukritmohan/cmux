@@ -1,8 +1,8 @@
-/// Top bar with tab strip and pane type dropdown.
+/// Top bar with tab strip and pane type icon trigger.
 ///
-/// Sits above the terminal content area (40px height).
+/// Sits above the content area (42px height).
 /// Left: menu button + scrollable tab bar showing surfaces.
-/// Right: pane type selector separated by a 1px divider.
+/// Right: pane type icon (36x36, colored per active type).
 library;
 
 import 'package:flutter/material.dart';
@@ -17,6 +17,8 @@ class TopBar extends StatelessWidget {
   final String? focusedSurfaceId;
   final ValueChanged<String> onSurfaceSelected;
   final VoidCallback onMenuTap;
+  final PaneType activePaneType;
+  final ValueChanged<PaneType> onPaneTypeChanged;
 
   const TopBar({
     super.key,
@@ -24,50 +26,47 @@ class TopBar extends StatelessWidget {
     this.focusedSurfaceId,
     required this.onSurfaceSelected,
     required this.onMenuTap,
+    this.activePaneType = PaneType.terminal,
+    required this.onPaneTypeChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
     return Container(
-      height: 40,
+      height: 42,
       decoration: BoxDecoration(
-        color: AppColors.bgSecondary,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(66), // ~26%
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
+        color: c.bgPrimary,
+        border: Border(
+          bottom: BorderSide(color: c.border),
+        ),
       ),
       child: Row(
         children: [
           // Menu button (opens workspace drawer)
           GestureDetector(
             onTap: onMenuTap,
-            child: const SizedBox(
+            child: SizedBox(
               width: 40,
-              height: 40,
-              child: Icon(Icons.menu, size: 18, color: AppColors.textSecondary),
+              height: 42,
+              child: Icon(Icons.menu, size: 18, color: c.textSecondary),
             ),
           ),
 
-          // Scrollable tab strip
+          // Scrollable tab strip (browser mode shows static tabs)
           TabBarStrip(
             surfaces: surfaces,
             focusedSurfaceId: focusedSurfaceId,
             onSurfaceSelected: onSurfaceSelected,
+            paneType: activePaneType,
           ),
 
-          // 1px vertical divider
-          Container(
-            width: 1,
-            height: 20,
-            color: AppColors.borderSubtle,
+          // Pane type dropdown (icon-only trigger)
+          PaneTypeDropdown(
+            activeType: activePaneType,
+            onTypeSelected: onPaneTypeChanged,
           ),
-
-          // Pane type dropdown
-          const PaneTypeDropdown(),
         ],
       ),
     );

@@ -20,6 +20,9 @@ class Pane {
   final double height;
   final bool focused;
 
+  /// Number of surfaces/tabs stacked in this pane (1 = single surface).
+  final int surfaceCount;
+
   const Pane({
     required this.id,
     this.surfaceId,
@@ -29,6 +32,7 @@ class Pane {
     this.width = 1,
     this.height = 1,
     this.focused = false,
+    this.surfaceCount = 1,
   });
 
   factory Pane.fromJson(Map<String, dynamic> json) {
@@ -41,10 +45,11 @@ class Pane {
       width: (json['width'] as num?)?.toDouble() ?? 1,
       height: (json['height'] as num?)?.toDouble() ?? 1,
       focused: json['focused'] as bool? ?? false,
+      surfaceCount: (json['surface_count'] as int?) ?? 1,
     );
   }
 
-  Pane copyWith({bool? focused}) {
+  Pane copyWith({bool? focused, int? surfaceCount}) {
     return Pane(
       id: id,
       surfaceId: surfaceId,
@@ -54,6 +59,7 @@ class Pane {
       width: width,
       height: height,
       focused: focused ?? this.focused,
+      surfaceCount: surfaceCount ?? this.surfaceCount,
     );
   }
 }

@@ -29,6 +29,9 @@ dependencies:
   # FFI
   ffi: ^2.1.4
 
+  # Google Fonts (IBM Plex Sans, IBM Plex Mono)
+  google_fonts: ^6.2.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,8 +1,16 @@
-/// Modifier bar with Esc, Ctrl, Alt, Tab toggles and arrow keys.
+/// Floating capsule modifier toolbar matching the pane-type-switcher spec.
 ///
-/// Sits below the terminal content area. Sends escape sequences
-/// to the PTY via the [onInput] callback.
+/// Spec design (sections 8-9):
+/// - Floating capsule: rounded 18px, backdrop blur(24px), semi-transparent bg
+/// - Margin: 0 8px 2px
+/// - Three zones with 1px dividers:
+///   (1) (+) amber accent button + clipboard button
+///   (2) Inverted-T arrow grid (3x2, 26px cells)
+///   (3) "RETURN" key (9px, 700 weight, uppercase)
+/// - All keys: 32px height, rounded 10px, borderless
 library;
+
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,221 +28,108 @@ class ModifierBar extends StatefulWidget {
 }
 
 class _ModifierBarState extends State<ModifierBar> {
-  bool _ctrlActive = false;
-  bool _altActive = false;
-
   void _sendKey(String data) {
     HapticFeedback.lightImpact();
-
-    String prefix = '';
-    if (_ctrlActive) prefix += '\x1b';
-    if (_altActive) prefix += '\x1b';
-
-    widget.onInput('$prefix$data');
-
-    // Clear toggle modifiers after sending a non-modifier key.
-    if (_ctrlActive || _altActive) {
-      setState(() {
-        _ctrlActive = false;
-        _altActive = false;
-      });
-    }
-  }
-
-  void _toggleModifier({required bool Function() getter, required void Function(bool) setter}) {
-    HapticFeedback.mediumImpact();
-    setState(() => setter(!getter()));
+    widget.onInput(data);
   }
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
     return Container(
-      height: 44,
-      decoration: const BoxDecoration(
-        color: AppColors.bgSecondary,
-        border: Border(
-          top: BorderSide(color: AppColors.borderSubtle),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: Row(
-        children: [
-          // Left group: modifier keys
-          _KeyButton(
-            label: 'Esc',
-            onTap: () {
-              HapticFeedback.lightImpact();
-              widget.onInput('\x1b');
-            },
-          ),
-          const SizedBox(width: 4),
-          _KeyButton(
-            label: 'Ctrl',
-            isActive: _ctrlActive,
-            onTap: () => _toggleModifier(
-              getter: () => _ctrlActive,
-              setter: (v) => _ctrlActive = v,
-            ),
-          ),
-          const SizedBox(width: 4),
-          _KeyButton(
-            label: 'Alt',
-            isActive: _altActive,
-            onTap: () => _toggleModifier(
-              getter: () => _altActive,
-              setter: (v) => _altActive = v,
-            ),
-          ),
-          const SizedBox(width: 4),
-          _KeyButton(
-            label: 'Tab',
-            onTap: () => _sendKey('\t'),
-          ),
-
-          const Spacer(),
-
-          // Right group: arrow keys in a grouped pill
-          _ArrowKeyGroup(onArrow: _sendKey),
-
-          const SizedBox(width: 8),
-
-          // Enter key with accent background
-          _KeyButton(
-            icon: Icons.keyboard_return,
-            isEnter: true,
-            onTap: () => _sendKey('\r'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Groups arrow keys into a single rounded pill container.
-class _ArrowKeyGroup extends StatelessWidget {
-  final void Function(String) onArrow;
-
-  const _ArrowKeyGroup({required this.onArrow});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 36,
+      margin: const EdgeInsets.fromLTRB(8, 0, 8, 2),
+      height: 42,
       decoration: BoxDecoration(
-        color: AppColors.bgTertiary,
-        borderRadius: BorderRadius.circular(AppColors.radiusSm),
-        border: Border.all(color: AppColors.borderSubtle),
+        borderRadius: BorderRadius.circular(18),
+        color: c.modifierBarBg,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _ArrowButton(icon: Icons.arrow_back, onTap: () => onArrow('\x1b[D')),
-          _divider(),
-          _ArrowButton(icon: Icons.arrow_downward, onTap: () => onArrow('\x1b[B')),
-          _divider(),
-          _ArrowButton(icon: Icons.arrow_upward, onTap: () => onArrow('\x1b[A')),
-          _divider(),
-          _ArrowButton(icon: Icons.arrow_forward, onTap: () => onArrow('\x1b[C')),
-        ],
-      ),
-    );
-  }
+      clipBehavior: Clip.hardEdge,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+          child: Row(
+            children: [
+              // Zone 1: (+) accent button + clipboard button
+              _FanButton(
+                icon: Icons.add,
+                isAccent: true,
+                onTap: () {
+                  // Fan-out will expand to show Esc/Ctrl/Alt/Tab
+                  HapticFeedback.mediumImpact();
+                },
+              ),
+              const SizedBox(width: 4),
+              _FanButton(
+                icon: Icons.content_paste,
+                isAccent: false,
+                onTap: () async {
+                  final data = await Clipboard.getData(Clipboard.kTextPlain);
+                  if (data?.text != null && data!.text!.isNotEmpty) {
+                    _sendKey(data.text!);
+                  }
+                },
+              ),
 
-  static Widget _divider() {
-    return Container(
-      width: 1,
-      height: 20,
-      color: AppColors.borderSubtle,
-    );
-  }
-}
+              // Divider
+              _BarDivider(),
 
-/// Individual arrow button inside the grouped pill (no outer border).
-class _ArrowButton extends StatefulWidget {
-  final IconData icon;
-  final VoidCallback onTap;
+              // Zone 2: inverted-T arrow cluster
+              _ArrowCluster(onArrow: _sendKey),
 
-  const _ArrowButton({required this.icon, required this.onTap});
+              // Divider
+              _BarDivider(),
 
-  @override
-  State<_ArrowButton> createState() => _ArrowButtonState();
-}
-
-class _ArrowButtonState extends State<_ArrowButton> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.95 : 1.0,
-        duration: const Duration(milliseconds: 80),
-        child: Container(
-          width: 36,
-          height: 36,
-          alignment: Alignment.center,
-          child: Icon(widget.icon, size: 16, color: AppColors.textPrimary),
+              // Zone 3: RETURN key
+              _ReturnKey(onTap: () => _sendKey('\r')),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _KeyButton extends StatefulWidget {
-  final String? label;
-  final IconData? icon;
-  final bool isActive;
-  final bool isEnter;
+/// Fan-out action button: (+) or clipboard. 38x32, rounded 10px.
+class _FanButton extends StatefulWidget {
+  final IconData icon;
+  final bool isAccent;
   final VoidCallback onTap;
 
-  const _KeyButton({
-    this.label,
-    this.icon,
-    this.isActive = false,
-    this.isEnter = false,
+  const _FanButton({
+    required this.icon,
+    required this.isAccent,
     required this.onTap,
   });
 
   @override
-  State<_KeyButton> createState() => _KeyButtonState();
+  State<_FanButton> createState() => _FanButtonState();
 }
 
-class _KeyButtonState extends State<_KeyButton> {
+class _FanButtonState extends State<_FanButton> {
   bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    final isActive = widget.isActive;
+    final c = AppColors.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Active modifier glow: accentBlue at 12% bg + 80% border + subtle shadow
-    final Color bgColor;
-    final Color borderColor;
-    final List<BoxShadow>? shadows;
+    Color bg;
+    Color fg;
 
-    if (isActive) {
-      bgColor = AppColors.accentBlue.withAlpha(31); // ~12%
-      borderColor = AppColors.accentBlue.withAlpha(204); // ~80%
-      shadows = [
-        BoxShadow(
-          color: AppColors.accentBlue.withAlpha(40),
-          blurRadius: 8,
-          spreadRadius: 1,
-        ),
-      ];
-    } else if (widget.isEnter) {
-      bgColor = AppColors.accentBlue.withAlpha(38); // ~15%
-      borderColor = AppColors.borderSubtle;
-      shadows = null;
+    if (widget.isAccent) {
+      bg = isDark
+          ? const Color(0x38E0A030) // amber gradient-like
+          : const Color(0x28E0A030);
+      fg = c.accentText;
     } else {
-      bgColor = AppColors.bgTertiary;
-      borderColor = AppColors.borderSubtle;
-      shadows = null;
+      bg = isDark
+          ? Colors.white.withAlpha(18)
+          : Colors.black.withAlpha(13);
+      fg = isDark
+          ? Colors.white.withAlpha(128)
+          : Colors.black.withAlpha(102);
     }
 
     return GestureDetector(
@@ -245,37 +140,199 @@ class _KeyButtonState extends State<_KeyButton> {
       },
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(
-        scale: _pressed ? 0.95 : 1.0,
+        scale: _pressed ? 0.93 : 1.0,
         duration: const Duration(milliseconds: 80),
         child: Container(
-          height: 36,
-          constraints: const BoxConstraints(minWidth: 40),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          width: 38,
+          height: 32,
           decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(AppColors.radiusSm),
-            border: Border.all(color: borderColor),
-            boxShadow: shadows,
+            color: bg,
+            borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
-          child: widget.icon != null
-              ? Icon(
-                  widget.icon,
-                  size: 16,
-                  color: isActive
-                      ? AppColors.accentBlue
-                      : AppColors.textPrimary,
-                )
-              : Text(
-                  widget.label ?? '',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isActive
-                        ? AppColors.accentBlue
-                        : AppColors.textPrimary,
-                  ),
-                ),
+          child: Icon(widget.icon, size: 15, color: fg),
+        ),
+      ),
+    );
+  }
+}
+
+/// Subtle vertical divider between zones.
+class _BarDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: 1,
+      height: 16,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withAlpha(18)
+            : Colors.black.withAlpha(18),
+        borderRadius: BorderRadius.circular(1),
+      ),
+    );
+  }
+}
+
+/// Inverted-T arrow key cluster: 3x2 grid, 26px cells.
+class _ArrowCluster extends StatelessWidget {
+  final void Function(String) onArrow;
+
+  const _ArrowCluster({required this.onArrow});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 26 * 3 + 4, // 3 columns + gaps
+      height: 32,
+      child: Stack(
+        children: [
+          // Top row: up arrow centered
+          Positioned(
+            left: 27,
+            top: 0,
+            child: _ArrowKey(
+              icon: Icons.keyboard_arrow_up,
+              onTap: () => onArrow('\x1b[A'),
+            ),
+          ),
+          // Bottom row: left, down, right
+          Positioned(
+            left: 0,
+            top: 16,
+            child: _ArrowKey(
+              icon: Icons.keyboard_arrow_left,
+              onTap: () => onArrow('\x1b[D'),
+            ),
+          ),
+          Positioned(
+            left: 27,
+            top: 16,
+            child: _ArrowKey(
+              icon: Icons.keyboard_arrow_down,
+              onTap: () => onArrow('\x1b[B'),
+            ),
+          ),
+          Positioned(
+            left: 54,
+            top: 16,
+            child: _ArrowKey(
+              icon: Icons.keyboard_arrow_right,
+              onTap: () => onArrow('\x1b[C'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Individual arrow key: 26x14, rounded 6px, borderless.
+class _ArrowKey extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _ArrowKey({required this.icon, required this.onTap});
+
+  @override
+  State<_ArrowKey> createState() => _ArrowKeyState();
+}
+
+class _ArrowKeyState extends State<_ArrowKey> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        HapticFeedback.selectionClick();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.90 : 1.0,
+        duration: const Duration(milliseconds: 60),
+        child: Container(
+          width: 26,
+          height: 14,
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withAlpha(15)
+                : Colors.black.withAlpha(10),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            widget.icon,
+            size: 10,
+            color: isDark
+                ? Colors.white.withAlpha(102)
+                : Colors.black.withAlpha(89),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "RETURN" key: elevated action button. 9px, 700 weight, uppercase.
+class _ReturnKey extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _ReturnKey({required this.onTap});
+
+  @override
+  State<_ReturnKey> createState() => _ReturnKeyState();
+}
+
+class _ReturnKeyState extends State<_ReturnKey> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.93 : 1.0,
+        duration: const Duration(milliseconds: 80),
+        child: Container(
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          margin: const EdgeInsets.only(left: 3),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withAlpha(20)
+                : Colors.black.withAlpha(15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            'RETURN',
+            style: TextStyle(
+              fontFamily: 'JetBrains Mono',
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: isDark
+                  ? Colors.white.withAlpha(191)
+                  : Colors.black.withAlpha(140),
+            ),
+          ),
         ),
       ),
     );

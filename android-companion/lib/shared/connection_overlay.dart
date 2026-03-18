@@ -2,13 +2,15 @@
 ///
 /// Shows different states: connecting, authenticating, reconnecting,
 /// disconnected, with appropriate animations and actions.
-/// Full polish in Chunk 10.
 library;
 
 import 'package:flutter/material.dart';
 
 import '../app/colors.dart';
 import '../connection/connection_state.dart';
+
+/// Warning orange for reconnecting state (not theme-dependent).
+const _warningOrange = Color(0xFFD29922);
 
 class ConnectionOverlay extends StatelessWidget {
   final ConnectionStatus status;
@@ -22,27 +24,29 @@ class ConnectionOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
     return Container(
-      color: AppColors.bgPrimary.withAlpha(230),
+      color: c.bgPrimary.withAlpha(230),
       child: Center(
-        child: _buildContent(),
+        child: _buildContent(c),
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppColorScheme c) {
     switch (status) {
       case ConnectionStatus.connecting:
       case ConnectionStatus.authenticating:
-        return const Column(
+        return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _PulseRing(color: AppColors.accentBlue),
-            SizedBox(height: 24),
+            _PulseRing(color: c.accent),
+            const SizedBox(height: 24),
             Text(
               'Connecting to Mac...',
               style: TextStyle(
-                color: AppColors.textSecondary,
+                color: c.textSecondary,
                 fontSize: 16,
               ),
             ),
@@ -50,15 +54,15 @@ class ConnectionOverlay extends StatelessWidget {
         );
 
       case ConnectionStatus.reconnecting:
-        return const Column(
+        return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _PulseRing(color: AppColors.accentOrange),
-            SizedBox(height: 24),
+            const _PulseRing(color: _warningOrange),
+            const SizedBox(height: 24),
             Text(
               'Reconnecting...',
               style: TextStyle(
-                color: AppColors.textSecondary,
+                color: c.textSecondary,
                 fontSize: 16,
               ),
             ),
@@ -69,25 +73,25 @@ class ConnectionOverlay extends StatelessWidget {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.cloud_off_rounded,
               size: 48,
-              color: AppColors.textMuted,
+              color: c.textMuted,
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Connection lost',
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Check your Tailscale connection and try again.',
               style: TextStyle(
-                color: AppColors.textSecondary,
+                color: c.textSecondary,
                 fontSize: 14,
               ),
               textAlign: TextAlign.center,
