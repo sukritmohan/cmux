@@ -212,17 +212,20 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   /// Sends text input to the Mac-side PTY.
   Future<void> _sendInput(String text) async {
     if (text.isEmpty) return;
+    final escaped = text.replaceAll('\r', '\\r').replaceAll('\x7f', '\\x7f').replaceAll('\x1b', '\\e');
+    _dlog('sendInput: "$escaped" (${text.length}b)');
     try {
       final manager = ref.read(connectionManagerProvider);
-      await manager.sendRequest(
+      final response = await manager.sendRequest(
         'surface.pty.write',
         params: {
           'surface_id': widget.surfaceId,
           'data': text,
         },
       );
+      _dlog('sendInput OK: ${response.ok} ${response.error ?? ""}');
     } catch (e) {
-      debugPrint('[TerminalView] Write error: $e');
+      _dlog('sendInput ERR: $e');
     }
   }
 

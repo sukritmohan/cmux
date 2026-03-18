@@ -454,17 +454,116 @@ final class BridgeConnection {
                                                message: "Surface not found: \(surfaceId.uuidString)"))
                 return
             }
-            // Write raw bytes to the terminal surface.
-            writeData.withUnsafeBytes { rawBuffer in
-                guard let baseAddress = rawBuffer.baseAddress?.assumingMemoryBound(to: CChar.self) else { return }
-                if let surface = panel.surface.surface {
-                    ghostty_surface_text(surface, baseAddress, UInt(rawBuffer.count))
+            guard let surface = panel.surface.surface else {
+                self.sendText(self.encodeError(id: id, code: "not_found",
+                                               message: "Surface not initialized: \(surfaceId.uuidString)"))
+                return
+            }
+
+            // Send input through the key event path (ghostty_surface_key) instead
+            // of the paste path (ghostty_surface_text). The paste path wraps input
+            // in bracketed paste sequences, which causes control characters like
+            // Enter (\r) and Backspace (\x7f) to be treated as literal text by
+            // the shell rather than executed as key presses.
+            //
+            // Strategy: batch printable characters into a single key event with
+            // keycode=0 and text=chars. Send control characters as individual
+            // key events with the appropriate Ghostty keycode.
+            let bytes = [UInt8](writeData)
+            var textStart = bytes.startIndex
+            for i in bytes.indices {
+                let b = bytes[i]
+                let isControl = b < 0x20 || b == 0x7F
+                if isControl {
+                    // Flush any accumulated printable text first.
+                    if textStart < i {
+                        let segment = Data(bytes[textStart..<i])
+                        self.sendKeyEventWithText(surface: surface, data: segment)
+                    }
+                    // Send the control character as a key event.
+                    self.sendControlKeyEvent(surface: surface, byte: b)
+                    textStart = i + 1
                 }
+            }
+            // Flush remaining printable text.
+            if textStart < bytes.endIndex {
+                let segment = Data(bytes[textStart...])
+                self.sendKeyEventWithText(surface: surface, data: segment)
             }
             self.sendText(self.encodeOk(id: id, result: [
                 "written": true,
                 "surface_id": surfaceId.uuidString,
             ]))
+        }
+    }
+
+    /// Sends printable text to the terminal via the key event path.
+    ///
+    /// Uses `ghostty_surface_key` with `keycode = 0` and the text payload,
+    /// which writes directly to the PTY without bracketed paste wrapping.
+    private func sendKeyEventWithText(surface: ghostty_surface_t, data: Data) {
+        data.withUnsafeBytes { rawBuffer in
+            guard let ptr = rawBuffer.baseAddress?.assumingMemoryBound(to: CChar.self) else { return }
+            // Null-terminate the string for C interop.
+            var nullTerminated = Data(rawBuffer)
+            nullTerminated.append(0)
+            nullTerminated.withUnsafeBytes { ntBuffer in
+                guard let ntPtr = ntBuffer.baseAddress?.assumingMemoryBound(to: CChar.self) else { return }
+                var keyEvent = ghostty_input_key_s()
+                keyEvent.action = GHOSTTY_ACTION_PRESS
+                keyEvent.keycode = 0
+                keyEvent.mods = GHOSTTY_MODS_NONE
+                keyEvent.consumed_mods = GHOSTTY_MODS_NONE
+                keyEvent.text = ntPtr
+                keyEvent.composing = false
+                keyEvent.unshifted_codepoint = 0
+                _ = ghostty_surface_key(surface, keyEvent)
+            }
+        }
+    }
+
+    /// macOS virtual keycodes for common terminal control keys.
+    /// Ghostty's key event pipeline maps these native keycodes to internal
+    /// key identifiers via `input.keycodes.entries`. Using the GHOSTTY_KEY_*
+    /// enum values directly won't work — those are Ghostty-internal, not
+    /// the native platform keycodes the struct expects.
+    private enum MacKeyCode: UInt32 {
+        case returnKey = 36
+        case delete    = 51  // Backspace
+        case tab       = 48
+        case escape    = 53
+    }
+
+    /// Sends a control character (byte < 0x20 or 0x7F) to the terminal as a
+    /// synthetic key event with the appropriate macOS virtual keycode.
+    private func sendControlKeyEvent(surface: ghostty_surface_t, byte: UInt8) {
+        var keyEvent = ghostty_input_key_s()
+        keyEvent.action = GHOSTTY_ACTION_PRESS
+        keyEvent.mods = GHOSTTY_MODS_NONE
+        keyEvent.consumed_mods = GHOSTTY_MODS_NONE
+        keyEvent.composing = false
+        keyEvent.unshifted_codepoint = 0
+
+        switch byte {
+        case 0x0D: // \r — Enter/Return
+            keyEvent.keycode = MacKeyCode.returnKey.rawValue
+            "\r".withCString { keyEvent.text = $0; _ = ghostty_surface_key(surface, keyEvent) }
+        case 0x7F: // DEL — Backspace
+            keyEvent.keycode = MacKeyCode.delete.rawValue
+            "\u{7f}".withCString { keyEvent.text = $0; _ = ghostty_surface_key(surface, keyEvent) }
+        case 0x09: // \t — Tab
+            keyEvent.keycode = MacKeyCode.tab.rawValue
+            "\t".withCString { keyEvent.text = $0; _ = ghostty_surface_key(surface, keyEvent) }
+        case 0x1B: // ESC
+            keyEvent.keycode = MacKeyCode.escape.rawValue
+            keyEvent.text = nil
+            _ = ghostty_surface_key(surface, keyEvent)
+        default:
+            // Other control chars (Ctrl+A = 0x01, Ctrl+C = 0x03, etc.)
+            // Send with no keycode but with the control char as text.
+            keyEvent.keycode = 0
+            let str = String(UnicodeScalar(byte))
+            str.withCString { keyEvent.text = $0; _ = ghostty_surface_key(surface, keyEvent) }
         }
     }
 
