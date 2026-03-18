@@ -8,6 +8,10 @@ import Foundation
 /// The C callback (`ptyOutputCallback`) runs on Ghostty's IO reader thread and must
 /// only copy bytes and dispatch — no blocking, no locks, no allocations beyond the
 /// `Data` copy.
+///
+/// PTY data is coalesced per-surface: bytes accumulate in a buffer and flush at most
+/// once per 16ms (60fps), preventing high-throughput commands like `cat /dev/urandom`
+/// from flooding the WebSocket with hundreds of tiny frames per second.
 final class BridgePTYStream: @unchecked Sendable {
     static let shared = BridgePTYStream()
 
@@ -24,7 +28,27 @@ final class BridgePTYStream: @unchecked Sendable {
     /// Key format: "\(connectionId):\(surfaceId)".
     private var mobileDimensions: [String: (cols: Int, rows: Int)] = [:]
 
-    /// Guards all access to the subscriptions, contexts, and mobileDimensions dictionaries.
+    // MARK: - Coalescing Buffer
+
+    /// Per-surface buffer accumulating PTY bytes between flushes. Guarded by `lock`.
+    private var coalescingBuffers: [UUID: Data] = [:]
+
+    /// Per-surface timers that fire to flush the coalescing buffer. Guarded by `lock`.
+    private var coalescingTimers: [UUID: DispatchSourceTimer] = [:]
+
+    /// Flush interval: at most one WebSocket frame per 16ms (~60fps) per surface.
+    private static let coalescingInterval: TimeInterval = 0.016
+
+    /// Hard cap on buffer size. If a single coalescing window accumulates more than
+    /// this, flush immediately to bound memory usage.
+    private static let maxBufferSize = 256 * 1024
+
+    /// Serial queue for coalescing timer callbacks. Avoids scheduling flushes on the
+    /// IO reader thread or the main thread.
+    private let coalescingQueue = DispatchQueue(label: "com.cmux.pty-coalescing")
+
+    /// Guards all access to the subscriptions, contexts, mobileDimensions,
+    /// coalescingBuffers, and coalescingTimers dictionaries.
     private let lock = NSLock()
 
     /// Observer token for `.bridgeSurfaceClosed` notifications, cleaned up on deinit.
@@ -49,16 +73,81 @@ final class BridgePTYStream: @unchecked Sendable {
     // MARK: - C Callback Trampoline
 
     /// C callback trampoline invoked by Ghostty on the IO reader thread when PTY
-    /// output arrives. Copies bytes to Data and dispatches to BridgeServer for
-    /// broadcast to subscribed connections.
+    /// output arrives. Copies bytes into the per-surface coalescing buffer.
     ///
-    /// IMPORTANT: This runs on Ghostty's IO reader thread. Only copy bytes and dispatch.
-    /// No locks, no blocking, no heavy allocations.
+    /// IMPORTANT: This runs on Ghostty's IO reader thread. The lock hold is minimal
+    /// (append + conditional timer create). No blocking, no heavy allocations.
     private static let ptyOutputCallback: @convention(c) (UnsafeMutableRawPointer?, UnsafePointer<UInt8>?, Int) -> Void = { userdata, dataPtr, length in
         guard let userdata, let dataPtr, length > 0 else { return }
         let context = Unmanaged<BridgePTYObserverContext>.fromOpaque(userdata).takeUnretainedValue()
         let data = Data(bytes: dataPtr, count: length)
-        BridgeServer.shared.broadcastPTYData(surfaceId: context.surfaceId, data: data)
+        BridgePTYStream.shared.bufferPTYData(surfaceId: context.surfaceId, data: data)
+    }
+
+    // MARK: - Coalescing
+
+    /// Appends PTY data to the per-surface coalescing buffer. Starts a 16ms flush
+    /// timer if one isn't already running. If the buffer exceeds `maxBufferSize`,
+    /// flushes immediately to bound memory.
+    ///
+    /// Called from Ghostty's IO reader thread. Lock hold is minimal.
+    private func bufferPTYData(surfaceId: UUID, data: Data) {
+        lock.lock()
+
+        coalescingBuffers[surfaceId, default: Data()].append(data)
+        let bufferSize = coalescingBuffers[surfaceId]?.count ?? 0
+        let hasTimer = coalescingTimers[surfaceId] != nil
+
+        if bufferSize >= BridgePTYStream.maxBufferSize {
+            // Buffer exceeded cap — flush immediately (still under lock, take the data).
+            let buffered = coalescingBuffers.removeValue(forKey: surfaceId) ?? Data()
+            let timer = coalescingTimers.removeValue(forKey: surfaceId)
+            lock.unlock()
+
+            timer?.cancel()
+            BridgeServer.shared.broadcastPTYData(surfaceId: surfaceId, data: buffered)
+            return
+        }
+
+        if !hasTimer {
+            let timer = DispatchSource.makeTimerSource(queue: coalescingQueue)
+            timer.schedule(deadline: .now() + BridgePTYStream.coalescingInterval)
+            timer.setEventHandler { [weak self] in
+                self?.flushBuffer(surfaceId: surfaceId)
+            }
+            coalescingTimers[surfaceId] = timer
+            lock.unlock()
+            timer.resume()
+        } else {
+            lock.unlock()
+        }
+    }
+
+    /// Flushes the coalescing buffer for a surface, broadcasting the accumulated
+    /// data to all subscribed bridge connections.
+    private func flushBuffer(surfaceId: UUID) {
+        lock.lock()
+        let buffered = coalescingBuffers.removeValue(forKey: surfaceId)
+        let timer = coalescingTimers.removeValue(forKey: surfaceId)
+        lock.unlock()
+
+        timer?.cancel()
+
+        if let buffered, !buffered.isEmpty {
+            BridgeServer.shared.broadcastPTYData(surfaceId: surfaceId, data: buffered)
+        }
+    }
+
+    /// Cancels the coalescing timer and discards any buffered data for a surface.
+    /// Called when all subscriptions for a surface are removed.
+    private func cancelCoalescing(forSurface surfaceId: UUID) {
+        // Caller must NOT hold `lock` — this method acquires it.
+        lock.lock()
+        coalescingBuffers.removeValue(forKey: surfaceId)
+        let timer = coalescingTimers.removeValue(forKey: surfaceId)
+        lock.unlock()
+
+        timer?.cancel()
     }
 
     // MARK: - Public API
@@ -110,6 +199,7 @@ final class BridgePTYStream: @unchecked Sendable {
 
         // Unregister Ghostty observer when last subscriber disconnects from this surface.
         if isEmpty {
+            cancelCoalescing(forSurface: surfaceId)
             unregisterObserver(for: surfaceId)
         }
     }
@@ -140,8 +230,9 @@ final class BridgePTYStream: @unchecked Sendable {
 
         lock.unlock()
 
-        // Unregister observers for surfaces with no remaining subscribers.
+        // Unregister observers and cancel coalescing for surfaces with no remaining subscribers.
         for surfaceId in emptiedSurfaces {
+            cancelCoalescing(forSurface: surfaceId)
             unregisterObserver(for: surfaceId)
         }
     }
@@ -163,7 +254,13 @@ final class BridgePTYStream: @unchecked Sendable {
         let surfaceSuffix = ":" + surfaceId.uuidString
         mobileDimensions = mobileDimensions.filter { !$0.key.hasSuffix(surfaceSuffix) }
 
+        // Clean up coalescing state inline (already holding lock).
+        coalescingBuffers.removeValue(forKey: surfaceId)
+        let timer = coalescingTimers.removeValue(forKey: surfaceId)
+
         lock.unlock()
+
+        timer?.cancel()
 
         // The surface is already gone, so we skip the C API call.
         // Just release the retained context.

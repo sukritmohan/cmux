@@ -2087,6 +2087,10 @@ class TerminalController {
         case "workspace.layout":
             return v2Result(id: id, self.v2WorkspaceLayout(params: params))
 
+        // Ports
+        case "ports.list":
+            return v2Result(id: id, self.v2PortsList(params: params))
+
         // Settings
         case "settings.open":
             return v2Result(id: id, self.v2SettingsOpen(params: params))
@@ -2454,6 +2458,7 @@ class TerminalController {
             "workspace.remote.status",
             "workspace.remote.terminal_session_end",
             "workspace.layout",
+            "ports.list",
             "settings.open",
             "feedback.open",
             "feedback.submit",
@@ -3988,6 +3993,40 @@ class TerminalController {
             ])
         }
         return result
+    }
+
+    private func v2PortsList(params: [String: Any]) -> V2CallResult {
+        guard let tabManager = v2ResolveTabManager(params: params) else {
+            return .err(code: "unavailable", message: "TabManager not available", data: nil)
+        }
+
+        let filterWorkspaceId = v2UUID(params, "workspace_id")
+
+        var ports: [[String: Any]] = []
+        v2MainSync {
+            let workspaces: [Workspace]
+            if let filterWorkspaceId {
+                workspaces = tabManager.tabs.filter { $0.id == filterWorkspaceId }
+            } else {
+                workspaces = tabManager.tabs
+            }
+            for workspace in workspaces {
+                for (surfaceId, surfacePorts) in workspace.surfaceListeningPorts {
+                    for port in surfacePorts {
+                        ports.append([
+                            "port": port,
+                            "workspace_id": workspace.id.uuidString,
+                            "surface_id": surfaceId.uuidString,
+                        ])
+                    }
+                }
+            }
+        }
+
+        // Sort by port number for deterministic output.
+        ports.sort { ($0["port"] as? Int ?? 0) < ($1["port"] as? Int ?? 0) }
+
+        return .ok(["ports": ports])
     }
 
     private func v2WorkspaceAction(params: [String: Any]) -> V2CallResult {

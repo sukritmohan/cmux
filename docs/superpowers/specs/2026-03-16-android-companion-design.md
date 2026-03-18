@@ -3,6 +3,12 @@
 **Date:** 2026-03-16
 **Status:** Draft
 
+## Progress
+
+- **Mac-side bridge infrastructure:** Complete. 8 files, 12 events, PTY streaming, QR pairing — all merged to `main`.
+- **Android / Flutter app:** 0% — no code written yet.
+- **GhosttyKit Android feasibility:** GO. Zig cross-compiles to Android NDK targets. **Blocker:** GhosttyKit's C API (`lib-vt`) only exposes parsers (key events, OSC, SGR). A full Terminal/Screen C API is needed to power a rich terminal experience identical to desktop Ghostty. This is the next step before any Flutter work begins.
+
 ## Overview
 
 A Flutter-based Android companion app that connects to a running cmux desktop instance on Mac over Tailscale, providing full real-time access to the desktop workflow from mobile. The app is a thin client — desktop cmux is the source of truth for all state.

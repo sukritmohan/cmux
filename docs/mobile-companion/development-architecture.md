@@ -1,5 +1,14 @@
 # Mobile Companion — Development Architecture
 
+## Status
+
+| Component | Phase | Status |
+|-----------|-------|--------|
+| Mac-side: cmux-bridge WebSocket server, pairing auth, V2 API relay | Phase 1 | **Complete** — merged to `main` |
+| Mac-side: PTY streaming, event relay, Ghostty PTY observer C API | Phase 2 | **Complete** — merged to `main` |
+| GhosttyKit Terminal/Screen C API (required for Android rendering) | Pre-Phase 3 | **In progress** |
+| Android / Flutter companion app | — | **Not started** |
+
 ## Overview
 
 The mobile companion feature enables a Flutter Android app to connect to a running cmux instance over Tailscale and control terminals via the existing V2 JSON-RPC protocol. The Mac-side infrastructure is an in-process WebSocket server (`cmux-bridge`).
@@ -99,12 +108,17 @@ BridgeEventRelay registers NotificationCenter observers in `start()` for 11 even
 | `surface.focused` | Workspace applyTabSelection | `.ghosttyDidFocusSurface` (existing) |
 | `surface.closed` | Workspace didCloseTab | `.bridgeSurfaceClosed` (new) |
 | `surface.moved` | Workspace didMoveTab | `.bridgeSurfaceMoved` (new) |
+| `surface.reordered` | Workspace didReorderTab | `.bridgeSurfaceReordered` (new) |
 | `surface.title_changed` | GhosttyTerminalView | `.ghosttyDidSetTitle` (existing) |
 
-`surface.reordered` is not wired — no BonsplitDelegate callback exists for tab reorder yet.
+### PTY Backpressure
+
+`BridgePTYStream` implements per-surface coalescing: PTY bytes accumulate in a buffer and flush at most once per 16ms (~60fps). If the buffer exceeds 256KB before the timer fires, it flushes immediately. This prevents `cat /dev/urandom` from flooding the WebSocket with hundreds of frames per second.
+
+### V2 API: `ports.list`
+
+Returns all discovered listening ports across workspaces. Accepts optional `workspace_id` filter. Response: `{"ports": [{"port": 3000, "workspace_id": "...", "surface_id": "..."}]}`.
 
 ## Phase 3 (Planned)
 
-- Backpressure for high-frequency PTY data (prevent `cat /dev/urandom` from flooding WebSocket)
 - Mobile-specific rendering hints using stored mobile dimensions
-- Add `ports.list` if needed (PortScanner callback model makes aggregation non-trivial)

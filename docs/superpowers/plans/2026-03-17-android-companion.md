@@ -115,7 +115,7 @@ android-companion/
 - Create: `Sources/Bridge/BridgeAuth.swift`
 - Test: Runtime behavior tested via socket commands in Phase 1 Task 5
 
-- [ ] **Step 1: Create `BridgeAuth.swift` with token generation and Keychain storage**
+- [x] **Step 1: Create `BridgeAuth.swift` with token generation and Keychain storage**
 
 ```swift
 // Sources/Bridge/BridgeAuth.swift
@@ -226,12 +226,12 @@ final class BridgeAuth: @unchecked Sendable {
 }
 ```
 
-- [ ] **Step 2: Verify the file compiles**
+- [x] **Step 2: Verify the file compiles**
 
 Run: `xcodebuild -project GhosttyTabs.xcodeproj -scheme cmux -configuration Debug -destination 'platform=macOS' -derivedDataPath /tmp/cmux-bridge-auth build 2>&1 | tail -5`
 Expected: BUILD SUCCEEDED
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Sources/Bridge/BridgeAuth.swift
@@ -245,7 +245,7 @@ git commit -m "feat(bridge): add pairing token management with Keychain storage"
 **Files:**
 - Create: `Sources/Bridge/BridgeSettings.swift`
 
-- [ ] **Step 1: Create `BridgeSettings.swift`**
+- [x] **Step 1: Create `BridgeSettings.swift`**
 
 ```swift
 // Sources/Bridge/BridgeSettings.swift
@@ -278,12 +278,12 @@ enum BridgeSettings {
 }
 ```
 
-- [ ] **Step 2: Verify compilation**
+- [x] **Step 2: Verify compilation**
 
 Run: `xcodebuild -project GhosttyTabs.xcodeproj -scheme cmux -configuration Debug -destination 'platform=macOS' -derivedDataPath /tmp/cmux-bridge-settings build 2>&1 | tail -5`
 Expected: BUILD SUCCEEDED
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Sources/Bridge/BridgeSettings.swift
@@ -302,7 +302,7 @@ git commit -m "feat(bridge): add BridgeSettings for bridge server configuration"
 
 This is the most substantial Mac-side component. The server runs as a Swift async task inside the cmux process, accepting WebSocket connections on a TCP port.
 
-- [ ] **Step 1: Add NIO WebSocket dependency**
+- [x] **Step 1: Add NIO WebSocket dependency**
 
 Check current `Package.swift` for existing NIO usage:
 ```bash
@@ -319,7 +319,7 @@ If NIO is not already a dependency, add `websocket-kit` (which bundles NIO):
 
 If a Swift Package dependency system is not used (Xcode project only), use `NWConnection` + `NWListener` from Network.framework instead (no external dependency needed). The implementation below uses Network.framework for zero-dependency approach.
 
-- [ ] **Step 2: Create `BridgeServer.swift` using Network.framework**
+- [x] **Step 2: Create `BridgeServer.swift` using Network.framework**
 
 ```swift
 // Sources/Bridge/BridgeServer.swift
@@ -471,7 +471,7 @@ final class BridgeServer {
 }
 ```
 
-- [ ] **Step 3: Create `BridgeConnection.swift`**
+- [x] **Step 3: Create `BridgeConnection.swift`**
 
 ```swift
 // Sources/Bridge/BridgeConnection.swift
@@ -743,12 +743,12 @@ final class BridgeConnection {
 }
 ```
 
-- [ ] **Step 4: Verify compilation**
+- [x] **Step 4: Verify compilation**
 
 Run: `xcodebuild -project GhosttyTabs.xcodeproj -scheme cmux -configuration Debug -destination 'platform=macOS' -derivedDataPath /tmp/cmux-bridge-server build 2>&1 | tail -10`
 Expected: BUILD SUCCEEDED
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Bridge/BridgeServer.swift Sources/Bridge/BridgeConnection.swift
@@ -764,7 +764,7 @@ git commit -m "feat(bridge): add WebSocket server and connection handler using N
 
 The bridge needs to call V2 API methods in-process without going through the Unix socket. We need to expose the V2 dispatch as a callable method.
 
-- [ ] **Step 1: Add `handleV2Message` public method**
+- [x] **Step 1: Add `handleV2Message` public method**
 
 Find the existing V2 dispatch entry point (around line 1830-1860 in `TerminalController.swift`). The current dispatch happens inside `handleClientConnection` for socket clients. We need to extract the V2 dispatch into a standalone method.
 
@@ -807,12 +807,12 @@ private func dispatchV2(method: String, id: Any?, params: [String: Any]) -> Stri
 
 Then update the original socket handler call site to use `dispatchV2(method:id:params:)`.
 
-- [ ] **Step 2: Verify compilation**
+- [x] **Step 2: Verify compilation**
 
 Run: `xcodebuild -project GhosttyTabs.xcodeproj -scheme cmux -configuration Debug -destination 'platform=macOS' -derivedDataPath /tmp/cmux-bridge-v2 build 2>&1 | tail -5`
 Expected: BUILD SUCCEEDED
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Sources/TerminalController.swift
@@ -826,7 +826,7 @@ git commit -m "refactor(socket): extract dispatchV2 for in-process bridge access
 **Files:**
 - Modify: `Sources/TerminalController.swift`
 
-- [ ] **Step 1: Add `workspace.layout` to the V2 dispatch switch**
+- [x] **Step 1: Add `workspace.layout` to the V2 dispatch switch**
 
 In `dispatchV2`, add a new case after the existing workspace methods (around line 1912):
 
@@ -835,7 +835,7 @@ case "workspace.layout":
     return v2Result(id: id, self.v2WorkspaceLayout(params: params))
 ```
 
-- [ ] **Step 2: Implement `v2WorkspaceLayout`**
+- [x] **Step 2: Implement `v2WorkspaceLayout`**
 
 Add the implementation method (near the other `v2Workspace*` methods):
 
@@ -895,7 +895,7 @@ private func v2WorkspaceLayout(params: [String: Any]) -> V2CallResult {
 }
 ```
 
-- [ ] **Step 3: Register in `v2Capabilities()`**
+- [x] **Step 3: Register in `v2Capabilities()`**
 
 Add `"workspace.layout"` to the capabilities array (around line 2283):
 
@@ -905,12 +905,12 @@ Add `"workspace.layout"` to the capabilities array (around line 2283):
 "settings.open",
 ```
 
-- [ ] **Step 4: Verify compilation**
+- [x] **Step 4: Verify compilation**
 
 Run: `xcodebuild -project GhosttyTabs.xcodeproj -scheme cmux -configuration Debug -destination 'platform=macOS' -derivedDataPath /tmp/cmux-workspace-layout build 2>&1 | tail -5`
 Expected: BUILD SUCCEEDED
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/TerminalController.swift
@@ -925,7 +925,7 @@ git commit -m "feat(api): add workspace.layout V2 method for pane spatial layout
 - Modify: `Sources/PortScanner.swift`
 - Modify: `Sources/TerminalController.swift`
 
-- [ ] **Step 1: Add `allActivePorts()` to PortScanner**
+- [x] **Step 1: Add `allActivePorts()` to PortScanner**
 
 The existing `PortScanner` tracks ports per `(workspaceId, panelId)`. We need a method that aggregates all known ports across all workspaces.
 
@@ -952,7 +952,7 @@ func allActivePorts() -> [(port: Int, workspaceId: UUID, panelId: UUID)] {
 
 Note: Verify the actual property name for cached ports. Search for `lastKnownPorts` or similar in PortScanner.swift. If the property has a different name, use that.
 
-- [ ] **Step 2: Add `ports.list` to TerminalController V2 dispatch**
+- [x] **Step 2: Add `ports.list` to TerminalController V2 dispatch**
 
 In the dispatch switch:
 ```swift
@@ -976,9 +976,9 @@ private func v2PortsList(params: [String: Any]) -> V2CallResult {
 }
 ```
 
-- [ ] **Step 3: Register `ports.list` in `v2Capabilities()`**
+- [x] **Step 3: Register `ports.list` in `v2Capabilities()`**
 
-- [ ] **Step 4: Verify compilation and commit**
+- [x] **Step 4: Verify compilation and commit**
 
 ```bash
 git add Sources/PortScanner.swift Sources/TerminalController.swift
@@ -994,7 +994,7 @@ git commit -m "feat(api): add ports.list V2 method for discovered port aggregati
 
 This is the stub that will be fully implemented in Phase 2. For now it provides the subscription tracking interface.
 
-- [ ] **Step 1: Create `BridgePTYStream.swift`**
+- [x] **Step 1: Create `BridgePTYStream.swift`**
 
 ```swift
 // Sources/Bridge/BridgePTYStream.swift
@@ -1051,7 +1051,7 @@ final class BridgePTYStream: @unchecked Sendable {
 }
 ```
 
-- [ ] **Step 2: Verify compilation and commit**
+- [x] **Step 2: Verify compilation and commit**
 
 ```bash
 git add Sources/Bridge/BridgePTYStream.swift
@@ -1065,7 +1065,7 @@ git commit -m "feat(bridge): add PTY stream subscription registry stub"
 **Files:**
 - Create: `Sources/Bridge/BridgeEventRelay.swift`
 
-- [ ] **Step 1: Create `BridgeEventRelay.swift`**
+- [x] **Step 1: Create `BridgeEventRelay.swift`**
 
 ```swift
 // Sources/Bridge/BridgeEventRelay.swift
@@ -1107,7 +1107,7 @@ final class BridgeEventRelay {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add Sources/Bridge/BridgeEventRelay.swift
@@ -1121,7 +1121,7 @@ git commit -m "feat(bridge): add event relay stub for state change broadcasting"
 **Files:**
 - Modify: `Sources/AppDelegate.swift`
 
-- [ ] **Step 1: Add bridge lifecycle calls to AppDelegate**
+- [x] **Step 1: Add bridge lifecycle calls to AppDelegate**
 
 Find the `applicationDidFinishLaunching` method in AppDelegate. Add bridge startup after the `TerminalController.shared.start(...)` call:
 
@@ -1140,12 +1140,12 @@ BridgeServer.shared.stop()
 BridgeEventRelay.shared.stop()
 ```
 
-- [ ] **Step 2: Verify compilation**
+- [x] **Step 2: Verify compilation**
 
 Run: `xcodebuild -project GhosttyTabs.xcodeproj -scheme cmux -configuration Debug -destination 'platform=macOS' -derivedDataPath /tmp/cmux-bridge-startup build 2>&1 | tail -5`
 Expected: BUILD SUCCEEDED
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Sources/AppDelegate.swift
@@ -1159,7 +1159,7 @@ git commit -m "feat(bridge): integrate bridge server lifecycle into AppDelegate"
 **Files:**
 - Create: `Sources/Bridge/BridgeSettingsView.swift`
 
-- [ ] **Step 1: Create the SwiftUI settings view**
+- [x] **Step 1: Create the SwiftUI settings view**
 
 ```swift
 // Sources/Bridge/BridgeSettingsView.swift
@@ -1335,11 +1335,11 @@ struct BridgePairingQRView: View {
 }
 ```
 
-- [ ] **Step 2: Wire into the existing Settings view**
+- [x] **Step 2: Wire into the existing Settings view**
 
 Find the settings view file (search for the existing Settings tab/page structure). Add `BridgeSettingsView` as a new tab/section labeled "Mobile". The exact integration point depends on the existing settings architecture.
 
-- [ ] **Step 3: Verify compilation and commit**
+- [x] **Step 3: Verify compilation and commit**
 
 ```bash
 git add Sources/Bridge/BridgeSettingsView.swift
@@ -2471,7 +2471,7 @@ git commit -m "investigate: GhosttyKit Android NDK cross-compilation feasibility
 
 This task hooks into the Ghostty surface's PTY output to capture raw bytes and forward them to subscribed bridge connections.
 
-- [ ] **Step 1: Investigate PTY output hook point**
+- [x] **Step 1: Investigate PTY output hook point**
 
 The design spec notes two options:
 1. Tee from the PTY file descriptor
@@ -2485,7 +2485,7 @@ grep -rn "surface_io\|io_callback\|output_callback" /Users/sm/code/cmux/ghostty/
 
 The preferred approach depends on what Ghostty exposes. If Ghostty provides an IO callback or output event, use that. Otherwise, use `ghostty_surface_read_text` for screen snapshots.
 
-- [ ] **Step 2: Implement PTY output capture**
+- [x] **Step 2: Implement PTY output capture**
 
 Update `BridgePTYStream` with the actual tee mechanism:
 
@@ -2508,7 +2508,7 @@ func onPTYOutput(surfaceId: UUID, data: Data) {
 }
 ```
 
-- [ ] **Step 3: Wire the output hook into the terminal surface**
+- [x] **Step 3: Wire the output hook into the terminal surface**
 
 Find the point in `GhosttyTerminalView.swift` or `TerminalPanel.swift` where PTY output arrives. Add a call to `BridgePTYStream.shared.onPTYOutput(...)` there. This must be gated to avoid performance impact when no subscribers exist.
 
@@ -2519,7 +2519,7 @@ if BridgePTYStream.shared.hasSubscribers(for: surfaceId) {
 }
 ```
 
-- [ ] **Step 4: Verify compilation and commit**
+- [x] **Step 4: Verify compilation and commit**
 
 ```bash
 git add Sources/Bridge/BridgePTYStream.swift Sources/GhosttyTerminalView.swift
@@ -2535,7 +2535,7 @@ git commit -m "feat(bridge): implement PTY output tee for live terminal streamin
 - Modify: `Sources/TerminalController.swift` (add `system.subscribe_events` / `system.unsubscribe_events`)
 - Modify: `Sources/Workspace.swift` (add change notification posts)
 
-- [ ] **Step 1: Define NotificationCenter event names**
+- [x] **Step 1: Define NotificationCenter event names**
 
 Add to `BridgeEventRelay.swift`:
 
@@ -2551,7 +2551,7 @@ extension Notification.Name {
 }
 ```
 
-- [ ] **Step 2: Register observers in `BridgeEventRelay.start()`**
+- [x] **Step 2: Register observers in `BridgeEventRelay.start()`**
 
 ```swift
 func start() {
@@ -2567,7 +2567,7 @@ func start() {
 }
 ```
 
-- [ ] **Step 3: Post notifications from Workspace/TabManager lifecycle methods**
+- [x] **Step 3: Post notifications from Workspace/TabManager lifecycle methods**
 
 In `TabManager.swift`, where workspaces are created/closed, post the corresponding notification:
 
@@ -2580,7 +2580,7 @@ NotificationCenter.default.post(
 )
 ```
 
-- [ ] **Step 4: Add V2 methods to TerminalController dispatch**
+- [x] **Step 4: Add V2 methods to TerminalController dispatch**
 
 ```swift
 case "system.subscribe_events":
@@ -2590,7 +2590,7 @@ case "system.unsubscribe_events":
     return v2Ok(id: id, result: ["unsubscribed": true])
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Bridge/BridgeEventRelay.swift Sources/TerminalController.swift Sources/Workspace.swift Sources/TabManager.swift

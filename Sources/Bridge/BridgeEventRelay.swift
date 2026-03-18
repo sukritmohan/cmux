@@ -19,6 +19,8 @@ extension Notification.Name {
     static let bridgeSurfaceClosed = Notification.Name("bridge.surface.closed")
     /// Posted when a surface is moved between panes.
     static let bridgeSurfaceMoved = Notification.Name("bridge.surface.moved")
+    /// Posted when a surface is reordered within the same pane.
+    static let bridgeSurfaceReordered = Notification.Name("bridge.surface.reordered")
 }
 
 // MARK: - Bridge-Specific UserInfo Keys
@@ -31,6 +33,8 @@ enum BridgeNotificationKey {
     static let paneId = "bridge.paneId"
     static let fromPane = "bridge.fromPane"
     static let toPane = "bridge.toPane"
+    static let fromIndex = "bridge.fromIndex"
+    static let toIndex = "bridge.toIndex"
 }
 
 // MARK: - BridgeEventRelay
@@ -86,8 +90,7 @@ final class BridgeEventRelay: @unchecked Sendable {
 
     // MARK: - Observer Registration
 
-    /// Registers observers for 11 event types (surface.reordered is skipped — no
-    /// BonsplitDelegate callback exists for tab reorder yet).
+    /// Registers observers for all 12 bridge event types.
     private func registerObservers() {
         // 1. workspace.selected — existing notification, fired when the selected workspace changes
         observers.append(NotificationCenter.default.addObserver(
@@ -223,7 +226,23 @@ final class BridgeEventRelay: @unchecked Sendable {
             ])
         })
 
-        // Note: surface.reordered is not wired — no BonsplitDelegate callback for tab reorder exists yet.
+        // 12. surface.reordered — fired when a surface is reordered within the same pane
+        observers.append(NotificationCenter.default.addObserver(
+            forName: .bridgeSurfaceReordered, object: nil, queue: nil
+        ) { [weak self] notification in
+            guard let tabId = notification.userInfo?[GhosttyNotificationKey.tabId] as? UUID else { return }
+            guard let surfaceId = notification.userInfo?[GhosttyNotificationKey.surfaceId] as? UUID else { return }
+            let paneId = notification.userInfo?[BridgeNotificationKey.paneId] as? String ?? ""
+            let fromIndex = notification.userInfo?[BridgeNotificationKey.fromIndex] as? Int ?? 0
+            let toIndex = notification.userInfo?[BridgeNotificationKey.toIndex] as? Int ?? 0
+            self?.emit(event: "surface.reordered", data: [
+                "workspace_id": tabId.uuidString,
+                "surface_id": surfaceId.uuidString,
+                "pane_id": paneId,
+                "from_index": fromIndex,
+                "to_index": toIndex,
+            ])
+        })
     }
 
     // MARK: - Event Emission

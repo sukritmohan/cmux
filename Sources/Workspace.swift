@@ -9305,6 +9305,23 @@ extension Workspace: BonsplitDelegate {
         }
     }
 
+    func splitTabBar(_ controller: BonsplitController, didReorderTab tab: Bonsplit.Tab, inPane pane: PaneID, fromIndex: Int, toIndex: Int) {
+        // Notify bridge clients that a surface was reordered within a pane.
+        if let surfaceId = panelIdFromSurfaceId(tab.id) {
+            NotificationCenter.default.post(
+                name: .bridgeSurfaceReordered,
+                object: nil,
+                userInfo: [
+                    GhosttyNotificationKey.tabId: self.id,
+                    GhosttyNotificationKey.surfaceId: surfaceId,
+                    BridgeNotificationKey.paneId: pane.id.uuidString,
+                    BridgeNotificationKey.fromIndex: fromIndex,
+                    BridgeNotificationKey.toIndex: toIndex,
+                ]
+            )
+        }
+    }
+
     func splitTabBar(_ controller: BonsplitController, didFocusPane pane: PaneID) {
         // When a pane is focused, focus its selected tab's panel
         guard let tab = controller.selectedTab(inPane: pane) else { return }
