@@ -134,6 +134,12 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   // "Copied!" feedback state.
   bool _showCopiedFeedback = false;
 
+  // Velocity-damped drag accumulators.
+  double _dragAccumX = 0;
+  double _dragAccumY = 0;
+  double _dragAnchorX = 0;
+  double _dragAnchorY = 0;
+
   // Layout values cached from the last build for hit-testing.
   int _lastFitCols = 0;
   int _lastWrapLines = 1;
@@ -444,6 +450,8 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
       _isDraggingStartHandle = false;
       _isDraggingEndHandle = false;
     });
+    _dragAccumX = _dragAccumY = 0;
+    _dragAnchorX = _dragAnchorY = 0;
   }
 
   /// Converts a local touch position to Mac grid (col, row), accounting for
@@ -565,7 +573,30 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   /// Minimum interval between character-boundary haptics (ms).
   static const _hapticThrottleMs = 30;
 
+  /// Velocity damping: slow drags are scaled down for precision.
+  static const _dampingMin = 0.3;
+  static const _dampingMax = 1.0;
+  static const _dampingVelocityThreshold = 20.0;
+
   void _onHandleDragStart(bool isStart, DragStartDetails details) {
+    // Compute handle's viewport position (same math as _buildSelectionHandle).
+    final anchorCol = isStart ? _selStartCol! : _selEndCol!;
+    final anchorRow = isStart ? _selStartRow! : _selEndRow!;
+    final pos = _gridToScreen(anchorCol, anchorRow);
+
+    final handleCenterX = isStart
+        ? pos.dx          // start: stem at left edge of cell
+        : pos.dx + _lastCellWidth;  // end: stem at right edge of cell
+    final handleCenterY = isStart
+        ? pos.dy           // start: stem bottom at cell top
+        : pos.dy + _lastCellHeight; // end: stem top at cell bottom
+
+    // Bake finger offset into anchor once — no second subtraction in update.
+    _dragAnchorX = handleCenterX;
+    _dragAnchorY = handleCenterY - _handleFingerOffsetY;
+    _dragAccumX = 0;
+    _dragAccumY = 0;
+
     setState(() {
       if (isStart) {
         _isDraggingStartHandle = true;
@@ -578,39 +609,24 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   }
 
   void _onHandleDragUpdate(bool isStart, DragUpdateDetails details) {
-    // Convert handle-local position to viewport space.
-    // details.localPosition is relative to the 48x48 handle widget, but
-    // _hitTestCell expects terminal viewport coordinates.
-    final anchorCol = isStart ? _selStartCol! : _selEndCol!;
-    final anchorRow = isStart ? _selStartRow! : _selEndRow!;
-    final pos = _gridToScreen(anchorCol, anchorRow);
-
-    final handleLeft = isStart
-        ? pos.dx - 24
-        : pos.dx + _lastCellWidth - 24;
-    final handleTop = isStart
-        ? pos.dy - 40
-        : pos.dy + _lastCellHeight - 8;
+    // Velocity-damped accumulation.
+    final velocity = details.delta.distance;
+    final ratio = _dampingMin +
+        (_dampingMax - _dampingMin) *
+            (velocity / _dampingVelocityThreshold).clamp(0.0, 1.0);
+    _dragAccumX += details.delta.dx * ratio;
+    _dragAccumY += details.delta.dy * ratio;
 
     final viewportPos = Offset(
-      details.localPosition.dx + handleLeft,
-      details.localPosition.dy + handleTop,
+      _dragAnchorX + _dragAccumX,
+      _dragAnchorY + _dragAccumY,
     );
+    final (col, row) = _hitTestCell(viewportPos);
 
-    final adjusted = Offset(
-      viewportPos.dx,
-      viewportPos.dy - _handleFingerOffsetY,
-    );
-    final (col, row) = _hitTestCell(adjusted);
-
-    // Determine which boundary to update.
     final prevCol = isStart ? _selStartCol : _selEndCol;
     final prevRow = isStart ? _selStartRow : _selEndRow;
-
-    // Only update if cell changed.
     if (col == prevCol && row == prevRow) return;
 
-    // Haptic click on each new cell boundary, throttled.
     final now = DateTime.now().millisecondsSinceEpoch;
     if (now - _lastHapticTimestamp >= _hapticThrottleMs) {
       HapticFeedback.selectionClick();
