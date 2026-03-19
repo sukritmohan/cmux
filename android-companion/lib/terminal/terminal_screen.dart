@@ -59,6 +59,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   /// Notifier incremented on scroll to tell TerminalView to clear selection.
   final _scrollNotifier = ValueNotifier<int>(0);
 
+  /// Ctrl modifier state from the modifier bar, shared with terminal view
+  /// so soft keyboard input can be intercepted (e.g., Ctrl+C → \x03).
+  final _ctrlActiveNotifier = ValueNotifier<bool>(false);
+
   @override
   void initState() {
     super.initState();
@@ -213,6 +217,34 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     );
   }
 
+  /// Creates a new pane by splitting right from the focused pane on desktop.
+  Future<void> _onNewTab() async {
+    final manager = ref.read(connectionManagerProvider);
+    try {
+      final result = await manager.sendRequest(
+        'pane.create',
+        params: {'direction': 'right'},
+      );
+      final surfaceId = result.result?['surface_id'] as String?;
+      final wsState = ref.read(workspaceProvider);
+      final activeWs = wsState.activeWorkspace;
+      if (surfaceId != null && activeWs != null) {
+        ref.read(surfaceProvider.notifier).addSurface(
+          Surface(
+            id: surfaceId,
+            title: 'Terminal',
+            workspaceId: activeWs.id,
+          ),
+        );
+      }
+      // Re-sync to pick up any server-side state changes.
+      await ref.read(workspaceProvider.notifier).fetchWorkspaces();
+      _syncSurfacesFromWorkspace();
+    } catch (e) {
+      debugPrint('[TerminalScreen] pane.create error: $e');
+    }
+  }
+
   void _onPaneTypeChanged(PaneType type) {
     if (type == PaneType.overview) {
       _openMinimap();
@@ -243,6 +275,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                   surfaceId: focusedSurfaceId,
                   workspaceId: activeWorkspaceId,
                   scrollNotifier: _scrollNotifier,
+                  ctrlActiveNotifier: _ctrlActiveNotifier,
                 )
               : Center(
                   child: Text(
@@ -274,6 +307,16 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     final surfaceState = ref.watch(surfaceProvider);
     final wsState = ref.watch(workspaceProvider);
 
+    // Re-sync surfaces whenever workspace panels change (e.g. desktop
+    // pane split/close triggers fetchWorkspaces → panels list updates).
+    ref.listen<WorkspaceState>(workspaceProvider, (previous, next) {
+      final prevPanels = previous?.activeWorkspace?.panels;
+      final nextPanels = next.activeWorkspace?.panels;
+      if (prevPanels != nextPanels) {
+        _syncSurfacesFromWorkspace();
+      }
+    });
+
     final focusedSurfaceId = surfaceState.focusedSurfaceId;
 
     return Scaffold(
@@ -298,6 +341,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                   onMenuTap: _openDrawer,
                   activePaneType: _activePaneType,
                   onPaneTypeChanged: _onPaneTypeChanged,
+                  onNewTab: _onNewTab,
                 ),
 
                 // Content area — switches by pane type
@@ -309,7 +353,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                 ),
 
                 // Modifier bar (only for terminal + browser)
-                if (_showModifierBar) ModifierBar(onInput: _sendInput),
+                if (_showModifierBar) ModifierBar(
+                  onInput: _sendInput,
+                  ctrlActiveNotifier: _ctrlActiveNotifier,
+                ),
               ],
             ),
 

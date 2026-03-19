@@ -18,7 +18,15 @@ import 'joystick_button.dart';
 class ModifierBar extends StatefulWidget {
   final ValueChanged<String> onInput;
 
-  const ModifierBar({super.key, required this.onInput});
+  /// Notifier for Ctrl modifier state, so the terminal view can apply
+  /// Ctrl to soft keyboard input (e.g., Ctrl+C → \x03).
+  final ValueNotifier<bool> ctrlActiveNotifier;
+
+  const ModifierBar({
+    super.key,
+    required this.onInput,
+    required this.ctrlActiveNotifier,
+  });
 
   @override
   State<ModifierBar> createState() => _ModifierBarState();
@@ -28,6 +36,25 @@ class _ModifierBarState extends State<ModifierBar> {
   /// Ctrl modifier state: inactive, sticky (single tap), locked (double tap).
   _CtrlState _ctrlState = _CtrlState.inactive;
   DateTime? _lastCtrlTap;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen for external Ctrl releases (e.g., terminal view consumed Ctrl+key).
+    widget.ctrlActiveNotifier.addListener(_onExternalCtrlChange);
+  }
+
+  @override
+  void dispose() {
+    widget.ctrlActiveNotifier.removeListener(_onExternalCtrlChange);
+    super.dispose();
+  }
+
+  void _onExternalCtrlChange() {
+    if (!widget.ctrlActiveNotifier.value && _ctrlState != _CtrlState.inactive) {
+      setState(() => _ctrlState = _CtrlState.inactive);
+    }
+  }
 
   void _onCtrlTap() {
     HapticFeedback.selectionClick();
@@ -44,6 +71,7 @@ class _ModifierBarState extends State<ModifierBar> {
       } else {
         _ctrlState = _CtrlState.sticky;
       }
+      widget.ctrlActiveNotifier.value = _ctrlState != _CtrlState.inactive;
     });
   }
 
@@ -51,7 +79,10 @@ class _ModifierBarState extends State<ModifierBar> {
     widget.onInput(data);
     // Auto-release sticky ctrl after consuming an input
     if (_ctrlState == _CtrlState.sticky) {
-      setState(() => _ctrlState = _CtrlState.inactive);
+      setState(() {
+        _ctrlState = _CtrlState.inactive;
+        widget.ctrlActiveNotifier.value = false;
+      });
     }
   }
 

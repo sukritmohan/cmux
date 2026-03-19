@@ -61,11 +61,16 @@ class TerminalView extends ConsumerStatefulWidget {
   /// TerminalView listens and clears any active text selection.
   final ValueNotifier<int>? scrollNotifier;
 
+  /// Ctrl modifier state from the modifier bar. When true, soft keyboard
+  /// letters are converted to control codes (e.g., 'c' → \x03 for Ctrl+C).
+  final ValueNotifier<bool>? ctrlActiveNotifier;
+
   const TerminalView({
     super.key,
     required this.surfaceId,
     this.workspaceId,
     this.scrollNotifier,
+    this.ctrlActiveNotifier,
   });
 
   @override
@@ -305,6 +310,27 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     if (newText.length > _lastText.length) {
       // Characters were added — extract and send the new portion.
       final added = newText.substring(_lastText.length);
+
+      // If Ctrl is active, convert letters to control codes (Ctrl+C → \x03).
+      if (widget.ctrlActiveNotifier?.value == true && added.length == 1) {
+        final char = added.toLowerCase();
+        if (char.codeUnitAt(0) >= 0x61 && char.codeUnitAt(0) <= 0x7a) {
+          // a-z → control codes \x01-\x1a
+          final controlCode = String.fromCharCode(char.codeUnitAt(0) - 0x60);
+          _sendInput(controlCode);
+          // Auto-release sticky ctrl
+          widget.ctrlActiveNotifier?.value = false;
+          _lastText = newText;
+          if (_textController.text.length > 100) {
+            _resettingBuffer = true;
+            _textController.text = '';
+            _lastText = '';
+            _resettingBuffer = false;
+          }
+          return;
+        }
+      }
+
       // Convert newlines to carriage returns for terminal.
       _sendInput(added.replaceAll('\n', '\r'));
     } else if (newText.length < _lastText.length) {
@@ -436,14 +462,51 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     );
   }
 
+  /// Expands selection to the word containing (col, row).
+  /// A "word" is a contiguous run of non-whitespace, non-null codepoints
+  /// within the same row. If pressed on whitespace, selects that single cell.
+  (int, int) _expandToWord(int col, int row) {
+    if (_cells.isEmpty || _cols == 0) return (col, col);
+
+    final rowStart = row * _cols;
+    final idx = rowStart + col;
+    if (idx >= _cells.length) return (col, col);
+
+    // If pressed on empty/space, select just that cell.
+    final cp = _cells[idx].codepoint;
+    if (cp == 0 || cp == 0x20) return (col, col);
+
+    // Scan left for word start.
+    int wordStart = col;
+    while (wordStart > 0) {
+      final prevIdx = rowStart + wordStart - 1;
+      if (prevIdx < 0 || prevIdx >= _cells.length) break;
+      final prevCp = _cells[prevIdx].codepoint;
+      if (prevCp == 0 || prevCp == 0x20) break;
+      wordStart--;
+    }
+
+    // Scan right for word end.
+    int wordEnd = col;
+    while (wordEnd < _cols - 1) {
+      final nextIdx = rowStart + wordEnd + 1;
+      if (nextIdx >= _cells.length) break;
+      final nextCp = _cells[nextIdx].codepoint;
+      if (nextCp == 0 || nextCp == 0x20) break;
+      wordEnd++;
+    }
+
+    return (wordStart, wordEnd);
+  }
+
   void _onLongPressStart(LongPressStartDetails details) {
     final (col, row) = _hitTestCell(details.localPosition);
+    final (wordStart, wordEnd) = _expandToWord(col, row);
     setState(() {
-      _selStartCol = col;
+      _selStartCol = wordStart;
       _selStartRow = row;
-      _selEndCol = col;
+      _selEndCol = wordEnd;
       _selEndRow = row;
-
       _showCopyPill = false;
     });
     HapticFeedback.mediumImpact();
@@ -488,10 +551,28 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   }
 
   void _onHandleDragUpdate(bool isStart, DragUpdateDetails details) {
-    // Apply finger offset: map from 28dp above touch point.
+    // Convert handle-local position to viewport space.
+    // details.localPosition is relative to the 48x48 handle widget, but
+    // _hitTestCell expects terminal viewport coordinates.
+    final anchorCol = isStart ? _selStartCol! : _selEndCol!;
+    final anchorRow = isStart ? _selStartRow! : _selEndRow!;
+    final pos = _gridToScreen(anchorCol, anchorRow);
+
+    final handleLeft = isStart
+        ? pos.dx - 24
+        : pos.dx + _lastCellWidth - 24;
+    final handleTop = isStart
+        ? pos.dy - 40
+        : pos.dy + _lastCellHeight - 8;
+
+    final viewportPos = Offset(
+      details.localPosition.dx + handleLeft,
+      details.localPosition.dy + handleTop,
+    );
+
     final adjusted = Offset(
-      details.localPosition.dx,
-      details.localPosition.dy - _handleFingerOffsetY,
+      viewportPos.dx,
+      viewportPos.dy - _handleFingerOffsetY,
     );
     final (col, row) = _hitTestCell(adjusted);
 
@@ -826,7 +907,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
         _termPadV + displayRow * cellHeight - scrollOffsetY - 36;
 
     final isCopied = _showCopiedFeedback;
-    final pillColor = isCopied ? const Color(0xFF50C878) : const Color(0xFFE0A030);
+    final pillColor = isCopied ? const Color(0xFF50C878) : const Color(0xFF4A9EFF);
 
     return Positioned(
       left: pillX.clamp(8.0, double.infinity),
@@ -882,11 +963,18 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   }) {
     final pos = _gridToScreen(col, row);
 
-    // Start handle: below-left of cell. End handle: below-right of cell.
+    // Compensate for Center widget offset: CustomPaint (24x32) centered in
+    // SizedBox (48x48) adds (12, 8) offset. Stem is at paint center (12, 0).
+    // So stem absolute = (left + 24, top + 8). Solve for left/top:
     final handleX = isStart
-        ? pos.dx - 12  // center 24dp circle on left edge of cell
-        : pos.dx + cellWidth - 12;  // center on right edge
-    final handleY = pos.dy + cellHeight; // stem connects to bottom of cell
+        ? pos.dx - 24        // stem aligns with left edge of start cell
+        : pos.dx + cellWidth - 24;  // stem aligns with right edge of end cell
+    // Y positioning depends on handle orientation:
+    // Start (inverted): stem bottom at cell top → top = pos.dy - 40 (8 center + 32 paint)
+    // End (normal):     stem top at cell bottom → top = pos.dy + cellHeight - 8
+    final handleY = isStart
+        ? pos.dy - 40
+        : pos.dy + cellHeight - 8;
 
     return Positioned(
       left: handleX,
@@ -941,7 +1029,7 @@ class TerminalPainter extends CustomPainter {
   static const _bg = Color(0xFF0A0A0F);
   static const _fg = Color(0xFFE8E8EE);
   static const _cursorColor = Color(0xCCE0A030); // amber cursor at ~80%
-  static const _selectionColor = Color(0x40E0A030); // translucent amber
+  static const _selectionColor = Color(0x404A9EFF); // translucent blue
 
   TerminalPainter({
     required this.cells,
@@ -1157,8 +1245,8 @@ class TerminalPainter extends CustomPainter {
 class _HandlePainter extends CustomPainter {
   final bool isStart;
 
-  static const _handleColor = Color(0xFFE0A030);
-  static const _stemColor = Color(0xB3E0A030);     // 70% opacity
+  static const _handleColor = Color(0xFF4A9EFF);
+  static const _stemColor = Color(0xB34A9EFF);     // 70% opacity
   static const _highlightColor = Color(0x66FFFFFF); // 40% opacity
   static const _shadowColor = Color(0x40000000);    // 25% opacity
 
@@ -1169,12 +1257,20 @@ class _HandlePainter extends CustomPainter {
     final circleRadius = 12.0; // 24dp diameter
     final stemWidth = 2.0;
     final stemHeight = 8.0;
-
-    // Stem at top, circle at bottom (inverted teardrop).
     final stemX = size.width / 2;
-    final stemTop = 0.0;
-    final stemBottom = stemHeight;
-    final circleCenter = Offset(size.width / 2, stemBottom + circleRadius);
+
+    // Start handle (inverted): circle at top, stem extends down.
+    // End handle (normal):     stem at top, circle at bottom.
+    final Offset circleCenter;
+    final double stemTop;
+
+    if (isStart) {
+      circleCenter = Offset(size.width / 2, circleRadius);
+      stemTop = circleRadius * 2;
+    } else {
+      stemTop = 0.0;
+      circleCenter = Offset(size.width / 2, stemHeight + circleRadius);
+    }
 
     // Draw shadow.
     canvas.drawCircle(
