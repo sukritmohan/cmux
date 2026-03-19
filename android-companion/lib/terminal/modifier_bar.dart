@@ -60,6 +60,11 @@ class _ModifierBarState extends State<ModifierBar> {
     widget.onInput('\x1b');
   }
 
+  void _onTab() {
+    HapticFeedback.lightImpact();
+    widget.onInput('\t');
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
@@ -82,6 +87,7 @@ class _ModifierBarState extends State<ModifierBar> {
               _KeyGroupCapsule(
                 ctrlState: _ctrlState,
                 onEsc: _onEsc,
+                onTab: _onTab,
                 onCtrl: _onCtrlTap,
               ),
 
@@ -118,15 +124,17 @@ class _ModifierBarState extends State<ModifierBar> {
 
 enum _CtrlState { inactive, sticky, locked }
 
-/// Esc + Ctrl paired capsule. Two keys in a connected group.
+/// Esc + Tab + Ctrl paired capsule. Three keys in a connected group.
 class _KeyGroupCapsule extends StatelessWidget {
   final _CtrlState ctrlState;
   final VoidCallback onEsc;
+  final VoidCallback onTab;
   final VoidCallback onCtrl;
 
   const _KeyGroupCapsule({
     required this.ctrlState,
     required this.onEsc,
+    required this.onTab,
     required this.onCtrl,
   });
 
@@ -146,15 +154,23 @@ class _KeyGroupCapsule extends StatelessWidget {
             label: 'esc',
             isActive: false,
             isLocked: false,
-            isFirst: true,
+            position: _KeyPosition.first,
             onTap: onEsc,
+          ),
+          SizedBox(width: 1, height: 34, child: ColoredBox(color: c.border)),
+          _GroupedKey(
+            label: 'tab',
+            isActive: false,
+            isLocked: false,
+            position: _KeyPosition.middle,
+            onTap: onTab,
           ),
           SizedBox(width: 1, height: 34, child: ColoredBox(color: c.border)),
           _GroupedKey(
             label: 'ctrl',
             isActive: ctrlState != _CtrlState.inactive,
             isLocked: ctrlState == _CtrlState.locked,
-            isFirst: false,
+            position: _KeyPosition.last,
             onTap: onCtrl,
           ),
         ],
@@ -163,19 +179,21 @@ class _KeyGroupCapsule extends StatelessWidget {
   }
 }
 
-/// Individual key within the esc+ctrl capsule.
+enum _KeyPosition { first, middle, last }
+
+/// Individual key within the esc+tab+ctrl capsule.
 class _GroupedKey extends StatefulWidget {
   final String label;
   final bool isActive;
   final bool isLocked;
-  final bool isFirst;
+  final _KeyPosition position;
   final VoidCallback onTap;
 
   const _GroupedKey({
     required this.label,
     required this.isActive,
     required this.isLocked,
-    required this.isFirst,
+    required this.position,
     required this.onTap,
   });
 
@@ -212,9 +230,11 @@ class _GroupedKeyState extends State<_GroupedKey> {
             height: 34,
             decoration: BoxDecoration(
               color: bg,
-              borderRadius: widget.isFirst
-                  ? const BorderRadius.horizontal(left: Radius.circular(10))
-                  : const BorderRadius.horizontal(right: Radius.circular(10)),
+              borderRadius: switch (widget.position) {
+                _KeyPosition.first => const BorderRadius.horizontal(left: Radius.circular(10)),
+                _KeyPosition.middle => BorderRadius.zero,
+                _KeyPosition.last => const BorderRadius.horizontal(right: Radius.circular(10)),
+              },
             ),
             alignment: Alignment.center,
             child: Column(

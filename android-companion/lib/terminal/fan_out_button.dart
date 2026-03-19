@@ -270,6 +270,7 @@ class _SymbolKeyState extends State<_SymbolKey> {
               fontSize: 18,
               fontWeight: FontWeight.w500,
               color: c.textSecondary,
+              decoration: TextDecoration.none,
             ),
           ),
         ),
