@@ -70,9 +70,11 @@ class EventHandler {
 
       case 'pane.split':
         _ref.read(paneProvider.notifier).onPaneSplit(data);
+        _ref.read(workspaceProvider.notifier).fetchWorkspaces();
 
       case 'pane.closed':
         _ref.read(paneProvider.notifier).onPaneClosed(data);
+        _ref.read(workspaceProvider.notifier).fetchWorkspaces();
 
       default:
         debugPrint('[EventHandler] Unhandled event: ${event.event}');

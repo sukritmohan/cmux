@@ -3,19 +3,23 @@
 /// Shows a proportionally-sized card representing one pane in the
 /// workspace layout. Features:
 /// - Type-color dot + IBM Plex Mono title
-/// - Mock text body placeholder
+/// - Live terminal content via colored-block minimap painter
 /// - Amber border + glow for focused panes
 /// - Stacked card layers for panes with surfaceCount > 1
 /// - Stack count badge (amber circle, top-right)
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../app/colors.dart';
+import '../app/providers.dart';
 import '../state/pane_provider.dart';
+import 'minimap_cell_consumer.dart';
+import 'minimap_terminal_painter.dart';
 
-class MinimapPane extends StatelessWidget {
+class MinimapPane extends ConsumerStatefulWidget {
   final Pane pane;
   final Size containerSize;
   final VoidCallback onTap;
@@ -27,9 +31,44 @@ class MinimapPane extends StatelessWidget {
     required this.onTap,
   });
 
+  @override
+  ConsumerState<MinimapPane> createState() => _MinimapPaneState();
+}
+
+class _MinimapPaneState extends ConsumerState<MinimapPane> {
+  MinimapCellConsumer? _consumer;
+
+  @override
+  void initState() {
+    super.initState();
+    _maybeSubscribe();
+  }
+
+  @override
+  void dispose() {
+    _consumer?.dispose();
+    super.dispose();
+  }
+
+  /// Subscribe to cell stream if this is a terminal pane with a surface.
+  void _maybeSubscribe() {
+    final pane = widget.pane;
+    if (pane.surfaceId == null || pane.type != 'terminal') return;
+
+    final manager = ref.read(connectionManagerProvider);
+    _consumer = MinimapCellConsumer(
+      manager: manager,
+      surfaceId: pane.surfaceId!,
+      onUpdate: () {
+        if (mounted) setState(() {});
+      },
+    );
+    _consumer!.subscribe();
+  }
+
   /// Returns the type-specific accent color for the pane dot indicator.
   Color _typeColor(AppColorScheme c) {
-    switch (pane.type) {
+    switch (widget.pane.type) {
       case 'terminal':
         return c.terminalColor;
       case 'browser':
@@ -43,22 +82,23 @@ class MinimapPane extends StatelessWidget {
 
   /// Capitalizes the first letter of the pane type for the title label.
   String get _typeLabel {
-    if (pane.type.isEmpty) return 'Pane';
-    return pane.type[0].toUpperCase() + pane.type.substring(1);
+    if (widget.pane.type.isEmpty) return 'Pane';
+    return widget.pane.type[0].toUpperCase() + widget.pane.type.substring(1);
   }
 
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final pane = widget.pane;
 
-    final left = pane.x * containerSize.width;
-    final top = pane.y * containerSize.height;
-    final width = pane.width * containerSize.width;
-    final height = pane.height * containerSize.height;
+    final left = pane.x * widget.containerSize.width;
+    final top = pane.y * widget.containerSize.height;
+    final width = pane.width * widget.containerSize.width;
+    final height = pane.height * widget.containerSize.height;
 
     // Clamp dimensions to prevent negative values from margin subtraction
-    final cardWidth = (width - 4).clamp(0.0, containerSize.width);
-    final cardHeight = (height - 4).clamp(0.0, containerSize.height);
+    final cardWidth = (width - 4).clamp(0.0, widget.containerSize.width);
+    final cardHeight = (height - 4).clamp(0.0, widget.containerSize.height);
 
     final hasStack = pane.surfaceCount > 1;
 
@@ -68,7 +108,7 @@ class MinimapPane extends StatelessWidget {
       width: cardWidth,
       height: cardHeight,
       child: GestureDetector(
-        onTap: onTap,
+        onTap: widget.onTap,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -124,51 +164,44 @@ class MinimapPane extends StatelessWidget {
                         ]
                       : null,
                 ),
-                padding: const EdgeInsets.all(6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header row: type-color dot + title
-                    Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: _typeColor(c),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            _typeLabel,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.ibmPlexMono(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w500,
-                              color: c.textSecondary,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppColors.radiusSm - 1),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header row: type-color dot + title
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(6, 6, 6, 3),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: _typeColor(c),
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                _typeLabel,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.ibmPlexMono(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w500,
+                                  color: c.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-
-                    // Mock text body (placeholder lines)
-                    Expanded(
-                      child: Text(
-                        'lorem ipsum dolor sit\namet consectetur\nadipiscing elit',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontFamily: 'monospace',
-                          color: c.textMuted.withAlpha(128), // 50% alpha
-                          height: 1.3,
-                        ),
-                        overflow: TextOverflow.clip,
                       ),
-                    ),
-                  ],
+
+                      // Body: live terminal content or placeholder
+                      Expanded(child: _buildBody(c)),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -198,6 +231,41 @@ class MinimapPane extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Builds the pane body content.
+  ///
+  /// For terminal panes with live data: colored-block minimap painter.
+  /// For non-terminal panes or while waiting for first frame: placeholder.
+  Widget _buildBody(AppColorScheme c) {
+    final consumer = _consumer;
+    if (consumer != null && consumer.hasData) {
+      return CustomPaint(
+        painter: MinimapTerminalPainter(
+          cells: consumer.cells,
+          cols: consumer.cols,
+          rows: consumer.rows,
+        ),
+        child: const SizedBox.expand(),
+      );
+    }
+
+    // Placeholder for non-terminal panes or loading state.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Text(
+        widget.pane.type == 'terminal'
+            ? '\u2588\u2588\u2588 \u2588\u2588\u2588\u2588\u2588\n\u2588\u2588 \u2588\u2588\u2588'
+            : _typeLabel,
+        style: TextStyle(
+          fontSize: 8,
+          fontFamily: 'monospace',
+          color: c.textMuted.withAlpha(64),
+          height: 1.3,
+        ),
+        overflow: TextOverflow.clip,
       ),
     );
   }

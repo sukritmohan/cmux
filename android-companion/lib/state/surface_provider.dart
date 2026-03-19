@@ -115,6 +115,15 @@ class SurfaceNotifier extends StateNotifier<SurfaceState> {
     // workspace_id and surface_id for filtering if needed later.
   }
 
+  /// Add a new surface and optionally focus it.
+  void addSurface(Surface surface, {bool focus = true}) {
+    final updated = [...state.surfaces, surface];
+    state = SurfaceState(
+      surfaces: updated,
+      focusedSurfaceId: focus ? surface.id : state.focusedSurfaceId,
+    );
+  }
+
   /// Focus a specific surface by ID.
   void focusSurface(String surfaceId) {
     state = state.copyWith(focusedSurfaceId: surfaceId);

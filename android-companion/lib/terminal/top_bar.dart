@@ -19,6 +19,7 @@ class TopBar extends StatelessWidget {
   final VoidCallback onMenuTap;
   final PaneType activePaneType;
   final ValueChanged<PaneType> onPaneTypeChanged;
+  final VoidCallback? onNewTab;
 
   const TopBar({
     super.key,
@@ -28,6 +29,7 @@ class TopBar extends StatelessWidget {
     required this.onMenuTap,
     this.activePaneType = PaneType.terminal,
     required this.onPaneTypeChanged,
+    this.onNewTab,
   });
 
   @override
@@ -61,6 +63,25 @@ class TopBar extends StatelessWidget {
             onSurfaceSelected: onSurfaceSelected,
             paneType: activePaneType,
           ),
+
+          // New tab button
+          if (onNewTab != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 2),
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: onNewTab,
+                    child: Icon(Icons.add, size: 16, color: c.textMuted),
+                  ),
+                ),
+              ),
+            ),
 
           // Pane type dropdown (icon-only trigger)
           PaneTypeDropdown(
