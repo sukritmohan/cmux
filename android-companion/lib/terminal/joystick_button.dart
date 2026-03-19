@@ -190,7 +190,9 @@ class _JoystickButtonState extends State<JoystickButton> {
     final c = AppColors.of(context);
     final isPressed = _isDragReady || (_isDown && _activeDirection != null);
 
-    return GestureDetector(
+    return Semantics(
+      label: 'Arrow key joystick. Swipe for single arrow, press and hold then drag for repeat.',
+      child: GestureDetector(
       onPanStart: _onPanStart,
       onPanUpdate: _onPanUpdate,
       onPanEnd: _onPanEnd,
@@ -226,6 +228,7 @@ class _JoystickButtonState extends State<JoystickButton> {
           ),
         ),
       ),
+    ),
     );
   }
 }

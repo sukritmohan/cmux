@@ -1,7 +1,7 @@
 # Modifier Bar & Joystick Arrow Key Redesign
 
 **Date:** 2026-03-18
-**Status:** Approved
+**Status:** Implemented
 **Visual companion:** `docs/mobile-ux/pane-type-switcher-final.html` (existing spec), brainstorm mockups in `.superpowers/brainstorm/`
 
 ## Problem
