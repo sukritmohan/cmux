@@ -530,7 +530,6 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   }
 
   /// Extracts selected text from cell data and copies to clipboard.
-  /// Extracts selected text from cell data and copies to clipboard.
   void _copySelection() {
     if (!_hasSelection || _cells.isEmpty) return;
 
