@@ -1384,3 +1384,140 @@ class _HandlePainter extends CustomPainter {
   bool shouldRepaint(covariant _HandlePainter oldDelegate) =>
       isStart != oldDelegate.isStart;
 }
+
+/// Paints a zoomed-in view of terminal cells for the selection magnifier.
+///
+/// Shows ~7 characters at 2x zoom, centered on [focusCol]/[focusRow].
+/// Selection highlight is rendered for cells within [selLo]..[selHi].
+class _MagnifierPainter extends CustomPainter {
+  final List<CellData> cells;
+  final int cols;
+  final int focusCol;
+  final int focusRow;
+  final double cellWidth;
+  final double cellHeight;
+  final double fontSize;
+  final int selLo;
+  final int selHi;
+
+  static const _bg = Color(0xFF0A0A0F);
+  static const _fg = Color(0xFFE8E8EE);
+  static const _selColor = Color(0x404A9EFF); // 25% blue
+  static const _zoom = 2.0;
+
+  _MagnifierPainter({
+    required this.cells,
+    required this.cols,
+    required this.focusCol,
+    required this.focusRow,
+    required this.cellWidth,
+    required this.cellHeight,
+    required this.fontSize,
+    required this.selLo,
+    required this.selHi,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Clip to rounded rect.
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      const Radius.circular(8),
+    );
+    canvas.clipRRect(rrect);
+
+    // Fill background.
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = _bg,
+    );
+
+    final zCellW = cellWidth * _zoom;
+    final zCellH = cellHeight * _zoom;
+    final zFontSize = fontSize * _zoom;
+
+    // How many cells fit in the magnifier width.
+    final visibleCols = (size.width / zCellW).ceil();
+    // Center the focus cell horizontally.
+    final startCol = focusCol - visibleCols ~/ 2;
+
+    for (int i = 0; i < visibleCols; i++) {
+      final col = startCol + i;
+      if (col < 0 || col >= cols) continue;
+
+      final index = focusRow * cols + col;
+      if (index < 0 || index >= cells.length) continue;
+
+      final cell = cells[index];
+      if (cell.isSpacerTail) continue;
+
+      final x = i * zCellW + (size.width - visibleCols * zCellW) / 2;
+      // Vertically center the single row.
+      final y = (size.height - zCellH) / 2;
+      final charWidth = cell.isWide ? zCellW * 2 : zCellW;
+
+      // Draw selection highlight.
+      if (selLo >= 0 && index >= selLo && index <= selHi) {
+        canvas.drawRect(
+          Rect.fromLTWH(x, y, charWidth, zCellH),
+          Paint()..color = _selColor,
+        );
+      }
+
+      // Draw character.
+      if (cell.codepoint != 0 && !cell.isInvisible) {
+        Color fg;
+        if (cell.fgIsDefault) {
+          fg = _fg;
+        } else {
+          fg = Color.fromARGB(255, cell.fgR, cell.fgG, cell.fgB);
+        }
+        if (cell.isInverse) {
+          final cellBg = cell.bgIsDefault ? _bg : Color.fromARGB(255, cell.bgR, cell.bgG, cell.bgB);
+          fg = cellBg;
+        }
+        if (cell.isFaint) {
+          fg = fg.withAlpha(128);
+        }
+
+        final textStyle = ui.TextStyle(
+          color: fg,
+          fontSize: zFontSize,
+          fontFamily: 'JetBrains Mono',
+          fontWeight: cell.isBold ? FontWeight.bold : FontWeight.normal,
+          fontStyle: cell.isItalic ? FontStyle.italic : FontStyle.normal,
+        );
+
+        final pb = ui.ParagraphBuilder(
+          ui.ParagraphStyle(textAlign: TextAlign.left),
+        )
+          ..pushStyle(textStyle)
+          ..addText(cell.character);
+
+        final paragraph = pb.build()
+          ..layout(ui.ParagraphConstraints(width: charWidth));
+
+        final textY = y + (zCellH - paragraph.height) / 2;
+        canvas.drawParagraph(paragraph, Offset(x, textY));
+      }
+    }
+
+    // Draw border.
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..color = const Color(0xFF333333)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _MagnifierPainter old) {
+    return !identical(cells, old.cells) ||
+        focusCol != old.focusCol ||
+        focusRow != old.focusRow ||
+        selLo != old.selLo ||
+        selHi != old.selHi;
+  }
+}
