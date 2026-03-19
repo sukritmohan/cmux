@@ -550,6 +550,21 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
   void _onLongPressStart(LongPressStartDetails details) {
     final (col, row) = _hitTestCell(details.localPosition);
+    // Debug: log cell codepoints around the pressed position for word snap investigation.
+    if (_cells.isNotEmpty && _cols > 0) {
+      final rowStart = row * _cols;
+      final neighbors = <String>[];
+      for (int c = max(0, col - 3); c <= min(_cols - 1, col + 3); c++) {
+        final idx = rowStart + c;
+        if (idx < _cells.length) {
+          final cp = _cells[idx].codepoint;
+          final ch = cp > 0x20 ? String.fromCharCode(cp) : '.';
+          final marker = c == col ? '*' : ' ';
+          neighbors.add('$marker[$c]=0x${cp.toRadixString(16)}($ch)');
+        }
+      }
+      debugPrint('[WordSnap] row=$row col=$col cells: ${neighbors.join(' ')}');
+    }
     final (wordStart, wordEnd) = _expandToWord(col, row);
     setState(() {
       _selStartCol = wordStart;
