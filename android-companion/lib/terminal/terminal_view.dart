@@ -65,12 +65,22 @@ class TerminalView extends ConsumerStatefulWidget {
   /// letters are converted to control codes (e.g., 'c' → \x03 for Ctrl+C).
   final ValueNotifier<bool>? ctrlActiveNotifier;
 
+  /// External focus node for keyboard toggle. If provided, the terminal uses
+  /// this instead of creating its own, allowing the keyboard button to
+  /// toggle the soft keyboard by calling requestFocus/unfocus on this node.
+  final FocusNode? externalFocusNode;
+
+  /// Callback to record copied text in clipboard history.
+  final ValueChanged<String>? onCopy;
+
   const TerminalView({
     super.key,
     required this.surfaceId,
     this.workspaceId,
     this.scrollNotifier,
     this.ctrlActiveNotifier,
+    this.externalFocusNode,
+    this.onCopy,
   });
 
   @override
@@ -89,7 +99,10 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
   // Keyboard input — onKeyEvent handles hardware/Bluetooth keyboards while
   // the hidden TextField + _onTextChanged handles soft keyboard IME.
-  late final _focusNode = FocusNode(onKeyEvent: _handleKeyEvent);
+  // Uses externalFocusNode if provided (for keyboard button toggle), else
+  // creates an internal one. Either way, onKeyEvent is attached here.
+  late final FocusNode _focusNode;
+  bool _ownsInternalFocusNode = false;
   final _textController = TextEditingController();
   String _lastText = '';
 
@@ -129,6 +142,14 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   @override
   void initState() {
     super.initState();
+    // Use external focus node if provided (keyboard button toggle), else create internal.
+    if (widget.externalFocusNode != null) {
+      _focusNode = widget.externalFocusNode!;
+      _focusNode.onKeyEvent = _handleKeyEvent;
+    } else {
+      _focusNode = FocusNode(onKeyEvent: _handleKeyEvent);
+      _ownsInternalFocusNode = true;
+    }
     _textController.addListener(_onTextChanged);
     _subscribeToSurface();
     _startBlinkTimer();
@@ -140,7 +161,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     widget.scrollNotifier?.removeListener(_onScrollNotified);
     _unsubscribe();
     _textController.dispose();
-    _focusNode.dispose();
+    if (_ownsInternalFocusNode) _focusNode.dispose();
     _blinkTimer?.cancel();
     super.dispose();
   }
@@ -635,7 +656,9 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
       }
     }
 
-    Clipboard.setData(ClipboardData(text: buf.toString()));
+    final copiedText = buf.toString();
+    Clipboard.setData(ClipboardData(text: copiedText));
+    widget.onCopy?.call(copiedText);
     HapticFeedback.heavyImpact();
 
     setState(() {

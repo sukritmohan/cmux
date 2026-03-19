@@ -1,9 +1,10 @@
-/// Floating capsule modifier toolbar — redesigned with joystick arrows.
+/// Floating capsule modifier toolbar — 2-row layout.
 ///
-/// Layout: esc ctrl | fan | ——— spacer ——— | joystick | return
+/// Layout:
+///   Row 1: [esc|tab|ctrl] · [clipboard] · spacer · [voice]   ║ joystick
+///   Row 2: [= ~ | / -  ] · spacer · · · · · · · · · [keyboard] ║ return
 ///
-/// Spec: docs/superpowers/specs/2026-03-18-modifier-bar-joystick-redesign.md
-/// Visual: docs/mobile-ux/modifier-bar-joystick-design.html
+/// Spec: docs/superpowers/specs/2026-03-18-modifier-bar-2row-clipboard-keyboard-design.md
 library;
 
 import 'dart:ui';
@@ -12,8 +13,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app/colors.dart';
-import 'fan_out_button.dart';
+import 'clipboard_button.dart';
+import 'clipboard_history.dart';
 import 'joystick_button.dart';
+import 'keyboard_button.dart';
+import 'symbol_capsule.dart';
+import 'voice_button.dart';
 
 class ModifierBar extends StatefulWidget {
   final ValueChanged<String> onInput;
@@ -22,10 +27,26 @@ class ModifierBar extends StatefulWidget {
   /// Ctrl to soft keyboard input (e.g., Ctrl+C → \x03).
   final ValueNotifier<bool> ctrlActiveNotifier;
 
+  /// Clipboard history state for badge display and bottom sheet.
+  final ClipboardHistoryState clipboardHistoryState;
+
+  /// Clipboard history notifier for mutations (star, search, etc.).
+  final ClipboardHistoryNotifier clipboardHistoryNotifier;
+
+  /// Focus node shared with TerminalView's hidden TextField for keyboard toggle.
+  final FocusNode keyboardFocusNode;
+
+  /// Callback for pasting clipboard text (wraps in bracketed paste mode).
+  final ValueChanged<String> onPaste;
+
   const ModifierBar({
     super.key,
     required this.onInput,
     required this.ctrlActiveNotifier,
+    required this.clipboardHistoryState,
+    required this.clipboardHistoryNotifier,
+    required this.keyboardFocusNode,
+    required this.onPaste,
   });
 
   @override
@@ -96,13 +117,29 @@ class _ModifierBarState extends State<ModifierBar> {
     widget.onInput('\t');
   }
 
+  void _onShowClipboard() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ClipboardHistorySheet(
+        notifier: widget.clipboardHistoryNotifier,
+        historyState: widget.clipboardHistoryState,
+        onPaste: (text) {
+          Navigator.pop(context);
+          widget.onPaste(text);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 0, 8, 2),
-      height: 50, // taller to accommodate 40px joystick + padding
+      height: 86, // two rows + right column (joystick 50 + gap 4 + return 22 + padding 10)
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         color: c.modifierBarBg,
@@ -114,37 +151,77 @@ class _ModifierBarState extends State<ModifierBar> {
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
           child: Row(
             children: [
-              // Zone 1: esc + ctrl capsule
-              _KeyGroupCapsule(
-                ctrlState: _ctrlState,
-                onEsc: _onEsc,
-                onTab: _onTab,
-                onCtrl: _onCtrlTap,
+              // Left zone: two rows of tool buttons
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Row 1: esc+tab+ctrl | clipboard | spacer
+                    Row(
+                      children: [
+                        _KeyGroupCapsule(
+                          ctrlState: _ctrlState,
+                          onEsc: _onEsc,
+                          onTab: _onTab,
+                          onCtrl: _onCtrlTap,
+                        ),
+                        _BarDivider(),
+                        ClipboardButton(
+                          historyState: widget.clipboardHistoryState,
+                          onTap: _onShowClipboard,
+                        ),
+                        const Spacer(),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Row 2: symbol capsule | spacer
+                    Row(
+                      children: [
+                        // Symbols bypass Ctrl — use widget.onInput directly
+                        SymbolCapsule(onInput: widget.onInput),
+                        const Spacer(),
+                      ],
+                    ),
+                  ],
+                ),
               ),
 
-              // Divider
-              _BarDivider(),
-
-              // Zone 2: fan-out symbol button
-              FanOutButton(onInput: _onInput),
-
-              // Spacer — generous gap between left tools and right actions
-              const Spacer(),
-
-              // Zone 3: joystick
-              JoystickButton(
-                onInput: _onInput,
-                ctrlActive: _ctrlState != _CtrlState.inactive,
+              // Center-right: voice (top) + keyboard (bottom), vertically centered
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const VoiceButton(),
+                  const SizedBox(height: 4),
+                  KeyboardButton(keyboardFocusNode: widget.keyboardFocusNode),
+                ],
               ),
 
-              // Divider
-              _BarDivider(),
+              // Vertical divider before right column
+              Container(
+                width: 1,
+                height: 56,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: c.border,
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
 
-              // Zone 4: return key
-              _ReturnKey(onTap: () {
-                HapticFeedback.mediumImpact();
-                widget.onInput('\r');
-              }),
+              // Right column: joystick (50px) + return (22px), vertically centered
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  JoystickButton(
+                    onInput: _onInput,
+                    ctrlActive: _ctrlState != _CtrlState.inactive,
+                  ),
+                  const SizedBox(height: 4),
+                  _ReturnKey(onTap: () {
+                    HapticFeedback.mediumImpact();
+                    widget.onInput('\r');
+                  }),
+                ],
+              ),
             ],
           ),
         ),
@@ -347,15 +424,15 @@ class _ReturnKeyState extends State<_ReturnKey> {
         scale: _pressed ? 0.93 : 1.0,
         duration: const Duration(milliseconds: 80),
         child: Container(
-          height: 34,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          width: 50,
+          height: 22,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: const Alignment(-0.5, -1),
               end: const Alignment(0.5, 1),
               colors: [c.returnGradientStart, c.returnGradientEnd],
             ),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
                 color: c.returnGlow,
@@ -368,7 +445,7 @@ class _ReturnKeyState extends State<_ReturnKey> {
             'RETURN',
             style: TextStyle(
               fontFamily: 'JetBrains Mono',
-              fontSize: 9,
+              fontSize: 8,
               fontWeight: FontWeight.w700,
               letterSpacing: 1,
               color: c.accentText,

@@ -202,8 +202,8 @@ class _JoystickButtonState extends State<JoystickButton> {
         curve: Curves.easeOutExpo,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          width: 40,
-          height: 40,
+          width: 50,
+          height: 50,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isPressed ? c.joystickPressed : c.joystickFill,

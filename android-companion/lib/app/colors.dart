@@ -66,6 +66,25 @@ class AppColorScheme {
   final Color returnGradientEnd;
   final Color returnGlow;
 
+  // -- Clipboard --
+  final Color clipboardBadge;
+  final Color clipboardBadgeBorder;
+  final Color clipboardLatestBorder;
+  final Color clipboardLatestBadge;
+
+  // -- Keyboard button --
+  final Color keyboardBtnGradientStart;
+  final Color keyboardBtnGradientEnd;
+  final Color keyboardBtnBorder;
+  final Color keyboardBtnGlow;
+  final Color keyboardBtnIcon;
+
+  // -- Bottom sheet --
+  final Color sheetBg;
+  final Color sheetHandle;
+  final Color sheetSearch;
+  final Color sheetSearchBorder;
+
   // -- Connection indicator --
   final Color connectedColor;
 
@@ -110,6 +129,19 @@ class AppColorScheme {
     required this.returnGradientStart,
     required this.returnGradientEnd,
     required this.returnGlow,
+    required this.clipboardBadge,
+    required this.clipboardBadgeBorder,
+    required this.clipboardLatestBorder,
+    required this.clipboardLatestBadge,
+    required this.keyboardBtnGradientStart,
+    required this.keyboardBtnGradientEnd,
+    required this.keyboardBtnBorder,
+    required this.keyboardBtnGlow,
+    required this.keyboardBtnIcon,
+    required this.sheetBg,
+    required this.sheetHandle,
+    required this.sheetSearch,
+    required this.sheetSearchBorder,
     required this.connectedColor,
   });
 }
@@ -152,12 +184,25 @@ abstract final class AppColors {
     fanPopoverBg: Color(0xF214141E),          // rgba(20,20,30,0.95)
     symKeyResting: Color(0x0FFFFFFF),         // rgba(255,255,255,0.06)
     joystickFill: Color(0x0FFFFFFF),          // rgba(255,255,255,0.06)
-    joystickBorder: Color(0x14FFFFFF),        // rgba(255,255,255,0.08)
+    joystickBorder: Color(0x1AFFFFFF),        // rgba(255,255,255,0.10)
     joystickPressed: Color(0x1FE0A030),       // rgba(224,160,48,0.12)
     joystickPressedBorder: Color(0x40E0A030), // rgba(224,160,48,0.25)
     returnGradientStart: Color(0x47E0A030),   // rgba(224,160,48,0.28)
     returnGradientEnd: Color(0x1FE0A030),     // rgba(224,160,48,0.12)
     returnGlow: Color(0x14E0A030),            // rgba(224,160,48,0.08)
+    clipboardBadge: Color(0xB3E0A030),        // rgba(224,160,48,0.7)
+    clipboardBadgeBorder: Color(0xE6101018),  // rgba(16,16,24,0.9)
+    clipboardLatestBorder: Color(0x6678B4FF), // rgba(120,180,255,0.4)
+    clipboardLatestBadge: Color(0x9978B4FF),  // rgba(120,180,255,0.6)
+    keyboardBtnGradientStart: Color(0x3378B4FF), // rgba(120,180,255,0.2)
+    keyboardBtnGradientEnd: Color(0x1A508CDC),   // rgba(80,140,220,0.1)
+    keyboardBtnBorder: Color(0x2678B4FF),     // rgba(120,180,255,0.15)
+    keyboardBtnGlow: Color(0x1478B4FF),       // rgba(120,180,255,0.08)
+    keyboardBtnIcon: Color(0xB378B4FF),       // rgba(120,180,255,0.7)
+    sheetBg: Color(0xFA14141E),              // rgba(20,20,30,0.98)
+    sheetHandle: Color(0x26FFFFFF),           // rgba(255,255,255,0.15)
+    sheetSearch: Color(0x0AFFFFFF),           // rgba(255,255,255,0.04)
+    sheetSearchBorder: Color(0x0FFFFFFF),     // rgba(255,255,255,0.06)
     connectedColor: Color(0xFF50C878),
   );
 
@@ -203,6 +248,19 @@ abstract final class AppColors {
     returnGradientStart: Color(0x38E0A030),   // rgba(224,160,48,0.22)
     returnGradientEnd: Color(0x14E0A030),     // rgba(224,160,48,0.08)
     returnGlow: Color(0x0FE0A030),            // rgba(224,160,48,0.06)
+    clipboardBadge: Color(0xB3C08020),        // warm amber
+    clipboardBadgeBorder: Color(0xE6F8F8FA),  // light background
+    clipboardLatestBorder: Color(0x664080C0), // blue accent
+    clipboardLatestBadge: Color(0x994080C0),  // blue accent
+    keyboardBtnGradientStart: Color(0x264080C0),
+    keyboardBtnGradientEnd: Color(0x1A3060A0),
+    keyboardBtnBorder: Color(0x264080C0),
+    keyboardBtnGlow: Color(0x144080C0),       // blue glow
+    keyboardBtnIcon: Color(0xB34080C0),
+    sheetBg: Color(0xFAF8F8FA),
+    sheetHandle: Color(0x26000000),
+    sheetSearch: Color(0x0A000000),
+    sheetSearchBorder: Color(0x0F000000),
     connectedColor: Color(0xFF2D8A4E),
   );
 

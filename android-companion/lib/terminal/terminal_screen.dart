@@ -35,6 +35,7 @@ import '../state/pane_provider.dart';
 import '../state/surface_provider.dart';
 import '../state/workspace_provider.dart';
 import '../workspace/workspace_drawer.dart';
+import 'clipboard_history.dart';
 import 'modifier_bar.dart';
 import 'terminal_view.dart';
 import 'top_bar.dart';
@@ -63,6 +64,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   /// so soft keyboard input can be intercepted (e.g., Ctrl+C → \x03).
   final _ctrlActiveNotifier = ValueNotifier<bool>(false);
 
+  /// Focus node shared between keyboard button and terminal view for
+  /// programmatic soft keyboard toggle.
+  final _keyboardFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -73,6 +78,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   void dispose() {
     _statusSub?.cancel();
     _scrollNotifier.dispose();
+    _keyboardFocusNode.dispose();
     super.dispose();
   }
 
@@ -88,6 +94,9 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
       port: credentials.port,
       token: credentials.token,
     );
+
+    // Load clipboard history for this connection.
+    ref.read(clipboardHistoryProvider.notifier).load();
 
     // Initialize event handler to start routing bridge events.
     ref.read(eventHandlerProvider);
@@ -171,6 +180,11 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     } catch (e) {
       debugPrint('[TerminalScreen] Write error: $e');
     }
+  }
+
+  /// Pastes text into the terminal using bracketed paste mode for safety.
+  void _onPaste(String text) {
+    _sendInput('\x1b[200~$text\x1b[201~');
   }
 
   void _openMinimap() {
@@ -276,6 +290,9 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                   workspaceId: activeWorkspaceId,
                   scrollNotifier: _scrollNotifier,
                   ctrlActiveNotifier: _ctrlActiveNotifier,
+                  externalFocusNode: _keyboardFocusNode,
+                  onCopy: (text) =>
+                      ref.read(clipboardHistoryProvider.notifier).add(text),
                 )
               : Center(
                   child: Text(
@@ -356,6 +373,11 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                 if (_showModifierBar) ModifierBar(
                   onInput: _sendInput,
                   ctrlActiveNotifier: _ctrlActiveNotifier,
+                  clipboardHistoryState: ref.watch(clipboardHistoryProvider),
+                  clipboardHistoryNotifier:
+                      ref.read(clipboardHistoryProvider.notifier),
+                  keyboardFocusNode: _keyboardFocusNode,
+                  onPaste: _onPaste,
                 ),
               ],
             ),
