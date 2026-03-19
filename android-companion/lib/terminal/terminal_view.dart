@@ -621,7 +621,23 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
       _dragAnchorX + _dragAccumX,
       _dragAnchorY + _dragAccumY,
     );
-    final (col, row) = _hitTestCell(viewportPos);
+    var (col, row) = _hitTestCell(viewportPos);
+
+    // Hard clamp: prevent handle crossing.
+    final dragIdx = row * _cols + col;
+    if (isStart) {
+      final endIdx = _selEndRow! * _cols + _selEndCol!;
+      if (dragIdx > endIdx) {
+        col = _selEndCol!;
+        row = _selEndRow!;
+      }
+    } else {
+      final startIdx = _selStartRow! * _cols + _selStartCol!;
+      if (dragIdx < startIdx) {
+        col = _selStartCol!;
+        row = _selStartRow!;
+      }
+    }
 
     final prevCol = isStart ? _selStartCol : _selEndCol;
     final prevRow = isStart ? _selStartRow : _selEndRow;
