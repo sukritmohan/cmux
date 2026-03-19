@@ -50,6 +50,22 @@ class AppColorScheme {
   // -- Modifier bar --
   final Color modifierBarBg;
 
+  // -- Modifier bar components --
+  final Color keyGroupResting;
+  final Color keyGroupText;
+  final Color keyGroupActive;
+  final Color fanBtnResting;
+  final Color fanBtnActive;
+  final Color fanPopoverBg;
+  final Color symKeyResting;
+  final Color joystickFill;
+  final Color joystickBorder;
+  final Color joystickPressed;
+  final Color joystickPressedBorder;
+  final Color returnGradientStart;
+  final Color returnGradientEnd;
+  final Color returnGlow;
+
   // -- Connection indicator --
   final Color connectedColor;
 
@@ -80,6 +96,20 @@ class AppColorScheme {
     required this.drawerBg,
     required this.drawerScrim,
     required this.modifierBarBg,
+    required this.keyGroupResting,
+    required this.keyGroupText,
+    required this.keyGroupActive,
+    required this.fanBtnResting,
+    required this.fanBtnActive,
+    required this.fanPopoverBg,
+    required this.symKeyResting,
+    required this.joystickFill,
+    required this.joystickBorder,
+    required this.joystickPressed,
+    required this.joystickPressedBorder,
+    required this.returnGradientStart,
+    required this.returnGradientEnd,
+    required this.returnGlow,
     required this.connectedColor,
   });
 }
@@ -114,6 +144,20 @@ abstract final class AppColors {
     drawerBg: Color(0xEB0E0E14), // 92% alpha
     drawerScrim: Color(0x66000000), // 40%
     modifierBarBg: Color(0xD1101018), // 82%
+    keyGroupResting: Color(0x0FFFFFFF),       // rgba(255,255,255,0.06)
+    keyGroupText: Color(0x73FFFFFF),          // rgba(255,255,255,0.45)
+    keyGroupActive: Color(0x26E0A030),        // rgba(224,160,48,0.15)
+    fanBtnResting: Color(0x0FFFFFFF),         // rgba(255,255,255,0.06)
+    fanBtnActive: Color(0x1FE0A030),          // rgba(224,160,48,0.12)
+    fanPopoverBg: Color(0xF214141E),          // rgba(20,20,30,0.95)
+    symKeyResting: Color(0x0FFFFFFF),         // rgba(255,255,255,0.06)
+    joystickFill: Color(0x0FFFFFFF),          // rgba(255,255,255,0.06)
+    joystickBorder: Color(0x14FFFFFF),        // rgba(255,255,255,0.08)
+    joystickPressed: Color(0x1FE0A030),       // rgba(224,160,48,0.12)
+    joystickPressedBorder: Color(0x40E0A030), // rgba(224,160,48,0.25)
+    returnGradientStart: Color(0x47E0A030),   // rgba(224,160,48,0.28)
+    returnGradientEnd: Color(0x1FE0A030),     // rgba(224,160,48,0.12)
+    returnGlow: Color(0x14E0A030),            // rgba(224,160,48,0.08)
     connectedColor: Color(0xFF50C878),
   );
 
@@ -145,6 +189,20 @@ abstract final class AppColors {
     drawerBg: Color(0xEBFAFAF7), // 92% alpha
     drawerScrim: Color(0x14000000), // 8%
     modifierBarBg: Color(0xBFFFFFFF), // 75%
+    keyGroupResting: Color(0x0A000000),       // rgba(0,0,0,0.04)
+    keyGroupText: Color(0x61000000),          // rgba(0,0,0,0.38)
+    keyGroupActive: Color(0x1FE0A030),        // rgba(224,160,48,0.12)
+    fanBtnResting: Color(0x0A000000),         // rgba(0,0,0,0.04)
+    fanBtnActive: Color(0x1AE0A030),          // rgba(224,160,48,0.10)
+    fanPopoverBg: Color(0xEBFFFFFF),          // rgba(255,255,255,0.92)
+    symKeyResting: Color(0x0A000000),         // rgba(0,0,0,0.04)
+    joystickFill: Color(0x0A000000),          // rgba(0,0,0,0.04)
+    joystickBorder: Color(0x0F000000),        // rgba(0,0,0,0.06)
+    joystickPressed: Color(0x1AE0A030),       // rgba(224,160,48,0.10)
+    joystickPressedBorder: Color(0x33E0A030), // rgba(224,160,48,0.20)
+    returnGradientStart: Color(0x38E0A030),   // rgba(224,160,48,0.22)
+    returnGradientEnd: Color(0x14E0A030),     // rgba(224,160,48,0.08)
+    returnGlow: Color(0x0FE0A030),            // rgba(224,160,48,0.06)
     connectedColor: Color(0xFF2D8A4E),
   );
 
