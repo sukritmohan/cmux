@@ -756,8 +756,6 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                     isStart: true,
                     cellWidth: cellWidth,
                     cellHeight: cellHeight,
-                    wrapLines: wrapLines,
-                    scrollOffsetY: scrollOffsetY,
                   ),
                   _buildSelectionHandle(
                     col: _selEndCol!,
@@ -765,8 +763,6 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                     isStart: false,
                     cellWidth: cellWidth,
                     cellHeight: cellHeight,
-                    wrapLines: wrapLines,
-                    scrollOffsetY: scrollOffsetY,
                   ),
                 ],
 
@@ -818,7 +814,6 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     );
   }
 
-  /// Floating copy pill positioned above the selection end point.
   /// Floating copy pill positioned above the selection end point.
   Widget _buildCopyPill(int fitCols, double cellWidth, double cellHeight,
       int wrapLines, double scrollOffsetY) {
@@ -884,8 +879,6 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     required bool isStart,
     required double cellWidth,
     required double cellHeight,
-    required int wrapLines,
-    required double scrollOffsetY,
   }) {
     final pos = _gridToScreen(col, row);
 
