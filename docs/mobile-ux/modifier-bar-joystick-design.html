@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cmux Mobile — Modifier Bar & Joystick Design</title>
+<style>
+  /* ══════════════════════════════════════════════════════════
+     FONT IMPORTS — Developer Identity
+     ══════════════════════════════════════════════════════════ */
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  /* ══════════════════════════════════════════════════════════
+     DESIGN TOKENS — cmux Visual Identity
+     ══════════════════════════════════════════════════════════ */
+  :root {
+    /* Dark theme */
+    --d-bg-deep: #0A0A0F;
+    --d-bg-primary: #0E0E14;
+    --d-bg-elevated: #16161E;
+    --d-bg-surface: #1A1A24;
+    --d-bg-hover: #20202C;
+    --d-border: rgba(255,255,255,0.06);
+    --d-border-strong: rgba(255,255,255,0.10);
+    --d-text-primary: #E8E8EE;
+    --d-text-secondary: rgba(232,232,238,0.55);
+    --d-text-muted: rgba(232,232,238,0.30);
+
+    /* Light theme */
+    --l-bg-deep: #F5F5F0;
+    --l-bg-primary: #FAFAF7;
+    --l-bg-elevated: #FFFFFF;
+    --l-bg-surface: #F0F0EB;
+    --l-bg-hover: #EAEAE5;
+    --l-border: rgba(0,0,0,0.07);
+    --l-border-strong: rgba(0,0,0,0.12);
+    --l-text-primary: #1A1A1F;
+    --l-text-secondary: rgba(26,26,31,0.55);
+    --l-text-muted: rgba(26,26,31,0.30);
+
+    /* Signature accent */
+    --accent: #E0A030;
+    --accent-glow: rgba(224,160,48,0.15);
+    --accent-glow-strong: rgba(224,160,48,0.25);
+    --accent-text-on-dark: #F0C060;
+    --accent-text-on-light: #B07810;
+
+    /* Pane type colors */
+    --terminal-color: #50C878;
+    --terminal-bg: rgba(80,200,120,0.10);
+
+    /* Radii */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-phone: 48px;
+
+    /* Motion */
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+
+    /* Phone dimensions */
+    --phone-width: 375px;
+    --phone-height: 812px;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     RESET & PAGE FOUNDATION
+     ══════════════════════════════════════════════════════════ */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', -apple-system, system-ui, sans-serif;
+    background: #111116;
+    color: #E8E8EE;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.5;
+  }
+
+  .design-page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 80px 48px 120px;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     HERO
+     ══════════════════════════════════════════════════════════ */
+  .hero {
+    text-align: center;
+    margin-bottom: 80px;
+    position: relative;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -120px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 400px;
+    background: radial-gradient(ellipse, rgba(224,160,48,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--accent-text-on-dark);
+    background: var(--accent-glow);
+    border: 1px solid rgba(224,160,48,0.20);
+    padding: 6px 16px; border-radius: 100px;
+    margin-bottom: 24px;
+  }
+  .hero-tag .tag-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .hero h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 48px; font-weight: 700; letter-spacing: -1.5px; line-height: 1.1;
+    margin-bottom: 20px;
+  }
+  .hero h1 .accent { color: var(--accent-text-on-dark); }
+  .hero .subtitle {
+    font-size: 18px; font-weight: 400;
+    color: var(--d-text-secondary); line-height: 1.65;
+    max-width: 620px; margin: 0 auto;
+  }
+
+  /* ── Section Headers ── */
+  .section-header { margin: 100px 0 48px; }
+  .section-header .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent-text-on-dark); margin-bottom: 12px;
+  }
+  .section-header h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px; font-weight: 600; letter-spacing: -0.8px; line-height: 1.2;
+    margin-bottom: 12px;
+  }
+  .section-header p {
+    font-size: 16px; color: var(--d-text-secondary); line-height: 1.65; max-width: 640px;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     PHONE FRAMES
+     ══════════════════════════════════════════════════════════ */
+  .phone-pair {
+    display: flex; justify-content: center; gap: 48px; margin: 48px 0; flex-wrap: wrap;
+  }
+  .phone-column { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .phone-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px;
+  }
+  .phone-label.dark {
+    color: rgba(232,232,238,0.5); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+  }
+  .phone-label.light {
+    color: rgba(26,26,31,0.5); background: #F0F0EB; border: 1px solid rgba(0,0,0,0.08);
+  }
+
+  .phone-frame {
+    width: var(--phone-width); height: var(--phone-height);
+    border-radius: var(--radius-phone); overflow: hidden; position: relative; flex-shrink: 0;
+  }
+  .phone-frame.dark {
+    background: var(--d-bg-deep);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 0 0 4px #1A1A20, 0 32px 80px rgba(0,0,0,0.5);
+  }
+  .phone-frame.light {
+    background: var(--l-bg-deep);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 0 0 4px #D8D8D3, 0 32px 80px rgba(0,0,0,0.18);
+  }
+  /* Dynamic Island */
+  .phone-frame::before {
+    content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 34px; background: #000; border-radius: 20px; z-index: 100;
+  }
+  .phone-frame.light::before { background: #1A1A1F; }
+  .phone-inner {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ── Status Bar ── */
+  .status-bar {
+    height: 54px; display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 0 30px 8px; font-size: 15px; font-weight: 600; flex-shrink: 0; z-index: 50;
+  }
+  .dark .status-bar { color: var(--d-text-primary); }
+  .light .status-bar { color: var(--l-text-primary); }
+  .status-icons { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+
+  /* ── Top Bar ── */
+  .top-bar {
+    display: flex; align-items: center; padding: 0 0 0 12px; flex-shrink: 0; height: 42px;
+  }
+  .dark .top-bar { background: var(--d-bg-primary); border-bottom: 1px solid var(--d-border); }
+  .light .top-bar { background: var(--l-bg-primary); border-bottom: 1px solid var(--l-border); }
+  .tab-strip { display: flex; gap: 2px; flex: 1; align-items: center; padding: 5px 0; overflow-x: auto; scrollbar-width: none; }
+  .tab-strip::-webkit-scrollbar { display: none; }
+  .tab-item {
+    display: flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: var(--radius-sm);
+    font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+    font-size: 11.5px; font-weight: 500; white-space: nowrap; flex-shrink: 0;
+    position: relative; letter-spacing: 0.2px;
+  }
+  .dark .tab-item { color: var(--d-text-muted); }
+  .light .tab-item { color: var(--l-text-muted); }
+  .dark .tab-item.active { color: var(--d-text-primary); background: var(--d-bg-surface); }
+  .light .tab-item.active { color: var(--l-text-primary); background: var(--l-bg-surface); }
+  .tab-item.active::after {
+    content: ''; position: absolute; bottom: -5px; left: 8px; right: 8px;
+    height: 2px; background: var(--accent); border-radius: 1px;
+  }
+  .tab-status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--terminal-color); flex-shrink: 0; }
+  .pane-type-icon {
+    display: flex; align-items: center; justify-content: center; width: 36px; height: 36px;
+    border-radius: var(--radius-md); margin-left: auto; margin-right: 10px; flex-shrink: 0; font-size: 16px;
+  }
+  .dark .pane-type-icon { color: var(--terminal-color); background: var(--terminal-bg); }
+  .light .pane-type-icon { color: #1B8C4E; background: rgba(45,180,90,0.10); }
+
+  /* ── Terminal Content ── */
+  .terminal-content {
+    flex: 1; padding: 12px 14px;
+    font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace; font-size: 11.5px; line-height: 1.55;
+    overflow: hidden;
+  }
+  .dark .terminal-content { background: var(--d-bg-deep); color: var(--d-text-primary); }
+  .light .terminal-content { background: var(--l-bg-deep); color: var(--l-text-primary); }
+  .dark .terminal-content .prompt { color: var(--terminal-color); font-weight: 600; }
+  .light .terminal-content .prompt { color: #2D8A4E; font-weight: 600; }
+  .dark .terminal-content .output { color: var(--d-text-secondary); }
+  .light .terminal-content .output { color: var(--l-text-secondary); }
+  .dark .terminal-content .string { color: var(--accent-text-on-dark); }
+  .light .terminal-content .string { color: #A06810; }
+  .cursor-block {
+    display: inline-block; width: 7px; height: 14px; vertical-align: text-bottom;
+    animation: blink 1.2s step-end infinite;
+  }
+  .dark .cursor-block { background: var(--accent); }
+  .light .cursor-block { background: var(--accent-text-on-light); }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* ── Home Indicator ── */
+  .home-indicator { height: 34px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .home-indicator::after { content: ''; width: 134px; height: 5px; border-radius: 100px; }
+  .dark .home-indicator::after { background: rgba(255,255,255,0.18); }
+  .light .home-indicator::after { background: rgba(0,0,0,0.15); }
+
+  /* ══════════════════════════════════════════════════════════
+     MODIFIER BAR — Floating Capsule Toolbar
+     Layout: esc | ⇧ ctrl ⌥ ⌘ | joystick | return
+     ══════════════════════════════════════════════════════════ */
+  .modifier-bar {
+    display: flex; align-items: center;
+    padding: 5px 6px; gap: 3px; flex-shrink: 0;
+    margin: 0 8px 2px; border-radius: 18px;
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+  }
+  .dark .modifier-bar {
+    background: rgba(16, 16, 24, 0.82);
+    box-shadow:
+      0 -0.5px 0 rgba(255,255,255,0.06) inset,
+      0 0.5px 0 rgba(255,255,255,0.02) inset,
+      0 4px 24px rgba(0,0,0,0.50),
+      0 0 0 0.5px rgba(255,255,255,0.05);
+  }
+  .light .modifier-bar {
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow:
+      0 -0.5px 0 rgba(255,255,255,0.7) inset,
+      0 4px 24px rgba(0,0,0,0.07),
+      0 0 0 0.5px rgba(0,0,0,0.05);
+  }
+
+  /* ── Shared key base ── */
+  .mk {
+    display: flex; align-items: center; justify-content: center;
+    height: 34px; border-radius: 10px;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    font-size: 11px; font-weight: 500;
+    cursor: pointer; flex-shrink: 0; border: none;
+    user-select: none; -webkit-user-select: none;
+    transition: all var(--duration-fast) var(--ease-out-expo);
+  }
+
+  /* ── Escape key: leftmost, isolated ── */
+  .mk.esc { width: 40px; font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+  .dark .mk.esc { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.45); }
+  .light .mk.esc { background: rgba(0,0,0,0.05); color: rgba(0,0,0,0.40); }
+
+  /* ── Modifier group capsule ── */
+  .mod-group { display: flex; gap: 1px; border-radius: 10px; overflow: hidden; }
+  .dark .mod-group { background: rgba(255,255,255,0.04); }
+  .light .mod-group { background: rgba(0,0,0,0.03); }
+
+  .mk.mod { width: 38px; height: 34px; border-radius: 0; font-size: 10px; font-weight: 500; letter-spacing: 0.2px; }
+  .mk.mod:first-child { border-radius: 10px 0 0 10px; }
+  .mk.mod:last-child { border-radius: 0 10px 10px 0; }
+  .dark .mk.mod { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.35); }
+  .light .mk.mod { background: rgba(0,0,0,0.03); color: rgba(0,0,0,0.30); }
+
+  /* Sticky active state */
+  .dark .mk.mod.active { background: rgba(224,160,48,0.15); color: var(--accent-text-on-dark); }
+  .light .mk.mod.active { background: rgba(224,160,48,0.12); color: var(--accent-text-on-light); }
+
+  /* Locked state (double-tap): amber + underline */
+  .mk.mod.locked { position: relative; }
+  .dark .mk.mod.locked { background: rgba(224,160,48,0.15); color: var(--accent-text-on-dark); }
+  .light .mk.mod.locked { background: rgba(224,160,48,0.12); color: var(--accent-text-on-light); }
+  .mk.mod.locked::after {
+    content: ''; position: absolute; bottom: 3px; left: 25%; right: 25%;
+    height: 2px; border-radius: 1px; background: var(--accent);
+  }
+
+  /* ── Dividers ── */
+  .bar-div { width: 1px; height: 16px; flex-shrink: 0; border-radius: 1px; margin: 0 2px; }
+  .dark .bar-div { background: rgba(255,255,255,0.07); }
+  .light .bar-div { background: rgba(0,0,0,0.07); }
+
+  /* ══════════════════════════════════════════════════════════
+     JOYSTICK BUTTON — Echo-style crosshair
+     Circular, visually distinct from rectangular keys.
+     Swipe = single arrow, hold+drag = repeat.
+     ══════════════════════════════════════════════════════════ */
+  .joystick-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0;
+    margin-left: auto;
+    position: relative;
+    transition: all 0.12s ease;
+  }
+  .dark .joystick-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0.5px 0 rgba(255,255,255,0.04) inset;
+  }
+  .light .joystick-btn {
+    background: rgba(0,0,0,0.04);
+    border: 1.5px solid rgba(0,0,0,0.06);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 0.5px 0 rgba(255,255,255,0.5) inset;
+  }
+
+  /* Crosshair icon — custom drawn, matching Echo SSH reference */
+  .crosshair { position: relative; width: 18px; height: 18px; }
+  .crosshair::after {
+    content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 3px; height: 3px; border-radius: 50%;
+  }
+  .dark .crosshair::after { background: rgba(255,255,255,0.35); }
+  .light .crosshair::after { background: rgba(0,0,0,0.25); }
+  .crosshair .arm { position: absolute; }
+  .crosshair .arm.h { top: 50%; left: 50%; transform: translate(-50%, -50%); width: 18px; height: 1.5px; }
+  .crosshair .arm.v { top: 50%; left: 50%; transform: translate(-50%, -50%); width: 1.5px; height: 18px; }
+  .dark .crosshair .arm { background: rgba(255,255,255,0.45); }
+  .light .crosshair .arm { background: rgba(0,0,0,0.35); }
+  .crosshair .tip { position: absolute; width: 0; height: 0; border-style: solid; }
+  .crosshair .tip.up { top: 0; left: 50%; transform: translateX(-50%); border-width: 0 3px 4px 3px; border-color: transparent transparent currentColor transparent; }
+  .crosshair .tip.down { bottom: 0; left: 50%; transform: translateX(-50%); border-width: 4px 3px 0 3px; border-color: currentColor transparent transparent transparent; }
+  .crosshair .tip.left { left: 0; top: 50%; transform: translateY(-50%); border-width: 3px 4px 3px 0; border-color: transparent currentColor transparent transparent; }
+  .crosshair .tip.right { right: 0; top: 50%; transform: translateY(-50%); border-width: 3px 0 3px 4px; border-color: transparent transparent transparent currentColor; }
+  .dark .crosshair .tip { color: rgba(255,255,255,0.45); }
+  .light .crosshair .tip { color: rgba(0,0,0,0.35); }
+
+  /* Pressed state */
+  .joystick-btn.pressed { transform: scale(0.92); }
+  .dark .joystick-btn.pressed {
+    background: rgba(224,160,48,0.12); border-color: rgba(224,160,48,0.25);
+    box-shadow: 0 0 16px rgba(224,160,48,0.12), 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .dark .joystick-btn.pressed .crosshair .arm { background: var(--accent-text-on-dark); }
+  .dark .joystick-btn.pressed .crosshair .tip { color: var(--accent-text-on-dark); }
+  .dark .joystick-btn.pressed .crosshair::after { background: var(--accent); }
+
+  /* ══════════════════════════════════════════════════════════
+     RETURN KEY — Signature amber accent
+     ══════════════════════════════════════════════════════════ */
+  .mk.ret {
+    padding: 0 14px; height: 34px; border-radius: 10px;
+    font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    position: relative; overflow: hidden;
+  }
+  .dark .mk.ret {
+    background: linear-gradient(145deg, rgba(224,160,48,0.28), rgba(224,160,48,0.12));
+    color: var(--accent-text-on-dark);
+    box-shadow: 0 0 20px rgba(224,160,48,0.08), 0 1px 0 rgba(255,255,255,0.05) inset;
+  }
+  .light .mk.ret {
+    background: linear-gradient(145deg, rgba(224,160,48,0.22), rgba(224,160,48,0.08));
+    color: var(--accent-text-on-light);
+    box-shadow: 0 0 16px rgba(224,160,48,0.06), 0 1px 0 rgba(255,255,255,0.3) inset;
+  }
+  .mk.ret::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.06), transparent);
+    border-radius: 10px 10px 0 0; pointer-events: none;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     INTERACTION STATES
+     ══════════════════════════════════════════════════════════ */
+  .states-row {
+    display: flex; justify-content: center; gap: 40px; margin: 48px 0; flex-wrap: wrap;
+  }
+  .state-card {
+    display: flex; flex-direction: column; align-items: center; gap: 12px; width: 170px;
+  }
+  .state-visual {
+    width: 88px; height: 88px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; position: relative;
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);
+  }
+  .mini-joy {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; position: relative;
+    background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.08);
+  }
+  .mini-joy.active {
+    background: rgba(224,160,48,0.12) !important;
+    border-color: rgba(224,160,48,0.25) !important;
+  }
+  .mini-cross { font-size: 20px; color: rgba(255,255,255,0.4); }
+  .mini-joy.active .mini-cross { color: var(--accent-text-on-dark); }
+  .swipe-arrow {
+    position: absolute; font-size: 16px; color: var(--accent-text-on-dark);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+  .swipe-arrow.right { right: -8px; top: 50%; transform: translateY(-50%); }
+  .repeat-ring {
+    position: absolute; inset: -8px; border-radius: 50%;
+    border: 1.5px solid rgba(224,160,48,0.15);
+    animation: ringPulse 1s ease-out infinite;
+  }
+  .repeat-ring:nth-child(2) { inset: -16px; animation-delay: 0.3s; }
+  @keyframes ringPulse {
+    0% { opacity: 0.6; transform: scale(0.95); }
+    100% { opacity: 0; transform: scale(1.1); }
+  }
+  .state-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.3px; text-align: center;
+  }
+  .state-desc { font-size: 13px; color: var(--d-text-secondary); text-align: center; line-height: 1.5; }
+  .state-haptic {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 8px; border-radius: 5px;
+    background: rgba(224,160,48,0.08); color: var(--accent-text-on-dark);
+    font-size: 10px; font-weight: 600;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     BAR CLOSE-UPS
+     ══════════════════════════════════════════════════════════ */
+  .closeup-strip { display: flex; justify-content: center; gap: 28px; margin: 48px 0; flex-wrap: wrap; }
+  .closeup { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .closeup-bar {
+    display: flex; align-items: center; gap: 3px;
+    padding: 5px 6px; border-radius: 18px;
+    backdrop-filter: blur(24px);
+  }
+  .dark .closeup-bar {
+    background: rgba(16, 16, 24, 0.82);
+    box-shadow: 0 -0.5px 0 rgba(255,255,255,0.06) inset, 0 4px 24px rgba(0,0,0,0.50);
+  }
+  .closeup-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: #666; letter-spacing: 0.5px;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     BEHAVIOR SPEC TABLE
+     ══════════════════════════════════════════════════════════ */
+  .spec-section { max-width: 800px; margin: 0 auto; }
+  .spec-table {
+    width: 100%; border-collapse: collapse;
+    border-radius: 14px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .spec-table th {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase; color: #555;
+    padding: 12px 16px; text-align: left;
+    background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .spec-table td {
+    padding: 12px 16px; font-size: 13px; color: var(--d-text-secondary);
+    border-bottom: 1px solid rgba(255,255,255,0.03); vertical-align: top;
+  }
+  .spec-table td:first-child {
+    font-family: 'JetBrains Mono', monospace; font-weight: 500; color: var(--d-text-primary);
+    white-space: nowrap; width: 150px;
+  }
+  .spec-table tr:last-child td { border-bottom: none; }
+  .spec-table code {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 4px;
+  }
+  .spec-table .accent { color: var(--accent-text-on-dark); }
+
+  /* ══════════════════════════════════════════════════════════
+     ESCAPE SEQUENCE TABLE
+     ══════════════════════════════════════════════════════════ */
+  .esc-table {
+    width: 100%; border-collapse: collapse;
+    border-radius: 14px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.05);
+    margin-top: 24px;
+  }
+  .esc-table th {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase; color: #555;
+    padding: 10px 14px; text-align: center;
+    background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .esc-table th:first-child { text-align: left; }
+  .esc-table td {
+    padding: 8px 14px; font-size: 12px; text-align: center;
+    color: var(--d-text-secondary); border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .esc-table td:first-child { text-align: left; font-weight: 500; color: var(--d-text-primary); }
+  .esc-table tr:last-child td { border-bottom: none; }
+  .esc-table .socket { color: var(--accent-text-on-dark); font-style: italic; font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; }
+
+  /* ══════════════════════════════════════════════════════════
+     DESIGN NOTES GRID
+     ══════════════════════════════════════════════════════════ */
+  .note-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+  .note-card {
+    padding: 20px; border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02);
+  }
+  .note-card h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.3px; margin-bottom: 8px;
+  }
+  .note-card p { font-size: 13px; color: var(--d-text-secondary); line-height: 1.6; }
+  .note-card .accent-text { color: var(--accent-text-on-dark); }
+</style>
+</head>
+<body>
+<div class="design-page">
+
+  <!-- ══════════════════════════════════════════════════════════
+       HERO
+       ══════════════════════════════════════════════════════════ -->
+  <div class="hero">
+    <div class="hero-tag"><span class="tag-dot"></span> Modifier Bar Redesign</div>
+    <h1>Gesture <span class="accent">Joystick</span> + Modifier Keys</h1>
+    <p class="subtitle">
+      Inspired by Echo SSH — a circular crosshair joystick replaces the tiny arrow cluster.
+      Swipe for a single arrow. Hold and drag for rapid repeat. The modifier bar gains
+      esc, shift, ctrl, opt, cmd, and a signature amber Return.
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 1: FULL PHONE MOCKUPS
+       ══════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <div class="section-label">01 — Final Design</div>
+    <h2>The New Modifier Bar</h2>
+    <p>Frosted floating capsule with five zones: escape, modifier group, joystick, divider, return. Both dark and light themes shown.</p>
+  </div>
+
+  <div class="phone-pair">
+
+    <!-- DARK -->
+    <div class="phone-column">
+      <span class="phone-label dark">Dark</span>
+      <div class="phone-frame dark">
+        <div class="phone-inner">
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons"><span>&#9679;</span> <span style="font-size:14px">&#9679;&#9679;&#9679;&#9679;</span> <span>&#128267;</span></div>
+          </div>
+          <div class="top-bar">
+            <div class="tab-strip">
+              <div class="tab-item active"><span class="tab-status-dot"></span> server</div>
+              <div class="tab-item">build</div>
+              <div class="tab-item">logs</div>
+            </div>
+            <div class="pane-type-icon">&#9638;</div>
+          </div>
+          <div class="terminal-content">
+            <div><span class="prompt">~/cmux $</span> <span class="cmd">cargo build --release</span></div>
+            <div><span class="output">   Compiling cmux v0.16.0</span></div>
+            <div><span class="output">   Compiling bridge v0.3.1</span></div>
+            <div><span class="output">   Compiling terminal v0.8.2</span></div>
+            <div><span class="string">    Finished release [optimized]</span></div>
+            <div>&nbsp;</div>
+            <div><span class="prompt">~/cmux $</span> <span class="cmd">vim src/main.rs</span></div>
+            <div><span class="output">use std::io;</span></div>
+            <div><span class="output">use bridge::Server;</span></div>
+            <div>&nbsp;</div>
+            <div><span class="output">fn main() -> io::Result&lt;()&gt; {</span></div>
+            <div><span class="output">    let srv = Server::new()?;</span></div>
+            <div><span class="output">    srv.listen("0.0.0.0:8080")?;</span></div>
+            <div><span class="output">    Ok(())</span></div>
+            <div><span class="output">}</span></div>
+            <div>&nbsp;</div>
+            <div><span class="prompt">~/cmux $</span> <span class="cursor-block"></span></div>
+          </div>
+          <div class="modifier-bar">
+            <div class="mk esc">esc</div>
+            <div class="bar-div"></div>
+            <div class="mod-group">
+              <div class="mk mod">⇧</div>
+              <div class="mk mod">ctrl</div>
+              <div class="mk mod">⌥</div>
+              <div class="mk mod">⌘</div>
+            </div>
+            <div class="joystick-btn" style="margin-left: auto;">
+              <div class="crosshair">
+                <div class="arm h"></div><div class="arm v"></div>
+                <div class="tip up"></div><div class="tip down"></div>
+                <div class="tip left"></div><div class="tip right"></div>
+              </div>
+            </div>
+            <div class="bar-div"></div>
+            <div class="mk ret">return</div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIGHT -->
+    <div class="phone-column">
+      <span class="phone-label light">Light</span>
+      <div class="phone-frame light">
+        <div class="phone-inner">
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons"><span>&#9679;</span> <span style="font-size:14px">&#9679;&#9679;&#9679;&#9679;</span> <span>&#128267;</span></div>
+          </div>
+          <div class="top-bar">
+            <div class="tab-strip">
+              <div class="tab-item active"><span class="tab-status-dot"></span> server</div>
+              <div class="tab-item">build</div>
+              <div class="tab-item">logs</div>
+            </div>
+            <div class="pane-type-icon">&#9638;</div>
+          </div>
+          <div class="terminal-content">
+            <div><span class="prompt">~/cmux $</span> <span class="cmd">cargo build --release</span></div>
+            <div><span class="output">   Compiling cmux v0.16.0</span></div>
+            <div><span class="output">   Compiling bridge v0.3.1</span></div>
+            <div><span class="output">   Compiling terminal v0.8.2</span></div>
+            <div><span class="string">    Finished release [optimized]</span></div>
+            <div>&nbsp;</div>
+            <div><span class="prompt">~/cmux $</span> <span class="cmd">vim src/main.rs</span></div>
+            <div><span class="output">use std::io;</span></div>
+            <div><span class="output">use bridge::Server;</span></div>
+            <div>&nbsp;</div>
+            <div><span class="output">fn main() -> io::Result&lt;()&gt; {</span></div>
+            <div><span class="output">    let srv = Server::new()?;</span></div>
+            <div><span class="output">    srv.listen("0.0.0.0:8080")?;</span></div>
+            <div><span class="output">    Ok(())</span></div>
+            <div><span class="output">}</span></div>
+            <div>&nbsp;</div>
+            <div><span class="prompt">~/cmux $</span> <span class="cursor-block"></span></div>
+          </div>
+          <div class="modifier-bar">
+            <div class="mk esc">esc</div>
+            <div class="bar-div"></div>
+            <div class="mod-group">
+              <div class="mk mod">⇧</div>
+              <div class="mk mod">ctrl</div>
+              <div class="mk mod">⌥</div>
+              <div class="mk mod">⌘</div>
+            </div>
+            <div class="joystick-btn" style="margin-left: auto;">
+              <div class="crosshair">
+                <div class="arm h"></div><div class="arm v"></div>
+                <div class="tip up"></div><div class="tip down"></div>
+                <div class="tip left"></div><div class="tip right"></div>
+              </div>
+            </div>
+            <div class="bar-div"></div>
+            <div class="mk ret">return</div>
+          </div>
+          <div class="home-indicator"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 2: JOYSTICK INTERACTION STATES
+       ══════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <div class="section-label">02 — Joystick Interaction</div>
+    <h2>How the Joystick Works</h2>
+    <p>Two modes from one button: quick swipe for single arrow keys, press-and-hold with drag for continuous repeat with accelerating speed.</p>
+  </div>
+
+  <div class="states-row">
+    <div class="state-card">
+      <div class="state-visual">
+        <div class="mini-joy"><span class="mini-cross">✥</span></div>
+      </div>
+      <div class="state-label">Resting</div>
+      <div class="state-desc">Circular crosshair button sits in the bar. Subtle border gives it a physical, pressable look.</div>
+    </div>
+    <div class="state-card">
+      <div class="state-visual">
+        <div class="mini-joy active">
+          <span class="mini-cross">✥</span>
+          <span class="swipe-arrow right">→</span>
+        </div>
+      </div>
+      <div class="state-label">Swipe → Single Arrow</div>
+      <div class="state-desc">Quick flick from the button in any direction. Fires one arrow key. Min 8px distance. <span class="state-haptic">⫸ light tick</span></div>
+    </div>
+    <div class="state-card">
+      <div class="state-visual">
+        <div class="mini-joy active" style="transform: scale(0.92);">
+          <span class="mini-cross">✥</span>
+          <span class="swipe-arrow right">→</span>
+          <div class="repeat-ring"></div>
+          <div class="repeat-ring" style="inset: -16px;"></div>
+        </div>
+      </div>
+      <div class="state-label">Hold + Drag → Repeat</div>
+      <div class="state-desc">Press down >200ms, then drag past 12px threshold. Arrow repeats 200ms→40ms. <span class="state-haptic">⫸ continuous ticks</span></div>
+    </div>
+    <div class="state-card">
+      <div class="state-visual">
+        <div class="mini-joy" style="opacity: 0.6; transform: scale(1.03);">
+          <span class="mini-cross">✥</span>
+        </div>
+      </div>
+      <div class="state-label">Release</div>
+      <div class="state-desc">Lift thumb. Repeat stops instantly. Button springs back with 0.2s ease-out-expo.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 3: BAR CLOSE-UPS (ALL STATES)
+       ══════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <div class="section-label">03 — Bar States</div>
+    <h2>Modifier Bar Close-ups</h2>
+    <p>The bar in its various states: resting, modifier active (sticky), modifier locked (double-tap), and joystick pressed.</p>
+  </div>
+
+  <div class="closeup-strip">
+    <!-- Resting -->
+    <div class="closeup">
+      <div class="closeup-bar dark">
+        <div class="mk esc" style="width:36px; height:30px; font-size:9px;">esc</div>
+        <div class="bar-div"></div>
+        <div class="mod-group">
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">⇧</div>
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">ctrl</div>
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">⌥</div>
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">⌘</div>
+        </div>
+        <div class="joystick-btn" style="width:36px; height:36px; margin-left:auto;">
+          <div class="crosshair" style="width:15px; height:15px;">
+            <div class="arm h"></div><div class="arm v"></div>
+            <div class="tip up"></div><div class="tip down"></div>
+            <div class="tip left"></div><div class="tip right"></div>
+          </div>
+        </div>
+        <div class="bar-div"></div>
+        <div class="mk ret" style="height:30px; padding:0 12px; font-size:8px;">return</div>
+      </div>
+      <div class="closeup-label">Resting</div>
+    </div>
+
+    <!-- Ctrl sticky -->
+    <div class="closeup">
+      <div class="closeup-bar dark">
+        <div class="mk esc" style="width:36px; height:30px; font-size:9px;">esc</div>
+        <div class="bar-div"></div>
+        <div class="mod-group">
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">⇧</div>
+          <div class="mk mod active" style="width:34px; height:30px; font-size:9px;">ctrl</div>
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">⌥</div>
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">⌘</div>
+        </div>
+        <div class="joystick-btn" style="width:36px; height:36px; margin-left:auto;">
+          <div class="crosshair" style="width:15px; height:15px;">
+            <div class="arm h"></div><div class="arm v"></div>
+            <div class="tip up"></div><div class="tip down"></div>
+            <div class="tip left"></div><div class="tip right"></div>
+          </div>
+        </div>
+        <div class="bar-div"></div>
+        <div class="mk ret" style="height:30px; padding:0 12px; font-size:8px;">return</div>
+      </div>
+      <div class="closeup-label">Ctrl sticky (single tap)</div>
+    </div>
+
+    <!-- Ctrl locked -->
+    <div class="closeup">
+      <div class="closeup-bar dark">
+        <div class="mk esc" style="width:36px; height:30px; font-size:9px;">esc</div>
+        <div class="bar-div"></div>
+        <div class="mod-group">
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">⇧</div>
+          <div class="mk mod locked" style="width:34px; height:30px; font-size:9px;">ctrl</div>
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">⌥</div>
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">⌘</div>
+        </div>
+        <div class="joystick-btn" style="width:36px; height:36px; margin-left:auto;">
+          <div class="crosshair" style="width:15px; height:15px;">
+            <div class="arm h"></div><div class="arm v"></div>
+            <div class="tip up"></div><div class="tip down"></div>
+            <div class="tip left"></div><div class="tip right"></div>
+          </div>
+        </div>
+        <div class="bar-div"></div>
+        <div class="mk ret" style="height:30px; padding:0 12px; font-size:8px;">return</div>
+      </div>
+      <div class="closeup-label">Ctrl locked (double tap) — underline</div>
+    </div>
+
+    <!-- Joystick pressed -->
+    <div class="closeup">
+      <div class="closeup-bar dark">
+        <div class="mk esc" style="width:36px; height:30px; font-size:9px;">esc</div>
+        <div class="bar-div"></div>
+        <div class="mod-group">
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">⇧</div>
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">ctrl</div>
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">⌥</div>
+          <div class="mk mod" style="width:34px; height:30px; font-size:9px;">⌘</div>
+        </div>
+        <div class="joystick-btn pressed" style="width:36px; height:36px; margin-left:auto; transform:scale(0.92);">
+          <div class="crosshair" style="width:15px; height:15px;">
+            <div class="arm h" style="background:var(--accent-text-on-dark)"></div>
+            <div class="arm v" style="background:var(--accent-text-on-dark)"></div>
+            <div class="tip up" style="color:var(--accent-text-on-dark)"></div>
+            <div class="tip down" style="color:var(--accent-text-on-dark)"></div>
+            <div class="tip left" style="color:var(--accent-text-on-dark)"></div>
+            <div class="tip right" style="color:var(--accent-text-on-dark)"></div>
+          </div>
+        </div>
+        <div class="bar-div"></div>
+        <div class="mk ret" style="height:30px; padding:0 12px; font-size:8px;">return</div>
+      </div>
+      <div class="closeup-label">Joystick pressed (hold+drag)</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 4: BEHAVIOR SPEC
+       ══════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <div class="section-label">04 — Behavior Specification</div>
+    <h2>Gesture Reference</h2>
+    <p>Complete interaction table for the joystick button. All gestures, thresholds, and haptic feedback.</p>
+  </div>
+
+  <div class="spec-section">
+    <table class="spec-table">
+      <thead><tr><th>Gesture</th><th>Behavior</th><th>Feedback</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Swipe from button</td>
+          <td>Quick flick originating from the joystick in any cardinal direction (<code>≥8px</code>). Fires <span class="accent">one</span> arrow key. Touch can end anywhere. 90° cardinal sectors, diagonal snaps to nearest axis.</td>
+          <td><code>HapticFeedback.lightImpact()</code>. Button briefly flashes amber.</td>
+        </tr>
+        <tr>
+          <td>Press + hold</td>
+          <td>Finger down for <code>&gt;200ms</code> without movement (<code>&lt;4px</code>). Enters <span class="accent">drag-ready</span> state. No arrow fires yet.</td>
+          <td>Button contracts to 92% scale. Crosshair glows amber. <code>HapticFeedback.mediumImpact()</code>.</td>
+        </tr>
+        <tr>
+          <td>Hold + drag</td>
+          <td>While held, drag past <code>12px</code> threshold in any cardinal direction. First arrow fires immediately. Key <span class="accent">repeats</span> while held past threshold.</td>
+          <td>Repeat rate: <code>200ms</code> → <code>40ms</code> (over ~1s). <code>HapticFeedback.selectionClick()</code> on each repeat.</td>
+        </tr>
+        <tr>
+          <td>Change direction</td>
+          <td>While held, drag back through center and out in a new direction. Old direction stops, new direction starts repeating immediately.</td>
+          <td><code>HapticFeedback.selectionClick()</code> on center crossing. New direction lights up.</td>
+        </tr>
+        <tr>
+          <td>Release</td>
+          <td>Lift finger. Repeat stops immediately. Button returns to resting state.</td>
+          <td>Spring-back animation (<code>0.2s</code> ease-out-expo).</td>
+        </tr>
+        <tr>
+          <td>Modifier + swipe</td>
+          <td>Tap a modifier (e.g. <code>ctrl</code>) to sticky it, then swipe joystick. Sends modified arrow (e.g. <code>Ctrl+→ = \x1b[1;5C</code>). Modifier auto-releases after.</td>
+          <td>Active modifier stays amber until consumed by the arrow event.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 5: ESCAPE SEQUENCES
+       ══════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <div class="section-label">05 — Escape Sequences</div>
+    <h2>Terminal Protocol (xterm)</h2>
+    <p>Arrow keys follow xterm standard CSI sequences. Modifier parameter follows <code>1;{code}</code> convention.</p>
+  </div>
+
+  <div class="spec-section">
+    <table class="esc-table">
+      <thead>
+        <tr><th>Direction</th><th>No Modifier</th><th>+Shift (2)</th><th>+Ctrl (5)</th><th>+Opt/Alt (3)</th><th>+Cmd</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Up ↑</td><td>\x1b[A</td><td>\x1b[1;2A</td><td>\x1b[1;5A</td><td>\x1b[1;3A</td><td class="socket">via socket</td></tr>
+        <tr><td>Down ↓</td><td>\x1b[B</td><td>\x1b[1;2B</td><td>\x1b[1;5B</td><td>\x1b[1;3B</td><td class="socket">via socket</td></tr>
+        <tr><td>Right →</td><td>\x1b[C</td><td>\x1b[1;2C</td><td>\x1b[1;5C</td><td>\x1b[1;3C</td><td class="socket">via socket</td></tr>
+        <tr><td>Left ←</td><td>\x1b[D</td><td>\x1b[1;2D</td><td>\x1b[1;5D</td><td>\x1b[1;3D</td><td class="socket">via socket</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 6: DESIGN NOTES
+       ══════════════════════════════════════════════════════════ -->
+  <div class="section-header">
+    <div class="section-label">06 — Design Rationale</div>
+    <h2>Why These Choices</h2>
+  </div>
+
+  <div class="note-grid">
+    <div class="note-card">
+      <h4>Joystick over Buttons</h4>
+      <p>The old 26×14px inverted-T was unusable on mobile. Instead of making bigger buttons (which eat bar space), a single <span class="accent-text">40×40px circular joystick</span> handles all four directions through gesture. The entire button is your touch target.</p>
+    </div>
+    <div class="note-card">
+      <h4>Echo SSH Inspiration</h4>
+      <p>Echo's crosshair button (✥) proves that gesture-based arrow input works on touchscreens. We adapt their visual language while adding <span class="accent-text">hold+drag for repeat</span>, which Echo handles differently via their toolbar.</p>
+    </div>
+    <div class="note-card">
+      <h4>Modifier Capsule</h4>
+      <p>⇧ ctrl ⌥ ⌘ grouped in a connected capsule reads as one unit. Tap to <span class="accent-text">sticky-toggle</span> (amber = active), double-tap to lock (amber + underline). Auto-releases after consuming one input event.</p>
+    </div>
+    <div class="note-card">
+      <h4>Signature Return Key</h4>
+      <p>The only colored element in the bar. Warm <span class="accent-text">amber gradient</span> with subtle glow and inner shine. The "do the thing" button — visually elevated to feel like a satisfying, definitive action.</p>
+    </div>
+    <div class="note-card">
+      <h4>Escape Isolation</h4>
+      <p>Far left, deliberately separated from modifiers by a divider. Critical for vim <code>:q!</code> moments. <span class="accent-text">Never</span> accidentally hit when reaching for shift or ctrl.</p>
+    </div>
+    <div class="note-card">
+      <h4>Space Economy</h4>
+      <p>By moving arrows to the joystick gesture, we freed ~80px of horizontal space. That space now holds <span class="accent-text">four system modifiers</span> that were previously impossible to fit. No more missing Ctrl+C.</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
