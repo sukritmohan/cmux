@@ -75,6 +75,9 @@ class _ModifierBarState extends State<ModifierBar> {
               // Divider
               _BarDivider(),
 
+              // Push arrows + RETURN to the right
+              const Spacer(),
+
               // Zone 2: inverted-T arrow cluster
               _ArrowCluster(onArrow: _sendKey),
 
@@ -166,7 +169,7 @@ class _BarDivider extends StatelessWidget {
     return Container(
       width: 1,
       height: 16,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 2),
       decoration: BoxDecoration(
         color: isDark
             ? Colors.white.withAlpha(18)
@@ -187,12 +190,12 @@ class _ArrowCluster extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 26 * 3 + 4, // 3 columns + gaps
-      height: 32,
+      height: 30, // 14px + 2px gap + 14px
       child: Stack(
         children: [
           // Top row: up arrow centered
           Positioned(
-            left: 27,
+            left: 28, // 26px cell + 2px gap
             top: 0,
             child: _ArrowKey(
               icon: Icons.keyboard_arrow_up,
@@ -202,14 +205,14 @@ class _ArrowCluster extends StatelessWidget {
           // Bottom row: left, down, right
           Positioned(
             left: 0,
-            top: 16,
+            top: 16, // 14px + 2px gap
             child: _ArrowKey(
               icon: Icons.keyboard_arrow_left,
               onTap: () => onArrow('\x1b[D'),
             ),
           ),
           Positioned(
-            left: 27,
+            left: 28, // 26px cell + 2px gap
             top: 16,
             child: _ArrowKey(
               icon: Icons.keyboard_arrow_down,
@@ -217,7 +220,7 @@ class _ArrowCluster extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: 54,
+            left: 56, // 2 * (26px cell + 2px gap)
             top: 16,
             child: _ArrowKey(
               icon: Icons.keyboard_arrow_right,

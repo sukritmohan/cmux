@@ -53,6 +53,12 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   bool _showMinimap = false;
   PaneType _activePaneType = PaneType.terminal;
 
+  /// Fractional scroll remainder for smooth sub-line accumulation.
+  double _scrollRemainder = 0.0;
+
+  /// Notifier incremented on scroll to tell TerminalView to clear selection.
+  final _scrollNotifier = ValueNotifier<int>(0);
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +68,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   @override
   void dispose() {
     _statusSub?.cancel();
+    _scrollNotifier.dispose();
     super.dispose();
   }
 
@@ -181,15 +188,29 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     }
   }
 
-  void _onArrowSwipe(String direction) {
-    final escSeq = switch (direction) {
-      'left' => '\x1b[D',
-      'right' => '\x1b[C',
-      'up' => '\x1b[A',
-      'down' => '\x1b[B',
-      _ => null,
-    };
-    if (escSeq != null) _sendInput(escSeq);
+  /// Converts pixel delta from touch scroll into discrete line scroll commands.
+  ///
+  /// Cell height is 17.825px (fontSize 11.5 * lineHeight 1.55). Positive
+  /// deltaY = finger moved down = scroll up into history (positive delta_y
+  /// sent to Mac).
+  void _onScroll(double deltaY) {
+    const cellHeight = 17.825;
+    _scrollRemainder += deltaY;
+    final lines = (_scrollRemainder / cellHeight).truncate();
+    if (lines == 0) return;
+    _scrollRemainder -= lines * cellHeight;
+
+    final surfaceId = ref.read(surfaceProvider).focusedSurfaceId;
+    if (surfaceId == null) return;
+
+    // Notify TerminalView to clear any active text selection.
+    _scrollNotifier.value++;
+
+    final manager = ref.read(connectionManagerProvider);
+    manager.sendRequest(
+      'surface.scroll',
+      params: {'surface_id': surfaceId, 'delta_y': lines.toDouble()},
+    );
   }
 
   void _onPaneTypeChanged(PaneType type) {
@@ -214,13 +235,14 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
           callbacks: GestureCallbacks(
             onOpenDrawer: _openDrawer,
             onOpenMinimap: _openMinimap,
-            onArrowSwipe: _onArrowSwipe,
+            onScroll: _onScroll,
           ),
           child: focusedSurfaceId != null
               ? TerminalView(
                   key: ValueKey(focusedSurfaceId),
                   surfaceId: focusedSurfaceId,
                   workspaceId: activeWorkspaceId,
+                  scrollNotifier: _scrollNotifier,
                 )
               : Center(
                   child: Text(

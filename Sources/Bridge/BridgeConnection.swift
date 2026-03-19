@@ -299,6 +299,8 @@ final class BridgeConnection {
             handlePTYUnsubscribe(id: id, params: params)
         case "surface.pty.write":
             handlePTYWrite(id: id, params: params)
+        case "surface.scroll":
+            handleScroll(id: id, params: params)
         case "surface.pty.resize":
             handlePTYResize(id: id, params: params)
         case "surface.cells.subscribe":
@@ -564,6 +566,45 @@ final class BridgeConnection {
             keyEvent.keycode = 0
             let str = String(UnicodeScalar(byte))
             str.withCString { keyEvent.text = $0; _ = ghostty_surface_key(surface, keyEvent) }
+        }
+    }
+
+    /// Scrolls a terminal surface's viewport by the given delta.
+    ///
+    /// Sends a discrete mouse scroll event to the Ghostty surface, which scrolls
+    /// the terminal scrollback. The updated cell stream is sent automatically.
+    ///
+    /// - Parameters:
+    ///   - id: The JSON-RPC request ID.
+    ///   - params: Must contain `"surface_id"` (UUID string) and `"delta_y"` (Double,
+    ///     positive = scroll up into history, negative = scroll down toward prompt).
+    private func handleScroll(id: Any?, params: [String: Any]) {
+        guard let surfaceIdString = params["surface_id"] as? String,
+              let surfaceId = UUID(uuidString: surfaceIdString) else {
+            sendText(encodeError(id: id, code: "invalid_params", message: "Missing or invalid surface_id"))
+            return
+        }
+
+        guard let deltaY = params["delta_y"] as? Double else {
+            sendText(encodeError(id: id, code: "invalid_params", message: "Missing or invalid delta_y"))
+            return
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            guard let panel = resolveTerminalPanel(surfaceId: surfaceId) else {
+                self.sendText(self.encodeError(id: id, code: "not_found",
+                                               message: "Surface not found: \(surfaceId.uuidString)"))
+                return
+            }
+            if let surface = panel.surface.surface {
+                // Discrete scroll, no modifier keys.
+                ghostty_surface_mouse_scroll(surface, 0, deltaY, ghostty_input_scroll_mods_t(0))
+            }
+            self.sendText(self.encodeOk(id: id, result: [
+                "scrolled": true,
+                "surface_id": surfaceId.uuidString,
+            ]))
         }
     }
 

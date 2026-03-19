@@ -7,10 +7,11 @@
 ///   4. CellFrameParser updates cell grid
 ///   5. CustomPainter renders cells at native mobile font size
 ///
-/// Cell sizing pipeline (keyboard-stable):
-///   cellWidth  = viewportWidth / cols         (width-only derivation)
-///   cellHeight = cellWidth * _cellAspectRatio  (stable regardless of keyboard)
-///   fontSize   = cellHeight * 0.72             (tuned for JetBrains Mono x-height)
+/// Cell sizing pipeline (font-size-first, keyboard-stable):
+///   fontSize   = _targetFontSize              (11.5px — matches design spec)
+///   cellWidth  = fontSize * _monoAdvanceRatio  (6.9px — JetBrains Mono advance)
+///   cellHeight = fontSize * _lineHeightFactor  (17.825px — spec line-height 1.55)
+///   padding    = _termPadH / _termPadV         (14px H, 12px V — spec padding)
 ///
 /// When the on-screen keyboard appears (adjustResize), the viewport shrinks
 /// vertically but width stays constant — so cell dimensions never change.
@@ -22,6 +23,7 @@
 library;
 
 import 'dart:async';
+import 'dart:math' show min, max;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -33,9 +35,20 @@ import '../app/providers.dart';
 import '../native/ghostty_vt.dart';
 import 'cell_frame_parser.dart';
 
-/// Height-to-width ratio for terminal cells. 1.75:1 yields ~15-18 visible
-/// rows in portrait vs ~12-14 with the previous 2.0 ratio.
-const _cellAspectRatio = 1.75;
+/// Target font size matching the design spec (font-size: 11.5px).
+const _targetFontSize = 11.5;
+
+/// Line-height factor from the design spec (line-height: 1.55).
+const _lineHeightFactor = 1.55;
+
+/// JetBrains Mono advance-width / font-size ratio.
+const _monoAdvanceRatio = 0.6;
+
+/// Horizontal padding inside the terminal area (spec: padding left/right).
+const _termPadH = 14.0;
+
+/// Vertical padding inside the terminal area (spec: padding top/bottom).
+const _termPadV = 12.0;
 
 /// Error red used in loading/error states (not theme-dependent).
 const _errorRed = Color(0xFFF85149);
@@ -44,7 +57,16 @@ class TerminalView extends ConsumerStatefulWidget {
   final String surfaceId;
   final String? workspaceId;
 
-  const TerminalView({super.key, required this.surfaceId, this.workspaceId});
+  /// Notifier incremented by the parent when a scroll gesture fires.
+  /// TerminalView listens and clears any active text selection.
+  final ValueNotifier<int>? scrollNotifier;
+
+  const TerminalView({
+    super.key,
+    required this.surfaceId,
+    this.workspaceId,
+    this.scrollNotifier,
+  });
 
   @override
   ConsumerState<TerminalView> createState() => _TerminalViewState();
@@ -66,16 +88,6 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   final _textController = TextEditingController();
   String _lastText = '';
 
-  // On-screen debug log (temporary — remove after debugging)
-  final List<String> _debugLog = [];
-  void _dlog(String msg) {
-    debugPrint('[TerminalView] $msg');
-    setState(() {
-      _debugLog.add(msg);
-      if (_debugLog.length > 8) _debugLog.removeAt(0);
-    });
-  }
-
   // Cursor state for painting
   int _cursorCol = 0;
   int _cursorRow = 0;
@@ -85,21 +97,41 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   Timer? _blinkTimer;
   bool _cursorBlinkOn = true;
 
+  // Text selection in Mac grid coordinates (col, row).
+  int? _selStartCol, _selStartRow;
+  int? _selEndCol, _selEndRow;
+  bool _showCopyPill = false;
+
+  // Layout values cached from the last build for hit-testing.
+  int _lastFitCols = 0;
+  int _lastWrapLines = 1;
+  double _lastCellWidth = 0;
+  double _lastCellHeight = 0;
+  double _lastScrollOffsetY = 0;
+
   @override
   void initState() {
     super.initState();
     _textController.addListener(_onTextChanged);
     _subscribeToSurface();
     _startBlinkTimer();
+    widget.scrollNotifier?.addListener(_onScrollNotified);
   }
 
   @override
   void dispose() {
+    widget.scrollNotifier?.removeListener(_onScrollNotified);
     _unsubscribe();
     _textController.dispose();
     _focusNode.dispose();
     _blinkTimer?.cancel();
     super.dispose();
+  }
+
+  void _onScrollNotified() {
+    if (_hasSelection) {
+      _clearSelection();
+    }
   }
 
   void _startBlinkTimer() {
@@ -240,18 +272,14 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     if (_resettingBuffer) return;
 
     final newText = _textController.text;
-    _dlog('textChanged: last=${_lastText.length}ch new=${newText.length}ch');
-
     if (newText.length > _lastText.length) {
       // Characters were added — extract and send the new portion.
       final added = newText.substring(_lastText.length);
-      _dlog('IME added: "${added.replaceAll('\n', '\\n')}"');
       // Convert newlines to carriage returns for terminal.
       _sendInput(added.replaceAll('\n', '\r'));
     } else if (newText.length < _lastText.length) {
       // Characters were deleted — send backspace for each deleted char.
       final deletedCount = _lastText.length - newText.length;
-      _dlog('IME deleted $deletedCount chars');
       for (int i = 0; i < deletedCount; i++) {
         _sendInput('\x7f');
       }
@@ -270,7 +298,6 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
   /// Handles key events from the hardware/software keyboard.
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    _dlog('keyEvent: ${event.runtimeType} key=${event.logicalKey.keyLabel} char=${event.character}');
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
@@ -314,6 +341,113 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     }
 
     return KeyEventResult.ignored;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Text selection helpers
+  // ---------------------------------------------------------------------------
+
+  bool get _hasSelection =>
+      _selStartCol != null &&
+      _selStartRow != null &&
+      _selEndCol != null &&
+      _selEndRow != null;
+
+  void _clearSelection() {
+    setState(() {
+      _selStartCol = _selStartRow = _selEndCol = _selEndRow = null;
+      _showCopyPill = false;
+    });
+  }
+
+  /// Converts a local touch position to Mac grid (col, row), accounting for
+  /// padding, wrapping, and scroll offset.
+  (int col, int row) _hitTestCell(Offset local) {
+    final fitCols = _lastFitCols;
+    final cellWidth = _lastCellWidth;
+    final cellHeight = _lastCellHeight;
+    final wrapLines = _lastWrapLines;
+    if (fitCols == 0 || cellWidth == 0 || cellHeight == 0) return (0, 0);
+
+    // Account for scroll offset: local.dy is in viewport space, add scroll
+    // to get canvas space.
+    final canvasY = local.dy + _lastScrollOffsetY;
+
+    final displayCol =
+        ((local.dx - _termPadH) / cellWidth).floor().clamp(0, fitCols - 1);
+    final displayRow =
+        ((canvasY - _termPadV) / cellHeight).floor().clamp(0, _rows * wrapLines - 1);
+
+    // Inverse of wrapping: display → Mac grid.
+    final macRow = displayRow ~/ wrapLines;
+    final wrapOffset = displayRow % wrapLines;
+    final macCol = wrapOffset * fitCols + displayCol;
+
+    return (macCol.clamp(0, _cols - 1), macRow.clamp(0, _rows - 1));
+  }
+
+  void _onLongPressStart(LongPressStartDetails details) {
+    final (col, row) = _hitTestCell(details.localPosition);
+    setState(() {
+      _selStartCol = col;
+      _selStartRow = row;
+      _selEndCol = col;
+      _selEndRow = row;
+
+      _showCopyPill = false;
+    });
+    HapticFeedback.mediumImpact();
+  }
+
+  void _onLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
+    final (col, row) = _hitTestCell(details.localPosition);
+    setState(() {
+      _selEndCol = col;
+      _selEndRow = row;
+    });
+  }
+
+  void _onLongPressEnd(LongPressEndDetails details) {
+    if (_hasSelection) {
+      setState(() => _showCopyPill = true);
+    }
+  }
+
+  /// Extracts selected text from cell data and copies to clipboard.
+  void _copySelection() {
+    if (!_hasSelection || _cells.isEmpty) return;
+
+    // Normalize to reading order.
+    final startIdx = _selStartRow! * _cols + _selStartCol!;
+    final endIdx = _selEndRow! * _cols + _selEndCol!;
+    final lo = min(startIdx, endIdx);
+    final hi = max(startIdx, endIdx);
+
+    final buf = StringBuffer();
+    int lastRow = lo ~/ _cols;
+
+    for (int i = lo; i <= hi && i < _cells.length; i++) {
+      final row = i ~/ _cols;
+      if (row != lastRow) {
+        buf.write('\n');
+        lastRow = row;
+      }
+      final cell = _cells[i];
+      if (cell.codepoint != 0 && !cell.isSpacerTail) {
+        buf.write(cell.character);
+      }
+    }
+
+    Clipboard.setData(ClipboardData(text: buf.toString()));
+
+    setState(() {
+      _showCopyPill = false;
+    });
+
+    // Brief "Copied!" feedback, then clear selection.
+    Future<void>.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) _clearSelection();
+    });
   }
 
   @override
@@ -369,9 +503,15 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
     return GestureDetector(
       onTap: () {
-        _dlog('onTap: hasFocus=${_focusNode.hasFocus}');
-        _focusNode.requestFocus();
+        if (_hasSelection) {
+          _clearSelection();
+        } else {
+          _focusNode.requestFocus();
+        }
       },
+      onLongPressStart: _onLongPressStart,
+      onLongPressMoveUpdate: _onLongPressMoveUpdate,
+      onLongPressEnd: _onLongPressEnd,
       child: LayoutBuilder(
         builder: (context, constraints) {
           if (_cols == 0 || _rows == 0) {
@@ -380,17 +520,40 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
             );
           }
 
-          // Derive cell dimensions from width only — stable regardless
-          // of keyboard visibility (adjustResize shrinks height, not width).
-          final cellWidth = constraints.maxWidth / _cols;
-          final cellHeight = cellWidth * _cellAspectRatio;
-          final terminalHeight = cellHeight * _rows;
+          // Font-size-first cell sizing: fixed dimensions from the design
+          // spec, stable regardless of keyboard visibility.
+          const cellWidth = _targetFontSize * _monoAdvanceRatio;   // 6.9px
+          const cellHeight = _targetFontSize * _lineHeightFactor;  // 17.825px
 
-          // Auto-scroll to keep cursor row visible.
-          final visibleRows = (constraints.maxHeight / cellHeight).floor();
-          final maxScrollRow = (_rows - visibleRows).clamp(0, _rows);
-          final scrollRow = (_cursorRow - visibleRows + 1).clamp(0, maxScrollRow);
+          // How many columns fit on screen at this cell width?
+          final fitCols = ((constraints.maxWidth - _termPadH * 2) / cellWidth)
+              .floor()
+              .clamp(1, _cols);
+          // How many display lines each Mac row wraps into.
+          final wrapLines = (_cols / fitCols).ceil();
+          // Total display rows after wrapping.
+          final displayRows = _rows * wrapLines;
+          final terminalHeight = cellHeight * displayRows;
+
+          // Cursor display position after wrapping.
+          final cursorDisplayRow =
+              _cursorRow * wrapLines + (_cursorCol ~/ fitCols);
+
+          // Auto-scroll to keep cursor visible, accounting for padding.
+          final contentHeight = constraints.maxHeight - (_termPadV * 2);
+          final visibleRows = (contentHeight / cellHeight).floor();
+          final maxScrollRow =
+              (displayRows - visibleRows).clamp(0, displayRows);
+          final scrollRow =
+              (cursorDisplayRow - visibleRows + 1).clamp(0, maxScrollRow);
           final scrollOffsetY = scrollRow * cellHeight;
+
+          // Cache layout values for hit-testing in gesture handlers.
+          _lastFitCols = fitCols;
+          _lastWrapLines = wrapLines;
+          _lastCellWidth = cellWidth;
+          _lastCellHeight = cellHeight;
+          _lastScrollOffsetY = scrollOffsetY;
 
           return ClipRect(
             child: Stack(
@@ -418,19 +581,35 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                 Transform.translate(
                   offset: Offset(0, -scrollOffsetY),
                   child: CustomPaint(
-                    size: Size(constraints.maxWidth, terminalHeight),
+                    size: Size(
+                      constraints.maxWidth,
+                      terminalHeight + _termPadV * 2,
+                    ),
                     painter: TerminalPainter(
                       cells: _cells,
                       cols: _cols,
                       rows: _rows,
+                      fitCols: fitCols,
                       cellWidth: cellWidth,
                       cellHeight: cellHeight,
+                      fontSize: _targetFontSize,
+                      paddingH: _termPadH,
+                      paddingV: _termPadV,
                       cursorCol: _cursorCol,
                       cursorRow: _cursorRow,
                       cursorVisible: _cursorVisible && _cursorBlinkOn,
+                      selStartCol: _selStartCol,
+                      selStartRow: _selStartRow,
+                      selEndCol: _selEndCol,
+                      selEndRow: _selEndRow,
                     ),
                   ),
                 ),
+
+                // Copy pill — shown above selection end after long-press lift
+                if (_showCopyPill && _hasSelection)
+                  _buildCopyPill(fitCols, cellWidth, cellHeight,
+                      wrapLines, scrollOffsetY),
 
                 // Inner shadow: 3px gradient at terminal top edge — feels recessed
                 Positioned(
@@ -472,31 +651,53 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                   ),
                 ),
 
-                // DEBUG OVERLAY — remove after debugging
-                if (_debugLog.isNotEmpty)
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: IgnorePointer(
-                      child: Container(
-                        color: Colors.black.withAlpha(200),
-                        padding: const EdgeInsets.all(6),
-                        child: Text(
-                          _debugLog.join('\n'),
-                          style: const TextStyle(
-                            color: Colors.greenAccent,
-                            fontSize: 10,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  /// Floating copy pill positioned above the selection end point.
+  Widget _buildCopyPill(int fitCols, double cellWidth, double cellHeight,
+      int wrapLines, double scrollOffsetY) {
+    // Position pill above the end of the selection.
+    final endCol = _selEndCol ?? 0;
+    final endRow = _selEndRow ?? 0;
+    final displayRow = endRow * wrapLines + (endCol ~/ fitCols);
+    final displayCol = endCol % fitCols;
+    final pillX = _termPadH + displayCol * cellWidth;
+    final pillY =
+        _termPadV + displayRow * cellHeight - scrollOffsetY - 36;
+
+    return Positioned(
+      left: pillX.clamp(8.0, double.infinity),
+      top: pillY.clamp(4.0, double.infinity),
+      child: GestureDetector(
+        onTap: _copySelection,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE0A030),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x40000000),
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Text(
+            'Copy',
+            style: TextStyle(
+              color: Color(0xFF0A0A0F),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -510,39 +711,73 @@ class TerminalPainter extends CustomPainter {
   final List<CellData> cells;
   final int cols;
   final int rows;
+  final int fitCols;
   final double cellWidth;
   final double cellHeight;
+  final double fontSize;
+  final double paddingH;
+  final double paddingV;
   final int cursorCol;
   final int cursorRow;
   final bool cursorVisible;
+
+  // Selection bounds in Mac grid coordinates (nullable = no selection).
+  final int? selStartCol;
+  final int? selStartRow;
+  final int? selEndCol;
+  final int? selEndRow;
 
   // Terminal always uses dark palette for cell rendering.
   static const _bg = Color(0xFF0A0A0F);
   static const _fg = Color(0xFFE8E8EE);
   static const _cursorColor = Color(0xCCE0A030); // amber cursor at ~80%
+  static const _selectionColor = Color(0x40E0A030); // translucent amber
 
   TerminalPainter({
     required this.cells,
     required this.cols,
     required this.rows,
+    required this.fitCols,
     required this.cellWidth,
     required this.cellHeight,
+    required this.fontSize,
+    required this.paddingH,
+    required this.paddingV,
     required this.cursorCol,
     required this.cursorRow,
     required this.cursorVisible,
+    this.selStartCol,
+    this.selStartRow,
+    this.selEndCol,
+    this.selEndRow,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (cells.isEmpty || cols == 0 || rows == 0) return;
 
-    final fontSize = cellHeight * 0.72;
+    // Number of display lines each Mac row wraps into.
+    final wrapLines = (cols / fitCols).ceil();
 
     // 1. Fill entire canvas with terminal background to prevent gaps.
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, size.height),
       Paint()..color = _bg,
     );
+
+    // Compute selection range (normalized to reading order).
+    int selLo = -1;
+    int selHi = -1;
+    if (selStartCol != null &&
+        selStartRow != null &&
+        selEndCol != null &&
+        selEndRow != null) {
+      final selStart = selStartRow! * cols + selStartCol!;
+      final selEnd = selEndRow! * cols + selEndCol!;
+      selLo = min(selStart, selEnd);
+      selHi = max(selStart, selEnd);
+    }
+    final selPaint = Paint()..color = _selectionColor;
 
     final bgPaint = Paint();
 
@@ -556,8 +791,11 @@ class TerminalPainter extends CustomPainter {
         // Skip spacer tails (right half of wide chars).
         if (cell.isSpacerTail) continue;
 
-        final x = col * cellWidth;
-        final y = row * cellHeight;
+        // Map Mac grid position to wrapped display position.
+        final displayRow = row * wrapLines + (col ~/ fitCols);
+        final displayCol = col % fitCols;
+        final x = paddingH + displayCol * cellWidth;
+        final y = paddingV + displayRow * cellHeight;
         final charWidth = cell.isWide ? cellWidth * 2 : cellWidth;
 
         // Resolve colors, handling inverse attribute.
@@ -590,6 +828,12 @@ class TerminalPainter extends CustomPainter {
         if (!cell.bgIsDefault || cell.isInverse) {
           bgPaint.color = bg;
           canvas.drawRect(Rect.fromLTWH(x, y, charWidth, cellHeight), bgPaint);
+        }
+
+        // Draw selection highlight.
+        if (selLo >= 0 && index >= selLo && index <= selHi) {
+          canvas.drawRect(
+              Rect.fromLTWH(x, y, charWidth, cellHeight), selPaint);
         }
 
         // Determine if this cell is under the cursor (for character inversion).
@@ -653,8 +897,10 @@ class TerminalPainter extends CustomPainter {
 
     // Draw cursor: filled block with slight transparency and rounded corners.
     if (cursorVisible && cursorCol < cols && cursorRow < rows) {
-      final cx = cursorCol * cellWidth;
-      final cy = cursorRow * cellHeight;
+      final cursorDispRow = cursorRow * wrapLines + (cursorCol ~/ fitCols);
+      final cursorDispCol = cursorCol % fitCols;
+      final cx = paddingH + cursorDispCol * cellWidth;
+      final cy = paddingV + cursorDispRow * cellHeight;
       final cursorPaint = Paint()
         ..color = _cursorColor
         ..style = PaintingStyle.fill;
@@ -679,10 +925,16 @@ class TerminalPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant TerminalPainter oldDelegate) {
     return !identical(cells, oldDelegate.cells) ||
+        cols != oldDelegate.cols ||
+        fitCols != oldDelegate.fitCols ||
         cursorCol != oldDelegate.cursorCol ||
         cursorRow != oldDelegate.cursorRow ||
         cursorVisible != oldDelegate.cursorVisible ||
         cellWidth != oldDelegate.cellWidth ||
-        cellHeight != oldDelegate.cellHeight;
+        cellHeight != oldDelegate.cellHeight ||
+        selStartCol != oldDelegate.selStartCol ||
+        selStartRow != oldDelegate.selStartRow ||
+        selEndCol != oldDelegate.selEndCol ||
+        selEndRow != oldDelegate.selEndRow;
   }
 }

@@ -3,7 +3,7 @@
 /// Wraps the terminal content area and recognizes:
 ///   - Left edge swipe → open workspace drawer
 ///   - Pinch out → minimap overlay
-///   - Directional swipe on terminal → arrow key input
+///   - Single-finger vertical pan → scroll terminal history
 ///
 /// Uses only scale gestures (superset of pan) to avoid the Flutter
 /// "Incorrect GestureDetector arguments" error when both pan and scale
@@ -20,14 +20,14 @@ class GestureCallbacks {
   /// Called when the user pinches out to show the minimap.
   final VoidCallback onOpenMinimap;
 
-  /// Called when the user swipes on the terminal to send arrow key input.
-  /// The direction is one of: 'left', 'right', 'up', 'down'.
-  final ValueChanged<String> onArrowSwipe;
+  /// Called continuously during single-finger vertical pan with pixel delta.
+  /// Positive delta = finger moved down (scroll up into history).
+  final ValueChanged<double> onScroll;
 
   const GestureCallbacks({
     required this.onOpenDrawer,
     required this.onOpenMinimap,
-    required this.onArrowSwipe,
+    required this.onScroll,
   });
 }
 
@@ -63,7 +63,7 @@ class _GestureLayerState extends State<GestureLayer> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // Scale gestures handle both single-finger pan (edge swipe, arrow swipe)
+      // Scale gestures handle both single-finger pan (edge swipe, scroll)
       // and two-finger pinch (minimap). Scale is a superset of pan in Flutter.
       onScaleStart: _onScaleStart,
       onScaleUpdate: _onScaleUpdate,
@@ -97,8 +97,13 @@ class _GestureLayerState extends State<GestureLayer> {
         _pinchTriggered = true;
         widget.callbacks.onOpenMinimap();
       }
+      return;
     }
-    // Single finger pan updates don't need processing — velocity is checked on end.
+
+    // Single finger — continuous scroll (unless edge swipe).
+    if (!_isEdgeSwipe) {
+      widget.callbacks.onScroll(details.focalPointDelta.dy);
+    }
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
@@ -126,18 +131,6 @@ class _GestureLayerState extends State<GestureLayer> {
       _panStart = null;
       _pointerCount = 0;
       return;
-    }
-
-    // Arrow swipe detection
-    final dx = velocity.dx;
-    final dy = velocity.dy;
-
-    if (dx.abs() > _swipeVelocity || dy.abs() > _swipeVelocity) {
-      if (dx.abs() > dy.abs()) {
-        widget.callbacks.onArrowSwipe(dx > 0 ? 'right' : 'left');
-      } else {
-        widget.callbacks.onArrowSwipe(dy > 0 ? 'down' : 'up');
-      }
     }
 
     _panStart = null;
