@@ -460,6 +460,72 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Handle drag for selection refinement
+  // ---------------------------------------------------------------------------
+
+  /// Touch slop is handled by Flutter's PanGestureRecognizer (default 18px).
+  /// The 28dp finger offset ensures the selection boundary is visible above
+  /// the user's finger during drag.
+  static const _handleFingerOffsetY = 28.0;
+
+  /// Minimum interval between character-boundary haptics (ms).
+  static const _hapticThrottleMs = 30;
+
+  void _onHandleDragStart(bool isStart, DragStartDetails details) {
+    setState(() {
+      if (isStart) {
+        _isDraggingStartHandle = true;
+      } else {
+        _isDraggingEndHandle = true;
+      }
+      _showCopyPill = false;
+    });
+    HapticFeedback.selectionClick();
+  }
+
+  void _onHandleDragUpdate(bool isStart, DragUpdateDetails details) {
+    // Apply finger offset: map from 28dp above touch point.
+    final adjusted = Offset(
+      details.localPosition.dx,
+      details.localPosition.dy - _handleFingerOffsetY,
+    );
+    final (col, row) = _hitTestCell(adjusted);
+
+    // Determine which boundary to update.
+    final prevCol = isStart ? _selStartCol : _selEndCol;
+    final prevRow = isStart ? _selStartRow : _selEndRow;
+
+    // Only update if cell changed.
+    if (col == prevCol && row == prevRow) return;
+
+    // Haptic click on each new cell boundary, throttled.
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - _lastHapticTimestamp >= _hapticThrottleMs) {
+      HapticFeedback.selectionClick();
+      _lastHapticTimestamp = now;
+    }
+
+    setState(() {
+      if (isStart) {
+        _selStartCol = col;
+        _selStartRow = row;
+      } else {
+        _selEndCol = col;
+        _selEndRow = row;
+      }
+    });
+  }
+
+  void _onHandleDragEnd(bool isStart, DragEndDetails details) {
+    setState(() {
+      _isDraggingStartHandle = false;
+      _isDraggingEndHandle = false;
+      _showCopyPill = _hasSelection;
+    });
+    HapticFeedback.mediumImpact();
+  }
+
   /// Extracts selected text from cell data and copies to clipboard.
   void _copySelection() {
     if (!_hasSelection || _cells.isEmpty) return;
