@@ -102,6 +102,14 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   int? _selEndCol, _selEndRow;
   bool _showCopyPill = false;
 
+  // Handle drag state for selection refinement.
+  bool _isDraggingStartHandle = false;
+  bool _isDraggingEndHandle = false;
+  int _lastHapticTimestamp = 0; // for 30ms throttle
+
+  // "Copied!" feedback state.
+  bool _showCopiedFeedback = false;
+
   // Layout values cached from the last build for hit-testing.
   int _lastFitCols = 0;
   int _lastWrapLines = 1;
@@ -406,6 +414,23 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     final macCol = wrapOffset * fitCols + displayCol;
 
     return (macCol.clamp(0, _cols - 1), macRow.clamp(0, _rows - 1));
+  }
+
+  /// Converts Mac grid (col, row) to viewport screen position (top-left of cell).
+  /// Inverse of `_hitTestCell`. Used for positioning selection handles.
+  Offset _gridToScreen(int col, int row) {
+    final wrapLines = _lastWrapLines;
+    final fitCols = _lastFitCols;
+    final cellWidth = _lastCellWidth;
+    final cellHeight = _lastCellHeight;
+    if (fitCols == 0) return Offset.zero;
+
+    final displayRow = row * wrapLines + (col ~/ fitCols);
+    final displayCol = col % fitCols;
+    return Offset(
+      _termPadH + displayCol * cellWidth,
+      _termPadV + displayRow * cellHeight - _lastScrollOffsetY,
+    );
   }
 
   void _onLongPressStart(LongPressStartDetails details) {
