@@ -18,12 +18,15 @@ Left to right:
 
 | Position | Element | Size | Purpose |
 |----------|---------|------|---------|
-| 1 | `esc` | 40×34px, rounded rect | Escape key — isolated, easy left-thumb reach |
+| 1 | `esc ctrl` | 2 keys, each 44px wide × 34px tall, in connected capsule | Essential modifiers — paired for quick access |
 | — | Divider | 1×16px | Visual separator |
-| 2 | `⇧ ctrl ⌥ ⌘` | 4 keys, each 38px wide × 34px tall, in connected capsule | Sticky modifier group |
+| 2 | Fan-out `⌇` | 38×34px, rounded rect | Quick-access symbol keys (~ \| / -) |
+| — | Flex space | auto | Generous gap — the bar breathes |
 | 3 | Joystick `✥` | 40×40px, circular | Arrow key input via swipe/drag |
 | — | Divider | 1×16px | Visual separator |
 | 4 | `return` | auto×34px, rounded rect | Return/Enter — amber accent, rightmost |
+
+The joystick uses `margin-left: auto` to push itself and Return to the right end of the bar, creating a natural visual separation between the left-side tools and the right-side actions.
 
 ### Bar Container
 
@@ -76,46 +79,68 @@ Cardinal sectors are 90° each, centered on the axis (i.e., ±45° from each car
 9. **Center crossing haptic:** `HapticFeedback.selectionClick()` when passing through center during direction change
 10. **Release:** Lift thumb — repeat stops instantly, button springs back to resting state with a 0.2s ease-out-expo animation (not spring — the 400ms spring duration is reserved for larger UI transitions)
 
-### Interaction with Modifiers
+### Interaction with Ctrl
 
-- Tap a modifier key (e.g., `ctrl`) to sticky-toggle it (lights up amber)
+- Tap `ctrl` to sticky-toggle it (lights up amber)
 - Then swipe or hold+drag the joystick — sends modified arrow (e.g., `Ctrl+→`)
-- Modifier auto-releases after being consumed by the arrow event
-- Double-tap a modifier to lock it (stays active across multiple inputs)
+- Ctrl auto-releases after being consumed by the arrow event
+- Double-tap `ctrl` to lock it (stays active across multiple inputs)
 
 ### Escape Sequences
 
-Arrow keys follow the **xterm** standard. The joystick sends the appropriate CSI sequence based on active modifiers:
+Arrow keys follow the **xterm** standard. The joystick sends the appropriate CSI sequence based on whether Ctrl is active:
 
-| Direction | No modifier | +Shift | +Ctrl | +Opt (Alt) | +Cmd |
-|-----------|-------------|--------|-------|------------|------|
-| Up | `\x1b[A` | `\x1b[1;2A` | `\x1b[1;5A` | `\x1b[1;3A` | Forwarded to desktop via socket |
-| Down | `\x1b[B` | `\x1b[1;2B` | `\x1b[1;5B` | `\x1b[1;3B` | Forwarded to desktop via socket |
-| Right | `\x1b[C` | `\x1b[1;2C` | `\x1b[1;5C` | `\x1b[1;3C` | Forwarded to desktop via socket |
-| Left | `\x1b[D` | `\x1b[1;2D` | `\x1b[1;5D` | `\x1b[1;3D` | Forwarded to desktop via socket |
+| Direction | No modifier | +Ctrl |
+|-----------|-------------|-------|
+| Up | `\x1b[A` | `\x1b[1;5A` |
+| Down | `\x1b[B` | `\x1b[1;5B` |
+| Right | `\x1b[C` | `\x1b[1;5C` |
+| Left | `\x1b[D` | `\x1b[1;5D` |
 
-- **Modifier parameter** follows xterm convention: `1;{modifier_code}` where Shift=2, Alt=3, Ctrl=5, Shift+Ctrl=6, etc.
-- **Cmd (⌘)** has no terminal escape equivalent. Cmd+arrow is forwarded to the desktop cmux app via the socket protocol as a high-level command (e.g., Cmd+→ could mean "next pane" at the app level). The specific command mapping is defined by the socket command handler, not this spec.
-- **Standalone modifier taps** (e.g., tapping ctrl without a subsequent key) do nothing — they are purely combiners. The modifier enters sticky state and waits for the next input event.
+- **Modifier parameter** follows xterm convention: `1;5` for Ctrl.
+- **Standalone ctrl tap** (without a subsequent key) does nothing — it is a pure combiner. Ctrl enters sticky state and waits for the next input event.
 
-## Escape Key
+## Esc + Ctrl Capsule
 
-- **Position:** Far left, deliberately separated from the modifier group
-- **Rationale:** Critical for vim (`:q!`), canceling operations, and exiting modes. Must never be accidentally hit when reaching for a modifier.
-- **Style:** Same as modifier keys but isolated — `40×34px`, rounded rect, muted background
-- **Sends:** `\x1b` (ESC byte)
-- **Haptic:** `HapticFeedback.mediumImpact()`
-
-## Modifier Group (⇧ ctrl ⌥ ⌘)
-
-- **Layout:** Four keys in a single connected capsule with 1px gaps between them. First and last keys get outer border radius (10px); inner keys have no radius.
-- **Behavior:** Tap to sticky-toggle. Active state shows amber background and text. Double-tap to lock.
+- **Layout:** Two keys (`esc` and `ctrl`) in a single connected capsule with a 1px gap. `esc` gets left border radius (10px); `ctrl` gets right border radius (10px).
+- **Size:** Each key 44×34px
+- **Esc behavior:** Tap sends `\x1b` (ESC byte). No sticky state.
+- **Ctrl behavior:** Tap to sticky-toggle. Active state shows amber background and text. Double-tap to lock.
 - **Sticky visual (single tap):** Solid amber fill, no additional indicator
 - **Locked visual (double tap):** Same amber fill + a 2px amber underline bar at the bottom of the key to distinguish from sticky
-- **Dark resting:** `rgba(255,255,255,0.05)` background, `rgba(255,255,255,0.35)` text
-- **Dark active:** `rgba(224,160,48,0.15)` background, `#F0C060` text
-- **Light resting:** `rgba(0,0,0,0.03)` background, `rgba(0,0,0,0.30)` text
-- **Light active:** `rgba(224,160,48,0.12)` background, `#B07810` text
+- **Dark resting:** `rgba(255,255,255,0.06)` background, `rgba(255,255,255,0.45)` text
+- **Dark active (ctrl only):** `rgba(224,160,48,0.15)` background, `#F0C060` text
+- **Light resting:** `rgba(0,0,0,0.04)` background, `rgba(0,0,0,0.38)` text
+- **Light active (ctrl only):** `rgba(224,160,48,0.12)` background, `#B07810` text
+- **Haptic:** `HapticFeedback.mediumImpact()` for esc, `HapticFeedback.selectionClick()` for ctrl toggle
+- **Rationale:** Esc and Ctrl are the two most critical non-printable keys for terminal use (vim escape, Ctrl+C, Ctrl+D, Ctrl+Z). Shift, Opt, and Cmd are removed to keep the bar spacious — they can be added back later if needed.
+
+## Fan-out Symbol Button
+
+A compact button with a fan icon (three rays radiating from a point) that reveals four common terminal symbols on tap.
+
+- **Position:** Between the esc/ctrl capsule and the joystick
+- **Size:** 38×34px, rounded rect (10px radius)
+- **Icon:** Three lines radiating upward from a base dot at ±30° and 0° — a custom-drawn fan/spread icon. Not a Unicode character.
+- **Dark resting:** `rgba(255,255,255,0.06)` fill, `rgba(255,255,255,0.40)` icon color
+- **Dark active:** `rgba(224,160,48,0.12)` fill, `#F0C060` icon color
+- **Light resting:** `rgba(0,0,0,0.04)` fill, `rgba(0,0,0,0.35)` icon color
+- **Light active:** `rgba(224,160,48,0.10)` fill, `#B07810` icon color
+
+### Fan-out Popover
+
+- **Trigger:** Tap the fan button
+- **Direction:** Fans **upward** from the button
+- **Content:** Four symbol keys in a horizontal row: `~` `|` `/` `-`
+- **Symbol key size:** 48×42px each — full HIG touch targets
+- **Symbol key typography:** 18px, JetBrains Mono, weight 500
+- **Container:** Frosted glass pill (`backdrop-filter: blur(24px) saturate(150%)`) with 14px border radius. Connected to the button by a small triangular stem.
+- **Dark popover:** `rgba(20, 20, 30, 0.95)` background, drop shadow
+- **Light popover:** `rgba(255, 255, 255, 0.92)` background, drop shadow
+- **Animation:** Spring open with `0.2s ease-out-expo`, scale from 0.95 → 1.0, translate from 6px below → 0
+- **Dismissal:** Tap a symbol → inserts the character and auto-dismisses. Tap the fan button again → closes. Tap anywhere outside → closes.
+- **Haptic:** `HapticFeedback.lightImpact()` on open, `HapticFeedback.selectionClick()` on symbol selection
+- **Sends:** The literal character (`~`, `|`, `/`, or `-`) to the terminal input
 
 ## Return Key
 
@@ -152,9 +177,13 @@ All colors, radii, and motion curves use the existing cmux design token system d
 
 | Token name | Dark value | Light value |
 |---|---|---|
-| `modKeyResting` | `rgba(255,255,255,0.05)` | `rgba(0,0,0,0.03)` |
-| `modKeyText` | `rgba(255,255,255,0.35)` | `rgba(0,0,0,0.30)` |
-| `modKeyActive` | `rgba(224,160,48,0.15)` | `rgba(224,160,48,0.12)` |
+| `keyGroupResting` | `rgba(255,255,255,0.06)` | `rgba(0,0,0,0.04)` |
+| `keyGroupText` | `rgba(255,255,255,0.45)` | `rgba(0,0,0,0.38)` |
+| `keyGroupActive` | `rgba(224,160,48,0.15)` | `rgba(224,160,48,0.12)` |
+| `fanBtnResting` | `rgba(255,255,255,0.06)` | `rgba(0,0,0,0.04)` |
+| `fanBtnActive` | `rgba(224,160,48,0.12)` | `rgba(224,160,48,0.10)` |
+| `fanPopoverBg` | `rgba(20,20,30,0.95)` | `rgba(255,255,255,0.92)` |
+| `symKeyResting` | `rgba(255,255,255,0.06)` | `rgba(0,0,0,0.04)` |
 | `joystickFill` | `rgba(255,255,255,0.06)` | `rgba(0,0,0,0.04)` |
 | `joystickBorder` | `rgba(255,255,255,0.08)` | `rgba(0,0,0,0.06)` |
 | `joystickPressed` | `rgba(224,160,48,0.12)` | `rgba(224,160,48,0.10)` |
@@ -172,7 +201,7 @@ All colors, radii, and motion curves use the existing cmux design token system d
 ## Scope
 
 - **Portrait only** for v1. Landscape behavior is deferred.
-- **Accessibility:** Each button and modifier state needs `Semantics` labels. The joystick should announce "Arrow key joystick. Swipe for single arrow, press and hold then drag for repeat." Modifier states should announce "Control, active" / "Control, locked" / "Control, inactive."
+- **Accessibility:** Each button needs `Semantics` labels. The joystick: "Arrow key joystick. Swipe for single arrow, press and hold then drag for repeat." Ctrl states: "Control, active" / "Control, locked" / "Control, inactive." Fan button: "Symbol shortcuts. Double tap to open."
 
 ## What This Replaces
 
@@ -183,4 +212,4 @@ The current modifier bar had three zones: `actions | arrows | enter`
 - Arrow cluster (inverted-T, 26×14px cells) → **replaced by joystick button**
 - `return` button → **kept, redesigned with amber accent**
 
-New zones: `esc | modifiers | joystick | return`
+New zones: `esc ctrl | fan | ——— | joystick | return`
