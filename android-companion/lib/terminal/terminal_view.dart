@@ -739,6 +739,28 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                   _buildCopyPill(renderCols, cellWidth, cellHeight,
                       wrapLines, scrollOffsetY),
 
+                // Selection handles — shown when selection visible (post-gesture or during drag).
+                if (_hasSelection && (_showCopyPill || _isDraggingStartHandle || _isDraggingEndHandle)) ...[
+                  _buildSelectionHandle(
+                    col: _selStartCol!,
+                    row: _selStartRow!,
+                    isStart: true,
+                    cellWidth: cellWidth,
+                    cellHeight: cellHeight,
+                    wrapLines: wrapLines,
+                    scrollOffsetY: scrollOffsetY,
+                  ),
+                  _buildSelectionHandle(
+                    col: _selEndCol!,
+                    row: _selEndRow!,
+                    isStart: false,
+                    cellWidth: cellWidth,
+                    cellHeight: cellHeight,
+                    wrapLines: wrapLines,
+                    scrollOffsetY: scrollOffsetY,
+                  ),
+                ],
+
                 // Inner shadow: 3px gradient at terminal top edge — feels recessed
                 Positioned(
                   top: 0,
@@ -823,6 +845,50 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
               color: Color(0xFF0A0A0F),
               fontSize: 13,
               fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds a draggable teardrop selection handle positioned at the given
+  /// grid cell. [isStart] controls which selection boundary is updated
+  /// and which side the handle hangs from.
+  Widget _buildSelectionHandle({
+    required int col,
+    required int row,
+    required bool isStart,
+    required double cellWidth,
+    required double cellHeight,
+    required int wrapLines,
+    required double scrollOffsetY,
+  }) {
+    final pos = _gridToScreen(col, row);
+
+    // Start handle: below-left of cell. End handle: below-right of cell.
+    final handleX = isStart
+        ? pos.dx - 12  // center 24dp circle on left edge of cell
+        : pos.dx + cellWidth - 12;  // center on right edge
+    final handleY = pos.dy + cellHeight; // stem connects to bottom of cell
+
+    return Positioned(
+      left: handleX,
+      top: handleY,
+      child: GestureDetector(
+        // Absorb taps so the outer GestureDetector doesn't clear the selection.
+        onTap: () {},
+        onPanStart: (d) => _onHandleDragStart(isStart, d),
+        onPanUpdate: (d) => _onHandleDragUpdate(isStart, d),
+        onPanEnd: (d) => _onHandleDragEnd(isStart, d),
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: 48,  // 48dp touch target
+          height: 48,
+          child: Center(
+            child: CustomPaint(
+              size: const Size(24, 32), // 24dp circle + 8dp stem
+              painter: _HandlePainter(isStart: isStart),
             ),
           ),
         ),
@@ -1065,4 +1131,58 @@ class TerminalPainter extends CustomPainter {
         selEndCol != oldDelegate.selEndCol ||
         selEndRow != oldDelegate.selEndRow;
   }
+}
+
+/// Paints an inverted teardrop selection handle.
+///
+/// The handle consists of a filled amber circle (24dp) with a thin stem (2x8dp)
+/// connecting it to the character boundary. A subtle white center dot provides
+/// a "grabbable" affordance.
+class _HandlePainter extends CustomPainter {
+  final bool isStart;
+
+  static const _handleColor = Color(0xFFE0A030);
+  static const _stemColor = Color(0xB3E0A030);     // 70% opacity
+  static const _highlightColor = Color(0x66FFFFFF); // 40% opacity
+  static const _shadowColor = Color(0x40000000);    // 25% opacity
+
+  _HandlePainter({required this.isStart});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final circleRadius = 12.0; // 24dp diameter
+    final stemWidth = 2.0;
+    final stemHeight = 8.0;
+
+    // Stem at top, circle at bottom (inverted teardrop).
+    final stemX = size.width / 2;
+    final stemTop = 0.0;
+    final stemBottom = stemHeight;
+    final circleCenter = Offset(size.width / 2, stemBottom + circleRadius);
+
+    // Draw shadow.
+    canvas.drawCircle(
+      circleCenter + const Offset(0, 2),
+      circleRadius + 1,
+      Paint()
+        ..color = _shadowColor
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+
+    // Draw stem.
+    canvas.drawRect(
+      Rect.fromLTWH(stemX - stemWidth / 2, stemTop, stemWidth, stemHeight),
+      Paint()..color = _stemColor,
+    );
+
+    // Draw circle.
+    canvas.drawCircle(circleCenter, circleRadius, Paint()..color = _handleColor);
+
+    // Draw inner highlight dot.
+    canvas.drawCircle(circleCenter, 2, Paint()..color = _highlightColor);
+  }
+
+  @override
+  bool shouldRepaint(covariant _HandlePainter oldDelegate) =>
+      isStart != oldDelegate.isStart;
 }
