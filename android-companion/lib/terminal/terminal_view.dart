@@ -387,6 +387,9 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     setState(() {
       _selStartCol = _selStartRow = _selEndCol = _selEndRow = null;
       _showCopyPill = false;
+      _showCopiedFeedback = false;
+      _isDraggingStartHandle = false;
+      _isDraggingEndHandle = false;
     });
   }
 
@@ -527,6 +530,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   }
 
   /// Extracts selected text from cell data and copies to clipboard.
+  /// Extracts selected text from cell data and copies to clipboard.
   void _copySelection() {
     if (!_hasSelection || _cells.isEmpty) return;
 
@@ -552,14 +556,20 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     }
 
     Clipboard.setData(ClipboardData(text: buf.toString()));
+    HapticFeedback.heavyImpact();
 
     setState(() {
-      _showCopyPill = false;
+      _showCopiedFeedback = true;
     });
 
-    // Brief "Copied!" feedback, then clear selection.
+    // Dismiss after 600ms.
     Future<void>.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) _clearSelection();
+      if (mounted) {
+        setState(() {
+          _showCopiedFeedback = false;
+        });
+        _clearSelection();
+      }
     });
   }
 
@@ -810,9 +820,9 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   }
 
   /// Floating copy pill positioned above the selection end point.
+  /// Floating copy pill positioned above the selection end point.
   Widget _buildCopyPill(int fitCols, double cellWidth, double cellHeight,
       int wrapLines, double scrollOffsetY) {
-    // Position pill above the end of the selection.
     final endCol = _selEndCol ?? 0;
     final endRow = _selEndRow ?? 0;
     final displayRow = endRow * wrapLines + (endCol ~/ fitCols);
@@ -821,15 +831,19 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     final pillY =
         _termPadV + displayRow * cellHeight - scrollOffsetY - 36;
 
+    final isCopied = _showCopiedFeedback;
+    final pillColor = isCopied ? const Color(0xFF50C878) : const Color(0xFFE0A030);
+
     return Positioned(
       left: pillX.clamp(8.0, double.infinity),
       top: pillY.clamp(4.0, double.infinity),
       child: GestureDetector(
-        onTap: _copySelection,
-        child: Container(
+        onTap: isCopied ? null : _copySelection,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFFE0A030),
+            color: pillColor,
             borderRadius: BorderRadius.circular(16),
             boxShadow: const [
               BoxShadow(
@@ -839,13 +853,23 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
               ),
             ],
           ),
-          child: const Text(
-            'Copy',
-            style: TextStyle(
-              color: Color(0xFF0A0A0F),
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isCopied)
+                const Padding(
+                  padding: EdgeInsets.only(right: 4),
+                  child: Icon(Icons.check_rounded, size: 14, color: Color(0xFF0A0A0F)),
+                ),
+              Text(
+                isCopied ? 'Copied!' : 'Copy',
+                style: const TextStyle(
+                  color: Color(0xFF0A0A0F),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
       ),
