@@ -1,13 +1,9 @@
-/// Floating capsule modifier toolbar matching the pane-type-switcher spec.
+/// Floating capsule modifier toolbar — redesigned with joystick arrows.
 ///
-/// Spec design (sections 8-9):
-/// - Floating capsule: rounded 18px, backdrop blur(24px), semi-transparent bg
-/// - Margin: 0 8px 2px
-/// - Three zones with 1px dividers:
-///   (1) (+) amber accent button + clipboard button
-///   (2) Inverted-T arrow grid (3x2, 26px cells)
-///   (3) "RETURN" key (9px, 700 weight, uppercase)
-/// - All keys: 32px height, rounded 10px, borderless
+/// Layout: esc ctrl | fan | ——— spacer ——— | joystick | return
+///
+/// Spec: docs/superpowers/specs/2026-03-18-modifier-bar-joystick-redesign.md
+/// Visual: docs/mobile-ux/modifier-bar-joystick-design.html
 library;
 
 import 'dart:ui';
@@ -16,9 +12,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app/colors.dart';
+import 'fan_out_button.dart';
+import 'joystick_button.dart';
 
 class ModifierBar extends StatefulWidget {
-  /// Called with the escape sequence or character to send to the PTY.
   final ValueChanged<String> onInput;
 
   const ModifierBar({super.key, required this.onInput});
@@ -28,9 +25,39 @@ class ModifierBar extends StatefulWidget {
 }
 
 class _ModifierBarState extends State<ModifierBar> {
-  void _sendKey(String data) {
-    HapticFeedback.lightImpact();
+  /// Ctrl modifier state: inactive, sticky (single tap), locked (double tap).
+  _CtrlState _ctrlState = _CtrlState.inactive;
+  DateTime? _lastCtrlTap;
+
+  void _onCtrlTap() {
+    HapticFeedback.selectionClick();
+    final now = DateTime.now();
+    final isDoubleTap = _lastCtrlTap != null &&
+        now.difference(_lastCtrlTap!) < const Duration(milliseconds: 400);
+    _lastCtrlTap = now;
+
+    setState(() {
+      if (isDoubleTap && _ctrlState == _CtrlState.sticky) {
+        _ctrlState = _CtrlState.locked;
+      } else if (_ctrlState != _CtrlState.inactive) {
+        _ctrlState = _CtrlState.inactive;
+      } else {
+        _ctrlState = _CtrlState.sticky;
+      }
+    });
+  }
+
+  void _onInput(String data) {
     widget.onInput(data);
+    // Auto-release sticky ctrl after consuming an input
+    if (_ctrlState == _CtrlState.sticky) {
+      setState(() => _ctrlState = _CtrlState.inactive);
+    }
+  }
+
+  void _onEsc() {
+    HapticFeedback.mediumImpact();
+    widget.onInput('\x1b');
   }
 
   @override
@@ -39,7 +66,7 @@ class _ModifierBarState extends State<ModifierBar> {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 0, 8, 2),
-      height: 42,
+      height: 50, // taller to accommodate 40px joystick + padding
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         color: c.modifierBarBg,
@@ -51,41 +78,36 @@ class _ModifierBarState extends State<ModifierBar> {
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
           child: Row(
             children: [
-              // Zone 1: (+) accent button + clipboard button
-              _FanButton(
-                icon: Icons.add,
-                isAccent: true,
-                onTap: () {
-                  // Fan-out will expand to show Esc/Ctrl/Alt/Tab
-                  HapticFeedback.mediumImpact();
-                },
-              ),
-              const SizedBox(width: 4),
-              _FanButton(
-                icon: Icons.content_paste,
-                isAccent: false,
-                onTap: () async {
-                  final data = await Clipboard.getData(Clipboard.kTextPlain);
-                  if (data?.text != null && data!.text!.isNotEmpty) {
-                    _sendKey(data.text!);
-                  }
-                },
+              // Zone 1: esc + ctrl capsule
+              _KeyGroupCapsule(
+                ctrlState: _ctrlState,
+                onEsc: _onEsc,
+                onCtrl: _onCtrlTap,
               ),
 
               // Divider
               _BarDivider(),
 
-              // Push arrows + RETURN to the right
+              // Zone 2: fan-out symbol button
+              FanOutButton(onInput: _onInput),
+
+              // Spacer — generous gap between left tools and right actions
               const Spacer(),
 
-              // Zone 2: inverted-T arrow cluster
-              _ArrowCluster(onArrow: _sendKey),
+              // Zone 3: joystick
+              JoystickButton(
+                onInput: _onInput,
+                ctrlActive: _ctrlState != _CtrlState.inactive,
+              ),
 
               // Divider
               _BarDivider(),
 
-              // Zone 3: RETURN key
-              _ReturnKey(onTap: () => _sendKey('\r')),
+              // Zone 4: return key
+              _ReturnKey(onTap: () {
+                HapticFeedback.mediumImpact();
+                widget.onInput('\r');
+              }),
             ],
           ),
         ),
@@ -94,46 +116,82 @@ class _ModifierBarState extends State<ModifierBar> {
   }
 }
 
-/// Fan-out action button: (+) or clipboard. 38x32, rounded 10px.
-class _FanButton extends StatefulWidget {
-  final IconData icon;
-  final bool isAccent;
+enum _CtrlState { inactive, sticky, locked }
+
+/// Esc + Ctrl paired capsule. Two keys in a connected group.
+class _KeyGroupCapsule extends StatelessWidget {
+  final _CtrlState ctrlState;
+  final VoidCallback onEsc;
+  final VoidCallback onCtrl;
+
+  const _KeyGroupCapsule({
+    required this.ctrlState,
+    required this.onEsc,
+    required this.onCtrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: c.keyGroupResting.withAlpha(10), // capsule background tint
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _GroupedKey(
+            label: 'esc',
+            isActive: false,
+            isLocked: false,
+            isFirst: true,
+            onTap: onEsc,
+          ),
+          SizedBox(width: 1, height: 34, child: ColoredBox(color: c.border)),
+          _GroupedKey(
+            label: 'ctrl',
+            isActive: ctrlState != _CtrlState.inactive,
+            isLocked: ctrlState == _CtrlState.locked,
+            isFirst: false,
+            onTap: onCtrl,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Individual key within the esc+ctrl capsule.
+class _GroupedKey extends StatefulWidget {
+  final String label;
+  final bool isActive;
+  final bool isLocked;
+  final bool isFirst;
   final VoidCallback onTap;
 
-  const _FanButton({
-    required this.icon,
-    required this.isAccent,
+  const _GroupedKey({
+    required this.label,
+    required this.isActive,
+    required this.isLocked,
+    required this.isFirst,
     required this.onTap,
   });
 
   @override
-  State<_FanButton> createState() => _FanButtonState();
+  State<_GroupedKey> createState() => _GroupedKeyState();
 }
 
-class _FanButtonState extends State<_FanButton> {
+class _GroupedKeyState extends State<_GroupedKey> {
   bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Color bg;
-    Color fg;
-
-    if (widget.isAccent) {
-      bg = isDark
-          ? const Color(0x38E0A030) // amber gradient-like
-          : const Color(0x28E0A030);
-      fg = c.accentText;
-    } else {
-      bg = isDark
-          ? Colors.white.withAlpha(18)
-          : Colors.black.withAlpha(13);
-      fg = isDark
-          ? Colors.white.withAlpha(128)
-          : Colors.black.withAlpha(102);
-    }
+    final bg = widget.isActive ? c.keyGroupActive : c.keyGroupResting;
+    final fg = widget.isActive ? c.accentText : c.keyGroupText;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
@@ -142,18 +200,50 @@ class _FanButtonState extends State<_FanButton> {
         widget.onTap();
       },
       onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.93 : 1.0,
-        duration: const Duration(milliseconds: 80),
-        child: Container(
-          width: 38,
-          height: 32,
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(10),
+      child: Semantics(
+        label: widget.isActive
+            ? '${widget.label}, active${widget.isLocked ? ', locked' : ''}'
+            : '${widget.label}, inactive',
+        child: AnimatedScale(
+          scale: _pressed ? 0.93 : 1.0,
+          duration: const Duration(milliseconds: 80),
+          child: Container(
+            width: 44,
+            height: 34,
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: widget.isFirst
+                  ? const BorderRadius.horizontal(left: Radius.circular(10))
+                  : const BorderRadius.horizontal(right: Radius.circular(10)),
+            ),
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontFamily: 'JetBrains Mono',
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                    color: fg,
+                  ),
+                ),
+                // Locked indicator: 2px amber underline
+                if (widget.isLocked)
+                  Container(
+                    width: 16,
+                    height: 2,
+                    margin: const EdgeInsets.only(top: 2),
+                    decoration: BoxDecoration(
+                      color: c.accent,
+                      borderRadius: BorderRadius.circular(1),
+                    ),
+                  ),
+              ],
+            ),
           ),
-          alignment: Alignment.center,
-          child: Icon(widget.icon, size: 15, color: fg),
         ),
       ),
     );
@@ -164,128 +254,21 @@ class _FanButtonState extends State<_FanButton> {
 class _BarDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors.of(context);
 
     return Container(
       width: 1,
       height: 16,
       margin: const EdgeInsets.symmetric(horizontal: 2),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withAlpha(18)
-            : Colors.black.withAlpha(18),
+        color: c.border,
         borderRadius: BorderRadius.circular(1),
       ),
     );
   }
 }
 
-/// Inverted-T arrow key cluster: 3x2 grid, 26px cells.
-class _ArrowCluster extends StatelessWidget {
-  final void Function(String) onArrow;
-
-  const _ArrowCluster({required this.onArrow});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 26 * 3 + 4, // 3 columns + gaps
-      height: 30, // 14px + 2px gap + 14px
-      child: Stack(
-        children: [
-          // Top row: up arrow centered
-          Positioned(
-            left: 28, // 26px cell + 2px gap
-            top: 0,
-            child: _ArrowKey(
-              icon: Icons.keyboard_arrow_up,
-              onTap: () => onArrow('\x1b[A'),
-            ),
-          ),
-          // Bottom row: left, down, right
-          Positioned(
-            left: 0,
-            top: 16, // 14px + 2px gap
-            child: _ArrowKey(
-              icon: Icons.keyboard_arrow_left,
-              onTap: () => onArrow('\x1b[D'),
-            ),
-          ),
-          Positioned(
-            left: 28, // 26px cell + 2px gap
-            top: 16,
-            child: _ArrowKey(
-              icon: Icons.keyboard_arrow_down,
-              onTap: () => onArrow('\x1b[B'),
-            ),
-          ),
-          Positioned(
-            left: 56, // 2 * (26px cell + 2px gap)
-            top: 16,
-            child: _ArrowKey(
-              icon: Icons.keyboard_arrow_right,
-              onTap: () => onArrow('\x1b[C'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Individual arrow key: 26x14, rounded 6px, borderless.
-class _ArrowKey extends StatefulWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _ArrowKey({required this.icon, required this.onTap});
-
-  @override
-  State<_ArrowKey> createState() => _ArrowKeyState();
-}
-
-class _ArrowKeyState extends State<_ArrowKey> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        HapticFeedback.selectionClick();
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.90 : 1.0,
-        duration: const Duration(milliseconds: 60),
-        child: Container(
-          width: 26,
-          height: 14,
-          decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withAlpha(15)
-                : Colors.black.withAlpha(10),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            widget.icon,
-            size: 10,
-            color: isDark
-                ? Colors.white.withAlpha(102)
-                : Colors.black.withAlpha(89),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// "RETURN" key: elevated action button. 9px, 700 weight, uppercase.
+/// Return key with warm amber gradient.
 class _ReturnKey extends StatefulWidget {
   final VoidCallback onTap;
 
@@ -300,13 +283,12 @@ class _ReturnKeyState extends State<_ReturnKey> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors.of(context);
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
         setState(() => _pressed = false);
-        HapticFeedback.lightImpact();
         widget.onTap();
       },
       onTapCancel: () => setState(() => _pressed = false),
@@ -314,14 +296,21 @@ class _ReturnKeyState extends State<_ReturnKey> {
         scale: _pressed ? 0.93 : 1.0,
         duration: const Duration(milliseconds: 80),
         child: Container(
-          height: 32,
+          height: 34,
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          margin: const EdgeInsets.only(left: 3),
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withAlpha(20)
-                : Colors.black.withAlpha(15),
+            gradient: LinearGradient(
+              begin: const Alignment(-0.5, -1),
+              end: const Alignment(0.5, 1),
+              colors: [c.returnGradientStart, c.returnGradientEnd],
+            ),
             borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: c.returnGlow,
+                blurRadius: 20,
+              ),
+            ],
           ),
           alignment: Alignment.center,
           child: Text(
@@ -330,10 +319,8 @@ class _ReturnKeyState extends State<_ReturnKey> {
               fontFamily: 'JetBrains Mono',
               fontSize: 9,
               fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-              color: isDark
-                  ? Colors.white.withAlpha(191)
-                  : Colors.black.withAlpha(140),
+              letterSpacing: 1,
+              color: c.accentText,
             ),
           ),
         ),
