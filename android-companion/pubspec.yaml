@@ -16,6 +16,7 @@ dependencies:
 
   # Networking
   web_socket_channel: ^3.0.2
+  connectivity_plus: ^6.1.4
 
   # QR code scanning
   mobile_scanner: ^6.0.5

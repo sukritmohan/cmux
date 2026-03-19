@@ -6,6 +6,8 @@
 ///   - Text frame dispatch (responses vs events)
 ///   - Binary frame routing via [PtyDemuxer]
 ///   - Request/response tracking via [RequestTracker]
+///   - App lifecycle awareness (pause/resume → health check)
+///   - Network connectivity monitoring (skip retries when offline)
 library;
 
 import 'dart:async';
@@ -13,6 +15,8 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/widgets.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'connection_state.dart';
@@ -20,7 +24,7 @@ import 'message_protocol.dart';
 import 'pty_demuxer.dart';
 import 'request_tracker.dart';
 
-class ConnectionManager {
+class ConnectionManager with WidgetsBindingObserver {
   /// Current connection status.
   ConnectionStatus get status => _status;
   ConnectionStatus _status = ConnectionStatus.disconnected;
@@ -58,6 +62,53 @@ class ConnectionManager {
   static const _maxBackoff = Duration(seconds: 30);
   bool _shouldReconnect = false;
 
+  // Lifecycle tracking
+  DateTime? _backgroundedAt;
+
+  // Network connectivity
+  StreamSubscription? _connectivitySub;
+  bool _hasNetwork = true;
+
+  // Health check guard against rapid foreground/background cycling
+  bool _healthCheckInProgress = false;
+
+  /// Register as a lifecycle observer so we detect app pause/resume.
+  void initLifecycleObserver() {
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        // App is going to background — stop pinging to save battery.
+        _pingTimer?.cancel();
+        _pingTimer = null;
+        _backgroundedAt = DateTime.now();
+
+      case AppLifecycleState.resumed:
+        // App returned to foreground — reconnect immediately if needed.
+        _reconnectAttempt = 0;
+        _reconnectTimer?.cancel();
+        _reconnectTimer = null;
+
+        if (_status == ConnectionStatus.connected) {
+          _healthCheck();
+        } else if ((_status == ConnectionStatus.reconnecting ||
+                _status == ConnectionStatus.disconnected) &&
+            _shouldReconnect) {
+          _doConnect();
+        }
+
+        _backgroundedAt = null;
+
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        break;
+    }
+  }
+
   /// Configure credentials for connection. Call before [connect].
   void setCredentials({
     required String host,
@@ -79,6 +130,7 @@ class ConnectionManager {
 
     _shouldReconnect = true;
     _reconnectAttempt = 0;
+    _startConnectivityListener();
     await _doConnect();
   }
 
@@ -141,6 +193,9 @@ class ConnectionManager {
 
   /// Clean up all resources.
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _connectivitySub?.cancel();
+    _connectivitySub = null;
     disconnect();
     _statusController.close();
     _eventController.close();
@@ -227,6 +282,10 @@ class ConnectionManager {
   void _scheduleReconnect() {
     _reconnectTimer?.cancel();
 
+    // Don't schedule reconnect if no network — the connectivity listener
+    // will trigger reconnect when network returns.
+    if (!_hasNetwork) return;
+
     // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (capped)
     final backoffMs = _minBackoff.inMilliseconds *
         pow(2, _reconnectAttempt).toInt();
@@ -241,6 +300,56 @@ class ConnectionManager {
         _doConnect();
       }
     });
+  }
+
+  /// Subscribe to network connectivity changes so we can pause reconnect
+  /// attempts when offline and reconnect immediately when network returns.
+  void _startConnectivityListener() {
+    _connectivitySub?.cancel();
+    _connectivitySub =
+        Connectivity().onConnectivityChanged.listen((results) {
+      final hasNetwork =
+          !results.every((r) => r == ConnectivityResult.none);
+
+      if (!hasNetwork) {
+        // Network lost — stop wasting battery on reconnect attempts.
+        _hasNetwork = false;
+        _reconnectTimer?.cancel();
+        _reconnectTimer = null;
+      } else if (!_hasNetwork) {
+        // Network restored — reconnect immediately with zero backoff.
+        _hasNetwork = true;
+        _reconnectAttempt = 0;
+        if (_shouldReconnect && _status != ConnectionStatus.connected) {
+          _doConnect();
+        }
+      }
+    });
+  }
+
+  /// Verify the current connection is still alive after returning from
+  /// background. If the ping fails or times out, tear down and reconnect.
+  Future<void> _healthCheck() async {
+    if (_healthCheckInProgress) return;
+    _healthCheckInProgress = true;
+    try {
+      final response = await sendRequest('system.ping')
+          .timeout(const Duration(seconds: 3));
+      if (response.ok) {
+        // Connection is healthy — restart the keepalive ping timer.
+        _startPingTimer();
+        return;
+      }
+    } catch (_) {
+      // Ping failed or timed out — connection is stale.
+    } finally {
+      _healthCheckInProgress = false;
+    }
+
+    // Unhealthy: tear down and reconnect immediately.
+    _cleanup();
+    _reconnectAttempt = 0;
+    _doConnect();
   }
 
   void _setStatus(ConnectionStatus newStatus) {

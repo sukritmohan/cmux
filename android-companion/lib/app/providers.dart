@@ -8,9 +8,10 @@ import '../connection/connection_manager.dart';
 import '../connection/connection_state.dart';
 import '../connection/pairing_service.dart';
 
-/// Singleton connection manager.
+/// Singleton connection manager with lifecycle and network awareness.
 final connectionManagerProvider = Provider<ConnectionManager>((ref) {
   final manager = ConnectionManager();
+  manager.initLifecycleObserver();
   ref.onDispose(() => manager.dispose());
   return manager;
 });

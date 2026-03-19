@@ -50,7 +50,6 @@ class TerminalScreen extends ConsumerStatefulWidget {
 class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   StreamSubscription? _statusSub;
-  bool _initialFetchDone = false;
   bool _showMinimap = false;
   PaneType _activePaneType = PaneType.terminal;
 
@@ -106,9 +105,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     ref.read(eventHandlerProvider);
 
     // Listen for connected status to fetch initial workspace data.
+    // Resync state on every (re)connect — fetchWorkspaces replaces state
+    // atomically so this is idempotent.
     _statusSub = manager.statusStream.listen((status) {
-      if (status == ConnectionStatus.connected && !_initialFetchDone) {
-        _initialFetchDone = true;
+      if (status == ConnectionStatus.connected) {
         _fetchInitialData();
       }
     });
@@ -117,7 +117,6 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     if (manager.status == ConnectionStatus.disconnected) {
       await manager.connect();
     } else if (manager.status == ConnectionStatus.connected) {
-      _initialFetchDone = true;
       _fetchInitialData();
     }
   }
