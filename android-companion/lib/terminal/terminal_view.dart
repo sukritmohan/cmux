@@ -140,6 +140,17 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   double _dragAnchorX = 0;
   double _dragAnchorY = 0;
 
+  // Magnifier loupe state.
+  bool _showMagnifier = false;
+  Timer? _magnifierDelayTimer;
+  int _magnifierFocusCol = 0;
+  int _magnifierFocusRow = 0;
+
+  static const _magnifierWidth = 140.0;
+  static const _magnifierHeight = 36.0;
+  static const _magnifierOffsetY = 60.0;
+  static const _magnifierDelay = 50; // ms before showing
+
   // Layout values cached from the last build for hit-testing.
   int _lastFitCols = 0;
   int _lastWrapLines = 1;
@@ -175,6 +186,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     _textController.dispose();
     if (_ownsInternalFocusNode) _focusNode.dispose();
     _blinkTimer?.cancel();
+    _magnifierDelayTimer?.cancel();
     super.dispose();
   }
 
@@ -452,6 +464,8 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     });
     _dragAccumX = _dragAccumY = 0;
     _dragAnchorX = _dragAnchorY = 0;
+    _showMagnifier = false;
+    _magnifierDelayTimer?.cancel();
   }
 
   /// Converts a local touch position to Mac grid (col, row), accounting for
@@ -597,6 +611,14 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     _dragAccumX = 0;
     _dragAccumY = 0;
 
+    // Show magnifier after brief delay to avoid flicker on accidental touches.
+    _magnifierFocusCol = anchorCol;
+    _magnifierFocusRow = anchorRow;
+    _magnifierDelayTimer?.cancel();
+    _magnifierDelayTimer = Timer(const Duration(milliseconds: _magnifierDelay), () {
+      if (mounted) setState(() => _showMagnifier = true);
+    });
+
     setState(() {
       if (isStart) {
         _isDraggingStartHandle = true;
@@ -657,13 +679,17 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
         _selEndCol = col;
         _selEndRow = row;
       }
+      _magnifierFocusCol = col;
+      _magnifierFocusRow = row;
     });
   }
 
   void _onHandleDragEnd(bool isStart, DragEndDetails details) {
+    _magnifierDelayTimer?.cancel();
     setState(() {
       _isDraggingStartHandle = false;
       _isDraggingEndHandle = false;
+      _showMagnifier = false;
       _showCopyPill = _hasSelection;
     });
     HapticFeedback.mediumImpact();
@@ -933,6 +959,15 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                   ),
                 ],
 
+                // Magnifier loupe — shown during handle drag.
+                if (_hasSelection && (_isDraggingStartHandle || _isDraggingEndHandle))
+                  _buildMagnifier(
+                    cellWidth: cellWidth,
+                    cellHeight: cellHeight,
+                    viewportWidth: constraints.maxWidth,
+                    viewportHeight: constraints.maxHeight,
+                  ),
+
                 // Inner shadow: 3px gradient at terminal top edge — feels recessed
                 Positioned(
                   top: 0,
@@ -1031,6 +1066,87 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds the magnifier loupe widget, positioned above (or below) the
+  /// active handle during drag.
+  Widget _buildMagnifier({
+    required double cellWidth,
+    required double cellHeight,
+    required double viewportWidth,
+    required double viewportHeight,
+  }) {
+    // Position magnifier centered on the focus cell.
+    final pos = _gridToScreen(_magnifierFocusCol, _magnifierFocusRow);
+    final isStart = _isDraggingStartHandle;
+
+    // Handle top edge in viewport.
+    final handleTop = isStart
+        ? pos.dy - 40
+        : pos.dy + cellHeight - 8;
+
+    // Default: above the handle.
+    var magnifierTop = handleTop - _magnifierOffsetY - _magnifierHeight;
+    // Flip below if too close to top edge.
+    if (magnifierTop < 8) {
+      final handleBottom = handleTop + 48; // 48dp handle height
+      magnifierTop = handleBottom + _magnifierOffsetY;
+    }
+    // Clamp vertical bottom edge.
+    magnifierTop = magnifierTop.clamp(8.0, viewportHeight - _magnifierHeight - 8);
+
+    // Center horizontally on the cell, clamped to screen edges (8dp margin).
+    final magnifierLeft = (pos.dx + cellWidth / 2 - _magnifierWidth / 2)
+        .clamp(8.0, viewportWidth - _magnifierWidth - 8);
+
+    // Compute selection range for highlight.
+    int selLo = -1;
+    int selHi = -1;
+    if (_hasSelection) {
+      final s = _selStartRow! * _cols + _selStartCol!;
+      final e = _selEndRow! * _cols + _selEndCol!;
+      selLo = min(s, e);
+      selHi = max(s, e);
+    }
+
+    return Positioned(
+      left: magnifierLeft,
+      top: magnifierTop,
+      child: IgnorePointer(
+        child: AnimatedOpacity(
+          opacity: _showMagnifier ? 1.0 : 0.0,
+          duration: Duration(milliseconds: _showMagnifier ? 100 : 80),
+          curve: _showMagnifier ? Curves.easeOut : Curves.easeIn,
+          child: Container(
+            width: _magnifierWidth,
+            height: _magnifierHeight,
+            decoration: const BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x60000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: CustomPaint(
+              size: Size(_magnifierWidth, _magnifierHeight),
+              painter: _MagnifierPainter(
+                cells: _cells,
+                cols: _cols,
+                focusCol: _magnifierFocusCol,
+                focusRow: _magnifierFocusRow,
+                cellWidth: cellWidth,
+                cellHeight: cellHeight,
+                fontSize: _targetFontSize,
+                selLo: selLo,
+                selHi: selHi,
+              ),
+            ),
           ),
         ),
       ),
