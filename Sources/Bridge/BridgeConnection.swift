@@ -29,6 +29,10 @@ final class BridgeConnection {
     /// Whether the client has opted into receiving push event notifications.
     private(set) var subscribedToEvents = false
 
+    /// Saved desktop pixel dimensions per surface, for restoring after mobile resize.
+    /// Keyed by surface UUID. Only accessed from `DispatchQueue.main` blocks.
+    private var savedDesktopSizes: [UUID: (width: UInt32, height: UInt32)] = [:]
+
     /// Number of consecutive WebSocket pings that received no pong response.
     /// Reset to 0 on each received pong. BridgeServer disconnects after 3 missed pongs.
     var missedPongs = 0
@@ -92,14 +96,37 @@ final class BridgeConnection {
 
     /// Cancels the underlying connection and cleans up subscriptions.
     ///
-    /// Removes all PTY subscriptions for this connection and deregisters from
-    /// `BridgeServer.connections`. Safe to call multiple times.
+    /// Removes all PTY subscriptions for this connection, restores any desktop
+    /// terminal dimensions that were changed by mobile resize, and deregisters
+    /// from `BridgeServer.connections`. Safe to call multiple times.
     func disconnect() {
         NSLog("[BridgeConnection] %@ disconnect() called", id.uuidString)
+
+        // Capture saved desktop sizes before cleanup releases references.
+        // savedDesktopSizes is normally accessed on main, but disconnect() runs
+        // on the connection queue. Capture-and-clear here is safe because no
+        // further handlePTYResize calls will arrive after disconnect starts.
+        let sizesToRestore = savedDesktopSizes
+        savedDesktopSizes.removeAll()
+
         connection.cancel()
         BridgePTYStream.shared.removeAllSubscriptions(forConnection: id)
         BridgeCellStream.shared.removeAllSubscriptions(forConnection: id)
         BridgeServer.shared.removeConnection(id)
+
+        // Restore desktop terminal dimensions on main thread.
+        if !sizesToRestore.isEmpty {
+            let connId = id.uuidString
+            DispatchQueue.main.async {
+                for (surfaceId, savedSize) in sizesToRestore {
+                    guard let panel = resolveTerminalPanel(surfaceId: surfaceId),
+                          let surface = panel.surface.surface else { continue }
+                    ghostty_surface_set_size(surface, savedSize.width, savedSize.height)
+                    NSLog("[BridgeConnection] %@ restored desktop size for surface %@ (%dx%d px)",
+                          connId, surfaceId.uuidString, savedSize.width, savedSize.height)
+                }
+            }
+        }
     }
 
     // MARK: - Send
@@ -608,12 +635,13 @@ final class BridgeConnection {
         }
     }
 
-    /// Records the mobile client's desired terminal dimensions without resizing
-    /// the desktop PTY.
+    /// Resizes the desktop terminal to match the mobile client's dimensions (tmux-style).
     ///
-    /// The mobile client adapts to the desktop's dimensions. The mobile dimensions
-    /// are stored per-subscription for future mobile-specific rendering hints (Phase 3).
-    /// The response includes the desktop's actual dimensions so the mobile client can adapt.
+    /// On first resize for a surface, saves the original desktop pixel dimensions so
+    /// they can be restored when the mobile client disconnects. Computes pixel dimensions
+    /// from the requested cols/rows using the surface's cell metrics, then calls
+    /// `ghostty_surface_set_size` to actually resize the PTY. The cell stream automatically
+    /// picks up the new dimensions on the next poll tick.
     ///
     /// - Parameters:
     ///   - id: The JSON-RPC request ID.
@@ -631,37 +659,63 @@ final class BridgeConnection {
             return
         }
 
-        // Store mobile dimensions per-subscription for future mobile-specific rendering hints.
-        // The desktop PTY is NOT resized — the mobile client adapts to the desktop's dimensions.
-        BridgePTYStream.shared.setMobileDimensions(
-            connectionId: self.id,
-            surfaceId: surfaceId,
-            cols: cols,
-            rows: rows
-        )
-
-        // Return the desktop's actual dimensions so the mobile client can adapt.
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-
-            var desktopCols = 0
-            var desktopRows = 0
-            if let panel = resolveTerminalPanel(surfaceId: surfaceId),
-               let surface = panel.surface.surface {
-                let size = ghostty_surface_size(surface)
-                desktopCols = Int(size.columns)
-                desktopRows = Int(size.rows)
+            guard let panel = resolveTerminalPanel(surfaceId: surfaceId),
+                  let surface = panel.surface.surface else {
+                self.sendText(self.encodeError(id: id, code: "not_found",
+                                               message: "Surface not found: \(surfaceId.uuidString)"))
+                return
             }
 
+            let currentSize = ghostty_surface_size(surface)
+
+            // Save original desktop dimensions on first mobile resize for this surface.
+            if self.savedDesktopSizes[surfaceId] == nil {
+                self.savedDesktopSizes[surfaceId] = (
+                    width: currentSize.width_px,
+                    height: currentSize.height_px
+                )
+                NSLog("[BridgeConnection] %@ saved desktop size for surface %@ (%dx%d px)",
+                      self.id.uuidString, surfaceId.uuidString,
+                      currentSize.width_px, currentSize.height_px)
+            }
+
+            // Resize the terminal to match the phone's dimensions.
+            let newWidth = UInt32(cols) * currentSize.cell_width_px
+            let newHeight = UInt32(rows) * currentSize.cell_height_px
+            ghostty_surface_set_size(surface, newWidth, newHeight)
+
+            // Read back actual dimensions after resize.
+            let newSize = ghostty_surface_size(surface)
+            NSLog("[BridgeConnection] %@ resized surface %@ to %dx%d (requested %dx%d)",
+                  self.id.uuidString, surfaceId.uuidString,
+                  newSize.columns, newSize.rows, cols, rows)
+
             self.sendText(self.encodeOk(id: id, result: [
-                "stored": true,
+                "resized": true,
                 "surface_id": surfaceId.uuidString,
-                "mobile_cols": cols,
-                "mobile_rows": rows,
-                "desktop_cols": desktopCols,
-                "desktop_rows": desktopRows,
+                "cols": Int(newSize.columns),
+                "rows": Int(newSize.rows),
             ]))
         }
+    }
+
+    /// Restores the desktop terminal to its original pixel dimensions.
+    ///
+    /// Called when the mobile client unsubscribes from cell output or disconnects.
+    /// Must be called on the main thread (accesses Ghostty surface APIs).
+    ///
+    /// - Parameter surfaceId: The UUID of the surface to restore.
+    @MainActor
+    private func restoreDesktopSize(surfaceId: UUID) {
+        guard let savedSize = savedDesktopSizes.removeValue(forKey: surfaceId) else { return }
+        guard let panel = resolveTerminalPanel(surfaceId: surfaceId),
+              let surface = panel.surface.surface else { return }
+
+        ghostty_surface_set_size(surface, savedSize.width, savedSize.height)
+        NSLog("[BridgeConnection] %@ restored desktop size for surface %@ (%dx%d px)",
+              id.uuidString, surfaceId.uuidString, savedSize.width, savedSize.height)
     }
 
     // MARK: - Cell Stream Subscription Handlers
@@ -703,6 +757,9 @@ final class BridgeConnection {
 
     /// Unsubscribes this connection from cell output for a terminal surface.
     ///
+    /// Also restores the desktop terminal dimensions if they were changed by a
+    /// mobile resize (tmux-style resize cleanup).
+    ///
     /// - Parameters:
     ///   - id: The JSON-RPC request ID.
     ///   - params: Must contain `"surface_id"` as a UUID string.
@@ -714,6 +771,13 @@ final class BridgeConnection {
         }
 
         BridgeCellStream.shared.removeSubscriber(connectionId: self.id, surfaceId: surfaceId)
+
+        // Restore desktop terminal dimensions if they were changed for mobile.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.restoreDesktopSize(surfaceId: surfaceId)
+        }
+
         sendText(encodeOk(id: id, result: ["unsubscribed": true, "surface_id": surfaceId.uuidString]))
     }
 

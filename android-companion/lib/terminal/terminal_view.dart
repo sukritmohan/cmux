@@ -109,6 +109,10 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   double _lastCellHeight = 0;
   double _lastScrollOffsetY = 0;
 
+  // Track last sent resize dimensions to avoid redundant resize requests.
+  int _lastSentCols = 0;
+  int _lastSentRows = 0;
+
   @override
   void initState() {
     super.initState();
@@ -242,6 +246,27 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
       _cursorRow = result.cursorRow;
       _cursorVisible = result.cursorVisible;
     });
+  }
+
+  /// Sends a resize request to the Mac to match the phone's terminal dimensions.
+  ///
+  /// This implements tmux-style resize: the Mac terminal is resized to the phone's
+  /// cols/rows so both views show identical content with no wrapping needed.
+  Future<void> _sendResize(int cols, int rows) async {
+    try {
+      final manager = ref.read(connectionManagerProvider);
+      await manager.sendRequest(
+        'surface.pty.resize',
+        params: {
+          'surface_id': widget.surfaceId,
+          'cols': cols,
+          'rows': rows,
+        },
+      );
+      debugPrint('[TerminalView] Sent resize: ${cols}x$rows');
+    } catch (e) {
+      debugPrint('[TerminalView] Resize error: $e');
+    }
   }
 
   /// Sends text input to the Mac-side PTY.
@@ -522,19 +547,34 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
           const cellWidth = _targetFontSize * _monoAdvanceRatio;   // 6.9px
           const cellHeight = _targetFontSize * _lineHeightFactor;  // 17.825px
 
-          // How many columns fit on screen at this cell width?
+          // How many columns/rows fit on the phone screen.
           final fitCols = ((constraints.maxWidth - _termPadH * 2) / cellWidth)
               .floor()
-              .clamp(1, _cols);
+              .clamp(1, 999);
+          final fitRows = ((constraints.maxHeight - _termPadV * 2) / cellHeight)
+              .floor()
+              .clamp(1, 999);
+
+          // Send resize to Mac if phone dimensions changed (tmux-style resize).
+          // After resize, _cols from the cell stream will match fitCols, so
+          // wrapLines becomes 1 and rendering is 1:1 with the Mac grid.
+          if (fitCols != _lastSentCols || fitRows != _lastSentRows) {
+            _lastSentCols = fitCols;
+            _lastSentRows = fitRows;
+            _sendResize(fitCols, fitRows);
+          }
+
+          // Use Mac's actual cols for rendering (after resize, _cols == fitCols).
+          final renderCols = _cols.clamp(1, _cols);
           // How many display lines each Mac row wraps into.
-          final wrapLines = (_cols / fitCols).ceil();
+          final wrapLines = (_cols / renderCols).ceil();
           // Total display rows after wrapping.
           final displayRows = _rows * wrapLines;
           final terminalHeight = cellHeight * displayRows;
 
           // Cursor display position after wrapping.
           final cursorDisplayRow =
-              _cursorRow * wrapLines + (_cursorCol ~/ fitCols);
+              _cursorRow * wrapLines + (_cursorCol ~/ renderCols);
 
           // Auto-scroll to keep cursor visible, accounting for padding.
           final contentHeight = constraints.maxHeight - (_termPadV * 2);
@@ -546,7 +586,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
           final scrollOffsetY = scrollRow * cellHeight;
 
           // Cache layout values for hit-testing in gesture handlers.
-          _lastFitCols = fitCols;
+          _lastFitCols = renderCols;
           _lastWrapLines = wrapLines;
           _lastCellWidth = cellWidth;
           _lastCellHeight = cellHeight;
@@ -586,7 +626,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                       cells: _cells,
                       cols: _cols,
                       rows: _rows,
-                      fitCols: fitCols,
+                      fitCols: renderCols,
                       cellWidth: cellWidth,
                       cellHeight: cellHeight,
                       fontSize: _targetFontSize,
@@ -605,7 +645,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
                 // Copy pill — shown above selection end after long-press lift
                 if (_showCopyPill && _hasSelection)
-                  _buildCopyPill(fitCols, cellWidth, cellHeight,
+                  _buildCopyPill(renderCols, cellWidth, cellHeight,
                       wrapLines, scrollOffsetY),
 
                 // Inner shadow: 3px gradient at terminal top edge — feels recessed
