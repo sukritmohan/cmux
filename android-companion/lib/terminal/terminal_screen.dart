@@ -64,6 +64,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   /// so soft keyboard input can be intercepted (e.g., Ctrl+C → \x03).
   final _ctrlActiveNotifier = ValueNotifier<bool>(false);
 
+  /// Autocomplete/suggestion toggle state. Default ON so swipe typing works
+  /// out of the box. Resets to ON each app launch (no persistence).
+  final _autocompleteActiveNotifier = ValueNotifier<bool>(true);
+
   /// Focus node shared between keyboard button and terminal view for
   /// programmatic soft keyboard toggle.
   final _keyboardFocusNode = FocusNode();
@@ -291,6 +295,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                   scrollNotifier: _scrollNotifier,
                   ctrlActiveNotifier: _ctrlActiveNotifier,
                   externalFocusNode: _keyboardFocusNode,
+                  autocompleteActiveNotifier: _autocompleteActiveNotifier,
                   onCopy: (text) =>
                       ref.read(clipboardHistoryProvider.notifier).add(text),
                 )
@@ -377,6 +382,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                   clipboardHistoryNotifier:
                       ref.read(clipboardHistoryProvider.notifier),
                   keyboardFocusNode: _keyboardFocusNode,
+                  autocompleteActiveNotifier: _autocompleteActiveNotifier,
                   onPaste: _onPaste,
                 ),
               ],

@@ -1,13 +1,15 @@
 /// Keyboard toggle button for the modifier bar.
 ///
-/// Tapping the button requests or dismisses the soft keyboard by toggling
-/// focus on [keyboardFocusNode]. The button uses a blue accent gradient to
-/// visually distinguish it from the warm amber palette used by other elements
-/// in the modifier bar.
+/// Short tap toggles the soft keyboard by toggling focus on
+/// [keyboardFocusNode]. Long-press toggles autocomplete suggestions
+/// via [autocompleteActiveNotifier].
 ///
-/// Active state (keyboard visible) is driven by listening to [keyboardFocusNode]
-/// directly, so the visual state always reflects actual focus, not just the
-/// last tap action.
+/// Visual state reflects autocomplete status:
+///   - Autocomplete ON (default): blue accent gradient, blue border/glow/icon.
+///   - Autocomplete OFF: dim background, no gradient/border/glow, dim icon.
+///
+/// Active keyboard state (border boost, glow increase) layers on top of the
+/// autocomplete-driven base style.
 library;
 
 import 'package:flutter/material.dart';
@@ -15,21 +17,31 @@ import 'package:flutter/services.dart';
 
 import '../app/colors.dart';
 
-/// Toggle button that shows or hides the soft keyboard.
+/// Toggle button that shows/hides the soft keyboard (tap) and toggles
+/// autocomplete suggestions (long-press).
 ///
 /// Inputs:
 ///   [keyboardFocusNode] — the FocusNode that drives soft keyboard visibility.
+///   [autocompleteActiveNotifier] — shared notifier controlling whether the
+///   hidden TextField has `enableSuggestions` and `autocorrect` enabled.
 ///
 /// Behavior:
 ///   - Tapping while unfocused calls [FocusNode.requestFocus] to open keyboard.
 ///   - Tapping while focused calls [FocusNode.unfocus] to close keyboard.
-///   - Visual active state tracks actual focus via a listener, not local state.
+///   - Long-press toggles [autocompleteActiveNotifier.value] with medium haptic.
+///   - Visual base style tracks autocomplete state (blue = ON, dim = OFF).
+///   - Keyboard active state boosts border alpha and glow when autocomplete ON.
 ///   - Press animation scales to 0.93 (matching other modifier bar buttons).
 ///   - Provides [HapticFeedback.lightImpact] on every tap.
 class KeyboardButton extends StatefulWidget {
   final FocusNode keyboardFocusNode;
+  final ValueNotifier<bool> autocompleteActiveNotifier;
 
-  const KeyboardButton({super.key, required this.keyboardFocusNode});
+  const KeyboardButton({
+    super.key,
+    required this.keyboardFocusNode,
+    required this.autocompleteActiveNotifier,
+  });
 
   @override
   State<KeyboardButton> createState() => _KeyboardButtonState();
@@ -39,23 +51,27 @@ class _KeyboardButtonState extends State<KeyboardButton> {
   bool _pressed = false;
 
   /// Whether the keyboard focus node currently has focus (keyboard is visible).
-  bool get _isActive => widget.keyboardFocusNode.hasFocus;
+  bool get _isKeyboardActive => widget.keyboardFocusNode.hasFocus;
+
+  /// Whether autocomplete suggestions are enabled.
+  bool get _isAutocompleteOn => widget.autocompleteActiveNotifier.value;
 
   @override
   void initState() {
     super.initState();
     // Rebuild when focus changes so the visual active state stays in sync.
-    widget.keyboardFocusNode.addListener(_onFocusChange);
+    widget.keyboardFocusNode.addListener(_rebuild);
+    widget.autocompleteActiveNotifier.addListener(_rebuild);
   }
 
   @override
   void dispose() {
-    widget.keyboardFocusNode.removeListener(_onFocusChange);
+    widget.keyboardFocusNode.removeListener(_rebuild);
+    widget.autocompleteActiveNotifier.removeListener(_rebuild);
     super.dispose();
   }
 
-  void _onFocusChange() {
-    // Trigger a rebuild so the active visual state reflects real focus.
+  void _rebuild() {
     setState(() {});
   }
 
@@ -68,21 +84,84 @@ class _KeyboardButtonState extends State<KeyboardButton> {
     }
   }
 
+  void _onLongPress() {
+    HapticFeedback.mediumImpact();
+    widget.autocompleteActiveNotifier.value =
+        !widget.autocompleteActiveNotifier.value;
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
 
-    // When active, boost the border alpha (~2×) and increase glow blur radius
-    // to signal the keyboard is visible.
-    final borderColor = _isActive
-        ? Color.fromARGB(
-            (c.keyboardBtnBorder.a * 2.0).round().clamp(0, 255),
-            c.keyboardBtnBorder.r.round(),
-            c.keyboardBtnBorder.g.round(),
-            c.keyboardBtnBorder.b.round(),
-          )
-        : c.keyboardBtnBorder;
-    final glowBlurRadius = _isActive ? 20.0 : 12.0;
+    // Autocomplete ON: blue accent style. OFF: dim style.
+    if (_isAutocompleteOn) {
+      // When keyboard is active, boost border alpha and glow.
+      final borderColor = _isKeyboardActive
+          ? Color.fromARGB(
+              (c.keyboardBtnBorder.a * 2.0).round().clamp(0, 255),
+              c.keyboardBtnBorder.r.round(),
+              c.keyboardBtnBorder.g.round(),
+              c.keyboardBtnBorder.b.round(),
+            )
+          : c.keyboardBtnBorder;
+      final glowBlurRadius = _isKeyboardActive ? 20.0 : 12.0;
+
+      return _buildGesture(
+        child: Container(
+          width: 46,
+          height: 34,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [c.keyboardBtnGradientStart, c.keyboardBtnGradientEnd],
+            ),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: borderColor, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: c.keyboardBtnGlow,
+                blurRadius: glowBlurRadius,
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            Icons.keyboard_outlined,
+            size: 18,
+            color: c.keyboardBtnIcon,
+          ),
+        ),
+      );
+    }
+
+    // Autocomplete OFF: dim style.
+    return _buildGesture(
+      child: Container(
+        width: 46,
+        height: 34,
+        decoration: BoxDecoration(
+          color: const Color(0x0FFFFFFF), // rgba(255,255,255,0.06)
+          borderRadius: BorderRadius.circular(10),
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.keyboard_outlined,
+          size: 18,
+          color: c.keyGroupText.withAlpha(100),
+        ),
+      ),
+    );
+  }
+
+  /// Wraps the button content with gesture handling, semantics, and press
+  /// animation.
+  Widget _buildGesture({required Widget child}) {
+    final autocompleteLabel =
+        _isAutocompleteOn ? 'autocomplete on' : 'autocomplete off';
+    final keyboardLabel =
+        _isKeyboardActive ? 'Hide keyboard' : 'Show keyboard';
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
@@ -91,38 +170,14 @@ class _KeyboardButtonState extends State<KeyboardButton> {
         _onTap();
       },
       onTapCancel: () => setState(() => _pressed = false),
+      onLongPress: _onLongPress,
       child: Semantics(
-        label: _isActive ? 'Hide keyboard' : 'Show keyboard',
+        label: '$keyboardLabel, $autocompleteLabel, long press to toggle',
         button: true,
         child: AnimatedScale(
           scale: _pressed ? 0.93 : 1.0,
           duration: const Duration(milliseconds: 80),
-          child: Container(
-            width: 46,
-            height: 34,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                // 135 degrees: begin top-left, end bottom-right.
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [c.keyboardBtnGradientStart, c.keyboardBtnGradientEnd],
-              ),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: borderColor, width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: c.keyboardBtnGlow,
-                  blurRadius: glowBlurRadius,
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              Icons.keyboard_outlined,
-              size: 18,
-              color: c.keyboardBtnIcon,
-            ),
-          ),
+          child: child,
         ),
       ),
     );

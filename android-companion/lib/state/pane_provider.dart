@@ -36,16 +36,45 @@ class Pane {
   });
 
   factory Pane.fromJson(Map<String, dynamic> json) {
+    // The Mac API uses "pane_id"; fall back to "id" for compatibility.
+    final id = (json['pane_id'] as String?) ?? (json['id'] as String?) ?? '';
+
+    // The layout API nests surfaces in an array. Each entry has:
+    //   "surface_id" — bonsplit tab ID (internal, NOT usable for cell subscribe)
+    //   "panel_id"   — workspace panel ID (matches workspace.list panel IDs)
+    //   "is_selected" — whether this surface is the active tab in the pane
+    //
+    // surface.cells.subscribe resolves via panels[uuid], so we MUST use
+    // panel_id, not surface_id. Find the selected surface's panel_id.
+    final surfaces = json['surfaces'] as List?;
+    String? surfaceId;
+    if (surfaces != null && surfaces.isNotEmpty) {
+      // Prefer the selected surface's panel_id.
+      final surfaceMaps = surfaces.cast<Map<String, dynamic>>();
+      final selected = surfaceMaps.firstWhere(
+        (s) => s['is_selected'] == true,
+        orElse: () => surfaceMaps.first,
+      );
+      surfaceId = selected['panel_id'] as String?;
+      // Fall back to surface_id if panel_id not present.
+      surfaceId ??= selected['surface_id'] as String?;
+    }
+    // Legacy fallback for older API responses.
+    surfaceId ??= json['selected_surface_id'] as String?;
+    surfaceId ??= json['surface_id'] as String?;
+
+    final surfaceCount = surfaces?.length ?? (json['surface_count'] as int?) ?? 1;
+
     return Pane(
-      id: json['id'] as String? ?? '',
-      surfaceId: json['surface_id'] as String?,
+      id: id,
+      surfaceId: surfaceId,
       type: json['type'] as String? ?? 'terminal',
       x: (json['x'] as num?)?.toDouble() ?? 0,
       y: (json['y'] as num?)?.toDouble() ?? 0,
       width: (json['width'] as num?)?.toDouble() ?? 1,
       height: (json['height'] as num?)?.toDouble() ?? 1,
       focused: json['focused'] as bool? ?? false,
-      surfaceCount: (json['surface_count'] as int?) ?? 1,
+      surfaceCount: surfaceCount,
     );
   }
 

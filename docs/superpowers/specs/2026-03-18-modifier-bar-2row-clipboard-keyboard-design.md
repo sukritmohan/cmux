@@ -15,7 +15,7 @@ Redesign the Android companion modifier bar from a single-row layout to a 2-row 
 │                                                                 │
 │  Row 1: [esc|tab|ctrl] · [📋] · · · · · · · ·  [🎙]  ║  ⊕    │
 │                                                        ║ joy   │
-│  Row 2: [= ~ | / -  ] · · · · · · · · · · · ·  [⌨ ]  ║ stick │
+│  Row 2: [~ | / -    ] · · · · · · · · · · · · [⌨ ]  ║ stick │
 │                                                        ║       │
 │                                                        ║ [RET] │
 │                                                                 │
@@ -27,7 +27,7 @@ Redesign the Android companion modifier bar from a single-row layout to a 2-row 
 The bar is divided into three horizontal zones:
 
 1. **Left zone (2 rows):** Tool buttons arranged in two rows
-2. **Center-right zone (stacked):** Voice recorder (top) and Keyboard (bottom), vertically centered
+2. **Center-right zone (stacked):** Voice recorder (top), Autocomplete toggle + Keyboard in a row (bottom), vertically centered
 3. **Right column:** Joystick (50px circle) over Return pill, separated by a vertical divider
 
 ### Row 1 (top)
@@ -42,7 +42,12 @@ The bar is divided into three horizontal zones:
 
 ### Center-right stack (vertically centered between rows)
 - **Voice recorder** — 34×34px circular button with microphone icon, border matches joystick style. **Placeholder only** — no functionality in this spec
-- **Keyboard button** — 46×34px rounded rect with blue accent gradient (`rgba(120,180,255,0.2)` → `rgba(80,140,220,0.1)`), 1px blue border, soft blue glow. Keyboard icon in blue (`rgba(120,180,255,0.7)`)
+- **Keyboard button** — 46×34px rounded rect. Dual-function:
+  - **Short tap** → toggle soft keyboard visibility (request/unfocus on hidden TextField)
+  - **Long-press** → toggle autocomplete suggestions (`mediumImpact()` haptic). Toggles `autocompleteActiveNotifier.value`.
+  - **Autocomplete ON (default):** blue accent gradient (`rgba(120,180,255,0.2)` → `rgba(80,140,220,0.1)`), 1px blue border, soft blue glow, blue keyboard icon (`rgba(120,180,255,0.7)`)
+  - **Autocomplete OFF:** dim background `rgba(255,255,255,0.06)`, no gradient/border/glow, dim icon
+  - When keyboard is active and autocomplete ON, border alpha and glow intensity are boosted
 
 ### Right column (separated by 1px vertical divider, vertically centered)
 - **Joystick** — enlarged to 50×50px (up from 40×40px). Circular, same crosshair icon and gesture behavior. Border: 1.5px at `rgba(255,255,255,0.1)` (updates existing `joystickBorder` token from 0.08 to 0.1)
@@ -133,6 +138,21 @@ When pasting text that contains newlines, use **bracketed paste mode** (`\x1b[20
 - **Visual state:** when keyboard is active/visible, increase border opacity and glow intensity to indicate "on" state
 - **Haptic:** `lightImpact()` on tap
 
+## Autocomplete Toggle (via Keyboard Button Long-Press)
+
+Autocomplete toggling is merged into the keyboard button rather than having a separate button.
+
+### Behavior
+- **Long-press keyboard button** → toggle `autocompleteActiveNotifier.value`
+- **ON (default)** → hidden TextField has `enableSuggestions: true`, `autocorrect: true` (enables keyboard suggestion strip and swipe/gesture typing). Keyboard button shows blue accent style.
+- **OFF** → hidden TextField has `enableSuggestions: false`, `autocorrect: false` (raw terminal mode). Keyboard button shows dim style.
+- **Haptic:** `mediumImpact()` on long-press
+- **Default:** ON (suggestions enabled) — resets to ON each app launch, no persistence
+- **Implementation detail:** Toggling requires recreating the TextField with a new `ValueKey` to force Android to create a fresh `InputConnection` with updated `EditorInfo` flags
+
+### Semantics
+- Keyboard button label includes autocomplete state: "Show keyboard, autocomplete on, long press to toggle"
+
 ## Voice Recorder Button (Placeholder)
 
 ### Button appearance
@@ -149,13 +169,12 @@ When pasting text that contains newlines, use **bracketed paste mode** (`\x1b[20
 ## Fan-out Changes
 
 The fan-out button is replaced by an **always-expanded symbol capsule**:
-- Symbols: `=`, `~`, `|`, `/`, `-`
+- Symbols: `~`, `|`, `/`, `-`
 - Each symbol: 34×34px in a connected capsule group (like esc/tab/ctrl)
 - 1px dividers between symbols (`rgba(255,255,255,0.06)`)
 - Capsule background: `rgba(255,255,255,0.03)`
 - Font: JetBrains Mono, 15px, weight 500, `rgba(255,255,255,0.45)`
 - Tap → send the character, same `onInput` callback. Symbols always bypass Ctrl modifier (raw character sent regardless of Ctrl state, Ctrl is not auto-released).
-- The `=` symbol is new (added to the set)
 - The fan-out popover overlay is no longer needed
 
 ## Color Tokens (new additions)
@@ -215,11 +234,13 @@ The `ClipboardHistoryNotifier` is a `ChangeNotifier` (or Riverpod `StateNotifier
 
 ## Files affected
 
-- `lib/terminal/modifier_bar.dart` — 2-row layout, new button slots
-- `lib/terminal/fan_out_button.dart` → refactor to `symbol_capsule.dart` (expanded inline symbols)
+- `lib/terminal/modifier_bar.dart` — 2-row layout, new button slots, autocomplete notifier
+- `lib/terminal/fan_out_button.dart` → refactor to `symbol_capsule.dart` (expanded inline symbols, `=` removed)
+- `lib/terminal/autocomplete_button.dart` — **deleted**: autocomplete toggle merged into keyboard button long-press
 - `lib/terminal/clipboard_button.dart` — new: button + bottom sheet
 - `lib/terminal/clipboard_history.dart` — new: data model, persistence, dedup
 - `lib/terminal/keyboard_button.dart` — new: keyboard toggle
 - `lib/terminal/voice_button.dart` — new: placeholder button
 - `lib/app/colors.dart` — new color tokens
-- `lib/terminal/terminal_screen.dart` — wire clipboard history provider, keyboard focus control
+- `lib/terminal/terminal_view.dart` — wire autocomplete notifier to TextField suggestions
+- `lib/terminal/terminal_screen.dart` — wire clipboard history provider, keyboard focus control, autocomplete notifier

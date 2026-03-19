@@ -53,13 +53,18 @@ class _MinimapPaneState extends ConsumerState<MinimapPane> {
   /// Subscribe to cell stream if this is a terminal pane with a surface.
   void _maybeSubscribe() {
     final pane = widget.pane;
-    if (pane.surfaceId == null || pane.type != 'terminal') return;
+    debugPrint('[MinimapPane] pane=${pane.id} type=${pane.type} surfaceId=${pane.surfaceId}');
+    if (pane.surfaceId == null || pane.type != 'terminal') {
+      debugPrint('[MinimapPane] Skipping: surfaceId=${pane.surfaceId}, type=${pane.type}');
+      return;
+    }
 
     final manager = ref.read(connectionManagerProvider);
     _consumer = MinimapCellConsumer(
       manager: manager,
       surfaceId: pane.surfaceId!,
       onUpdate: () {
+        debugPrint('[MinimapPane] onUpdate fired for ${pane.surfaceId}, hasData=${_consumer?.hasData}');
         if (mounted) setState(() {});
       },
     );
@@ -252,13 +257,12 @@ class _MinimapPaneState extends ConsumerState<MinimapPane> {
       );
     }
 
-    // Placeholder for non-terminal panes or loading state.
+    // Placeholder with debug status for diagnostics.
+    final status = consumer?.debugStatus ?? (widget.pane.surfaceId == null ? 'no surfaceId' : 'no consumer');
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Text(
-        widget.pane.type == 'terminal'
-            ? '\u2588\u2588\u2588 \u2588\u2588\u2588\u2588\u2588\n\u2588\u2588 \u2588\u2588\u2588'
-            : _typeLabel,
+        status,
         style: TextStyle(
           fontSize: 8,
           fontFamily: 'monospace',

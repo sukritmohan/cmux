@@ -1,6 +1,6 @@
 /// Inline symbol capsule for the modifier bar — replaces the old FanOutButton popover.
 ///
-/// Displays five terminal symbols (=, ~, |, /, -) in a connected horizontal capsule
+/// Displays four terminal symbols (~, |, /, -) in a connected horizontal capsule
 /// with 1px dividers between each key. Tapping any symbol fires [onInput] directly
 /// with the raw character, bypassing any Ctrl modifier state.
 ///
@@ -12,7 +12,7 @@ import 'package:flutter/services.dart';
 
 import '../app/colors.dart';
 
-/// Connected capsule of five symbol keys: =, ~, |, /, -.
+/// Connected capsule of four symbol keys: ~, |, /, -.
 ///
 /// Each key is 34×34px with JetBrains Mono 15px weight-500 text.
 /// Tapping a key fires [onInput] with the symbol character and
@@ -26,7 +26,7 @@ class SymbolCapsule extends StatelessWidget {
 
   const SymbolCapsule({super.key, required this.onInput});
 
-  static const _symbols = ['=', '~', '|', '/', '-'];
+  static const _symbols = ['~', '|', '/', '-'];
 
   @override
   Widget build(BuildContext context) {

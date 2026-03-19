@@ -1,8 +1,8 @@
 /// Floating capsule modifier toolbar — 2-row layout.
 ///
 /// Layout:
-///   Row 1: [esc|tab|ctrl] · [clipboard] · spacer · [voice]   ║ joystick
-///   Row 2: [= ~ | / -  ] · spacer · · · · · · · · · [keyboard] ║ return
+///   Row 1: [esc|tab|ctrl] · spacer · · · · · · · · [voice]      ║ joystick
+///   Row 2: [~ | / -    ] · spacer · [clipboard] · [keyboard]  ║ return
 ///
 /// Spec: docs/superpowers/specs/2026-03-18-modifier-bar-2row-clipboard-keyboard-design.md
 library;
@@ -36,6 +36,10 @@ class ModifierBar extends StatefulWidget {
   /// Focus node shared with TerminalView's hidden TextField for keyboard toggle.
   final FocusNode keyboardFocusNode;
 
+  /// Autocomplete/suggestion toggle state, shared with TerminalView to
+  /// control `enableSuggestions` and `autocorrect` on the hidden TextField.
+  final ValueNotifier<bool> autocompleteActiveNotifier;
+
   /// Callback for pasting clipboard text (wraps in bracketed paste mode).
   final ValueChanged<String> onPaste;
 
@@ -46,6 +50,7 @@ class ModifierBar extends StatefulWidget {
     required this.clipboardHistoryState,
     required this.clipboardHistoryNotifier,
     required this.keyboardFocusNode,
+    required this.autocompleteActiveNotifier,
     required this.onPaste,
   });
 
@@ -126,7 +131,7 @@ class _ModifierBarState extends State<ModifierBar> {
         notifier: widget.clipboardHistoryNotifier,
         historyState: widget.clipboardHistoryState,
         onPaste: (text) {
-          Navigator.pop(context);
+          // Sheet's _pasteAndDismiss handles Navigator.pop — don't pop here.
           widget.onPaste(text);
         },
       ),
@@ -156,7 +161,7 @@ class _ModifierBarState extends State<ModifierBar> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Row 1: esc+tab+ctrl | clipboard | spacer
+                    // Row 1: esc+tab+ctrl | spacer
                     Row(
                       children: [
                         _KeyGroupCapsule(
@@ -165,34 +170,37 @@ class _ModifierBarState extends State<ModifierBar> {
                           onTab: _onTab,
                           onCtrl: _onCtrlTap,
                         ),
-                        _BarDivider(),
-                        ClipboardButton(
-                          historyState: widget.clipboardHistoryState,
-                          onTap: _onShowClipboard,
-                        ),
                         const Spacer(),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    // Row 2: symbol capsule | spacer
+                    // Row 2: symbol capsule | spacer | clipboard
                     Row(
                       children: [
                         // Symbols bypass Ctrl — use widget.onInput directly
                         SymbolCapsule(onInput: widget.onInput),
                         const Spacer(),
+                        ClipboardButton(
+                          historyState: widget.clipboardHistoryState,
+                          onTap: _onShowClipboard,
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
 
-              // Center-right: voice (top) + keyboard (bottom), vertically centered
+              // Center-right: voice (top) + keyboard (bottom)
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const VoiceButton(),
                   const SizedBox(height: 4),
-                  KeyboardButton(keyboardFocusNode: widget.keyboardFocusNode),
+                  KeyboardButton(
+                    keyboardFocusNode: widget.keyboardFocusNode,
+                    autocompleteActiveNotifier:
+                        widget.autocompleteActiveNotifier,
+                  ),
                 ],
               ),
 

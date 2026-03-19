@@ -33,6 +33,10 @@ class MinimapCellConsumer {
   /// Whether at least one full snapshot has been received.
   bool _hasData = false;
 
+  /// Debug status for on-screen diagnostics (remove after debugging).
+  String debugStatus = 'init';
+  int _frameCount = 0;
+
   // Exposed state for the painter.
   List<CellData> cells = [];
   int cols = 0;
@@ -56,24 +60,31 @@ class MinimapCellConsumer {
   /// Follows the same pattern as `_TerminalViewState._subscribeToSurface`
   /// but skips workspace.select and resize — minimap is read-only.
   Future<void> subscribe() async {
+    debugStatus = 'subscribing...';
+    _onUpdate();
     try {
       final response = await _manager.sendRequest(
         'surface.cells.subscribe',
         params: {'surface_id': _surfaceId},
       );
 
+      debugPrint('[MinimapCell] Subscribe response for $_surfaceId: ok=${response.ok} result=${response.result} error=${response.error}');
+
       if (!response.ok || response.result == null) {
-        debugPrint('[MinimapCell] Subscribe failed for $_surfaceId');
+        debugStatus = 'FAIL: ${response.error ?? "no result"}';
+        _onUpdate();
         return;
       }
 
       _channelId = response.result!['channel'] as int?;
       if (_channelId == null) {
-        debugPrint('[MinimapCell] No channel ID for $_surfaceId');
+        debugStatus = 'FAIL: no channel';
+        _onUpdate();
         return;
       }
 
-      debugPrint('[MinimapCell] Subscribed to $_surfaceId on channel $_channelId');
+      debugStatus = 'ch=$_channelId waiting...';
+      _onUpdate();
 
       // Listen for binary cell frames.
       _cellSub = _manager.ptyDemuxer.subscribe(_channelId!).listen(_onFrame);
@@ -86,7 +97,8 @@ class MinimapCellConsumer {
         }
       });
     } catch (e) {
-      debugPrint('[MinimapCell] Subscribe error for $_surfaceId: $e');
+      debugStatus = 'ERR: $e';
+      _onUpdate();
     }
   }
 
@@ -95,11 +107,17 @@ class MinimapCellConsumer {
   /// Parses immediately (keeps internal state current) but does NOT
   /// trigger a repaint. The periodic timer handles that at ~3fps.
   void _onFrame(Uint8List data) {
+    _frameCount++;
+    debugStatus = 'frames=$_frameCount ${data.length}B';
     final result = _parser.parse(data);
-    if (result == null) return;
+    if (result == null) {
+      debugStatus = 'frames=$_frameCount PARSE_NULL';
+      return;
+    }
 
     // Only update exposed state when cells actually changed.
     if (result.cellsChanged) {
+      debugStatus = 'LIVE ${result.cols}x${result.rows} f=$_frameCount';
       cells = result.cells;
       cols = result.cols;
       rows = result.rows;

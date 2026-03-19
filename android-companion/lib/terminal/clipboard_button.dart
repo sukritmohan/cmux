@@ -510,11 +510,12 @@ class _ClipboardHistorySheetState extends State<ClipboardHistorySheet> {
     );
   }
 
-  /// Footer hint with a top border.
+  /// Footer hint with a top border, respecting bottom safe area (Android nav bar).
   Widget _buildFooter(AppColorScheme c) {
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: EdgeInsets.fromLTRB(0, 10, 0, 10 + bottomPadding),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: c.border),

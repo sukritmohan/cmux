@@ -70,6 +70,11 @@ class TerminalView extends ConsumerStatefulWidget {
   /// toggle the soft keyboard by calling requestFocus/unfocus on this node.
   final FocusNode? externalFocusNode;
 
+  /// Autocomplete/suggestion toggle state. When true, the hidden TextField
+  /// enables `enableSuggestions` and `autocorrect` for swipe typing support.
+  /// When false, raw terminal mode with no suggestions.
+  final ValueNotifier<bool>? autocompleteActiveNotifier;
+
   /// Callback to record copied text in clipboard history.
   final ValueChanged<String>? onCopy;
 
@@ -80,6 +85,7 @@ class TerminalView extends ConsumerStatefulWidget {
     this.scrollNotifier,
     this.ctrlActiveNotifier,
     this.externalFocusNode,
+    this.autocompleteActiveNotifier,
     this.onCopy,
   });
 
@@ -800,21 +806,46 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
             child: Stack(
               children: [
                 // Hidden text input to capture soft keyboard IME events.
+                // Wrapped in ValueListenableBuilder so toggling autocomplete
+                // recreates the TextField with a new Key, forcing Android to
+                // create a fresh InputConnection with updated EditorInfo flags.
                 Positioned.fill(
                   child: Opacity(
                     opacity: 0,
-                    child: TextField(
-                      controller: _textController,
-                      focusNode: _focusNode,
-                      autofocus: true,
-                      maxLines: null,
-                      keyboardType: TextInputType.text,
-                      textInputAction: TextInputAction.none,
-                      enableSuggestions: false,
-                      autocorrect: false,
-                      showCursor: false,
-                      decoration: const InputDecoration.collapsed(hintText: ''),
-                    ),
+                    child: widget.autocompleteActiveNotifier != null
+                        ? ValueListenableBuilder<bool>(
+                            valueListenable:
+                                widget.autocompleteActiveNotifier!,
+                            builder: (context, autocomplete, _) {
+                              return TextField(
+                                key: ValueKey('tf-autocomplete-$autocomplete'),
+                                controller: _textController,
+                                focusNode: _focusNode,
+                                autofocus: true,
+                                maxLines: null,
+                                keyboardType: TextInputType.text,
+                                textInputAction: TextInputAction.none,
+                                enableSuggestions: autocomplete,
+                                autocorrect: autocomplete,
+                                showCursor: false,
+                                decoration: const InputDecoration.collapsed(
+                                    hintText: ''),
+                              );
+                            },
+                          )
+                        : TextField(
+                            controller: _textController,
+                            focusNode: _focusNode,
+                            autofocus: true,
+                            maxLines: null,
+                            keyboardType: TextInputType.text,
+                            textInputAction: TextInputAction.none,
+                            enableSuggestions: false,
+                            autocorrect: false,
+                            showCursor: false,
+                            decoration: const InputDecoration.collapsed(
+                                hintText: ''),
+                          ),
                   ),
                 ),
 
