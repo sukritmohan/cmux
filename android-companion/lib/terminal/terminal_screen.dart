@@ -230,10 +230,14 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
   Future<void> _sendInput(String data) async {
     final surfaceState = ref.read(surfaceProvider);
     final surfaceId = surfaceState.focusedSurfaceId;
-    if (surfaceId == null) return;
+    if (surfaceId == null) {
+      debugPrint('[TerminalScreen] _sendInput: no focused surface, dropping: "$data"');
+      return;
+    }
 
     try {
       final manager = ref.read(connectionManagerProvider);
+      debugPrint('[TerminalScreen] _sendInput: writing to surface $surfaceId: "$data"');
       await manager.sendRequest(
         'surface.pty.write',
         params: {'surface_id': surfaceId, 'data': data},
@@ -777,6 +781,9 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
         if (prevChip?.status == ChipStatus.committing) continue;
 
         // Send the chip text to the terminal pty.
+        debugPrint('[VoiceCommit] Sending chip ${chip.segmentId} to terminal: "${chip.commitText}"');
+        final surfaceId = ref.read(surfaceProvider).focusedSurfaceId;
+        debugPrint('[VoiceCommit] focusedSurfaceId=$surfaceId');
         _sendInput(chip.commitText);
 
         // Mark the chip as committed so it fades out.
