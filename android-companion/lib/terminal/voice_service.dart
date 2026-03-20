@@ -26,6 +26,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:record/record.dart';
 
 import '../connection/connection_manager.dart';
+import '../connection/message_protocol.dart';
 import 'voice_protocol.dart';
 
 // ---------------------------------------------------------------------------
@@ -78,6 +79,62 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   // Per-chip fade-out removal timers keyed by segmentId.
   final Map<int, Timer> _removeTimers = {};
 
+  // Subscription to bridge events (voice.transcription, voice.processing, etc.).
+  StreamSubscription<BridgeEvent>? _eventSub;
+
+  // ---------------------------------------------------------------------------
+  // Event handling
+  // ---------------------------------------------------------------------------
+
+  /// Subscribe to bridge events for voice.* notifications from the Mac.
+  ///
+  /// Must be called before starting a recording session so that transcription
+  /// results are routed to chip creation.
+  void listenToEvents(ConnectionManager manager) {
+    _eventSub?.cancel();
+    _eventSub = manager.eventStream.listen(_handleBridgeEvent);
+  }
+
+  /// Handle an incoming bridge event — routes voice.* events to the appropriate
+  /// state mutations.
+  void _handleBridgeEvent(BridgeEvent event) {
+    switch (event.event) {
+      case 'voice.transcription':
+        final segmentId = event.data['segment_id'] as int?;
+        final text = event.data['text'] as String?;
+        if (segmentId != null && text != null && text.isNotEmpty) {
+          // Run trigger word detection on the transcribed text.
+          final result = TriggerWordDetector.check(text);
+          addChip(
+            segmentId,
+            result.cleanText.isEmpty ? text : result.cleanText,
+            result.hasTrigger,
+          );
+        }
+
+      case 'voice.processing':
+        // Informational — Mac is transcribing a segment. Could show a
+        // "thinking" indicator, but for now we just wait for the result.
+        break;
+
+      case 'voice.error':
+        final message = event.data['message'] as String? ?? 'Unknown error';
+        state = state.copyWith(errorMessage: message);
+        debugPrint('[VoiceService] Mac error: $message');
+
+      case 'voice.setup_progress':
+        final percent = event.data['percent'];
+        final message = event.data['message'] as String?;
+        state = state.copyWith(
+          setupProgress: percent is num ? percent.toDouble() / 100.0 : null,
+          setupMessage: message,
+        );
+
+      default:
+        break;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Public RPC API
   // ---------------------------------------------------------------------------
@@ -121,6 +178,9 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       );
       return;
     }
+
+    // Subscribe to bridge events for transcription results.
+    listenToEvents(manager);
 
     // Notify the Mac that a recording session is starting.
     manager.sendRequest('voice.start');
@@ -292,6 +352,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
 
   @override
   void dispose() {
+    _eventSub?.cancel();
     _audioSub?.cancel();
     _durationTimer?.cancel();
     for (final t in _commitTimers.values) {

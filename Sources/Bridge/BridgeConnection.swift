@@ -37,10 +37,15 @@ final class BridgeConnection {
     /// Created lazily on the first `voice.*` RPC call or the first voice binary frame.
     private lazy var voiceChannel: VoiceChannel = {
         let channel = VoiceChannel()
-        // Wire the channel's outbound events back to the WebSocket as JSON-RPC notifications.
+        // Wire the channel's outbound events back to the WebSocket using the same
+        // format as BridgeEventRelay: {"type":"event","event":"...","data":{...}}.
         channel.sendEvent = { [weak self] method, params in
             guard let self else { return }
-            let notification: [String: Any] = ["method": method, "params": params]
+            let notification: [String: Any] = [
+                "type": "event",
+                "event": method,
+                "data": params,
+            ]
             self.sendText(self.encodeJSON(notification))
         }
         return channel
