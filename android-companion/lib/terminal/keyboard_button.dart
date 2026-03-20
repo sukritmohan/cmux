@@ -109,15 +109,15 @@ class _KeyboardButtonState extends State<KeyboardButton> {
 
       return _buildGesture(
         child: Container(
-          width: 46,
-          height: 34,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
+            shape: BoxShape.circle,
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [c.keyboardBtnGradientStart, c.keyboardBtnGradientEnd],
             ),
-            borderRadius: BorderRadius.circular(10),
             border: Border.all(color: borderColor, width: 1),
             boxShadow: [
               BoxShadow(
@@ -129,7 +129,7 @@ class _KeyboardButtonState extends State<KeyboardButton> {
           alignment: Alignment.center,
           child: Icon(
             Icons.keyboard_outlined,
-            size: 18,
+            size: 16,
             color: c.keyboardBtnIcon,
           ),
         ),
@@ -139,16 +139,16 @@ class _KeyboardButtonState extends State<KeyboardButton> {
     // Autocomplete OFF: dim style.
     return _buildGesture(
       child: Container(
-        width: 46,
-        height: 34,
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
+          shape: BoxShape.circle,
           color: const Color(0x0FFFFFFF), // rgba(255,255,255,0.06)
-          borderRadius: BorderRadius.circular(10),
         ),
         alignment: Alignment.center,
         child: Icon(
           Icons.keyboard_outlined,
-          size: 18,
+          size: 16,
           color: c.keyGroupText.withAlpha(100),
         ),
       ),

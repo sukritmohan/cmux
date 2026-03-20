@@ -14,7 +14,7 @@ import '../app/colors.dart';
 
 /// Connected capsule of four symbol keys: ~, |, /, -.
 ///
-/// Each key is 34×34px with JetBrains Mono 15px weight-500 text.
+/// Each key is 36px tall (flex:1 width) with JetBrains Mono 15px weight-500 text.
 /// Tapping a key fires [onInput] with the symbol character and
 /// triggers [HapticFeedback.selectionClick].
 ///
@@ -33,24 +33,26 @@ class SymbolCapsule extends StatelessWidget {
     final c = AppColors.of(context);
 
     return Container(
+      height: 36,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         color: const Color(0x08FFFFFF), // rgba(255,255,255,0.03)
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           for (int i = 0; i < _symbols.length; i++) ...[
             if (i > 0)
-              SizedBox(width: 1, height: 34, child: ColoredBox(color: c.border)),
-            _SymbolKey(
-              symbol: _symbols[i],
-              position: i == 0
-                  ? _KeyPosition.first
-                  : i == _symbols.length - 1
-                      ? _KeyPosition.last
-                      : _KeyPosition.middle,
-              onTap: () => onInput(_symbols[i]),
+              SizedBox(width: 1, height: 36, child: ColoredBox(color: c.border)),
+            Expanded(
+              child: _SymbolKey(
+                symbol: _symbols[i],
+                position: i == 0
+                    ? _KeyPosition.first
+                    : i == _symbols.length - 1
+                        ? _KeyPosition.last
+                        : _KeyPosition.middle,
+                onTap: () => onInput(_symbols[i]),
+              ),
             ),
           ],
         ],
@@ -102,8 +104,7 @@ class _SymbolKeyState extends State<_SymbolKey> {
           scale: _pressed ? 0.93 : 1.0,
           duration: const Duration(milliseconds: 80),
           child: Container(
-            width: 34,
-            height: 34,
+            height: 36,
             decoration: BoxDecoration(
               borderRadius: switch (widget.position) {
                 _KeyPosition.first =>

@@ -65,6 +65,7 @@ class AppColorScheme {
   final Color returnGradientStart;
   final Color returnGradientEnd;
   final Color returnGlow;
+  final Color returnText;
 
   // -- Clipboard --
   final Color clipboardBadge;
@@ -129,6 +130,7 @@ class AppColorScheme {
     required this.returnGradientStart,
     required this.returnGradientEnd,
     required this.returnGlow,
+    required this.returnText,
     required this.clipboardBadge,
     required this.clipboardBadgeBorder,
     required this.clipboardLatestBorder,
@@ -187,9 +189,10 @@ abstract final class AppColors {
     joystickBorder: Color(0x1AFFFFFF),        // rgba(255,255,255,0.10)
     joystickPressed: Color(0x1FE0A030),       // rgba(224,160,48,0.12)
     joystickPressedBorder: Color(0x40E0A030), // rgba(224,160,48,0.25)
-    returnGradientStart: Color(0x47E0A030),   // rgba(224,160,48,0.28)
-    returnGradientEnd: Color(0x1FE0A030),     // rgba(224,160,48,0.12)
-    returnGlow: Color(0x14E0A030),            // rgba(224,160,48,0.08)
+    returnGradientStart: Color(0xFFE8B84A),   // opaque warm amber top
+    returnGradientEnd: Color(0xFFC8922E),     // opaque warm amber bottom
+    returnGlow: Color(0x26E0A030),            // rgba(224,160,48,0.15)
+    returnText: Color(0xFF3D2800),            // warm dark brown
     clipboardBadge: Color(0xB3E0A030),        // rgba(224,160,48,0.7)
     clipboardBadgeBorder: Color(0xE6101018),  // rgba(16,16,24,0.9)
     clipboardLatestBorder: Color(0x6678B4FF), // rgba(120,180,255,0.4)
@@ -245,9 +248,10 @@ abstract final class AppColors {
     joystickBorder: Color(0x0F000000),        // rgba(0,0,0,0.06)
     joystickPressed: Color(0x1AE0A030),       // rgba(224,160,48,0.10)
     joystickPressedBorder: Color(0x33E0A030), // rgba(224,160,48,0.20)
-    returnGradientStart: Color(0x38E0A030),   // rgba(224,160,48,0.22)
-    returnGradientEnd: Color(0x14E0A030),     // rgba(224,160,48,0.08)
-    returnGlow: Color(0x0FE0A030),            // rgba(224,160,48,0.06)
+    returnGradientStart: Color(0xFFD4A030),   // opaque warm amber top
+    returnGradientEnd: Color(0xFFB88228),     // opaque warm amber bottom
+    returnGlow: Color(0x1AE0A030),            // rgba(224,160,48,0.10)
+    returnText: Color(0xFF3D2800),            // warm dark brown
     clipboardBadge: Color(0xB3C08020),        // warm amber
     clipboardBadgeBorder: Color(0xE6F8F8FA),  // light background
     clipboardLatestBorder: Color(0x664080C0), // blue accent

@@ -74,9 +74,9 @@ class _JoystickButtonState extends State<JoystickButton> {
   int _repeatCount = 0;
 
   static const _holdDelay = Duration(milliseconds: 200);
-  static const _swipeThreshold = 8.0;
-  static const _dragThreshold = 12.0;
-  static const _holdMoveTolerance = 4.0;
+  static const _swipeThreshold = 10.0;
+  static const _dragThreshold = 15.0;
+  static const _holdMoveTolerance = 5.0;
   static const _initialRepeatInterval = Duration(milliseconds: 200);
   static const _minRepeatInterval = Duration(milliseconds: 40);
 
@@ -202,8 +202,8 @@ class _JoystickButtonState extends State<JoystickButton> {
         curve: Curves.easeOutExpo,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          width: 50,
-          height: 50,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isPressed ? c.joystickPressed : c.joystickFill,

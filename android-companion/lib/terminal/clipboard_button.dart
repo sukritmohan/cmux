@@ -26,7 +26,7 @@ import 'clipboard_history.dart';
 // ClipboardButton
 // ---------------------------------------------------------------------------
 
-/// A 38×34 paste icon button with an optional amber badge dot.
+/// A 36px circular paste icon button with an optional amber badge dot.
 ///
 /// Inputs:
 ///   [historyState] — current clipboard history snapshot, used to decide
@@ -60,23 +60,23 @@ class ClipboardButton extends StatelessWidget {
           onTap();
         },
         child: SizedBox(
-          width: 38,
-          height: 34,
+          width: 36,
+          height: 36,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // Background capsule with icon.
+              // Circular background with icon.
               Container(
-                width: 38,
-                height: 34,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
+                  shape: BoxShape.circle,
                   color: c.keyGroupResting,
-                  borderRadius: BorderRadius.circular(AppColors.radiusMd),
                 ),
                 alignment: Alignment.center,
                 child: Icon(
                   Icons.content_paste_rounded,
-                  size: 14,
+                  size: 16,
                   color: c.keyGroupText,
                 ),
               ),
@@ -84,8 +84,8 @@ class ClipboardButton extends StatelessWidget {
               // Amber badge dot — only when history is non-empty.
               if (historyState.isNotEmpty)
                 Positioned(
-                  top: -1,
-                  right: -1,
+                  top: 0,
+                  right: 0,
                   child: Container(
                     width: 7,
                     height: 7,

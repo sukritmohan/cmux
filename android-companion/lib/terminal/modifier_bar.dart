@@ -1,10 +1,15 @@
-/// Floating capsule modifier toolbar — 2-row layout.
+/// Floating capsule modifier toolbar — three-section layout.
 ///
-/// Layout:
-///   Row 1: [esc|tab|ctrl] · spacer · · · · · · · · [voice]      ║ joystick
-///   Row 2: [~ | / -    ] · spacer · [clipboard] · [keyboard]  ║ return
+/// Layout (flex row):
+///   [Left: Keys flex:1] | [Middle: Tools 2×2 grid] | [Right: Nav+Submit flex:1]
 ///
-/// Spec: docs/superpowers/specs/2026-03-18-modifier-bar-2row-clipboard-keyboard-design.md
+///   Left:                   Middle:                      Right:
+///     Row 1: esc|tab|ctrl     [+attach]   [clipboard]     [joystick] [RETURN]
+///     Row 2: ~ | / | -       [keyboard]  [voice]
+///
+/// Three sections separated by two 56px-tall vertical dividers.
+/// Left and right both flex:1 — middle grid stays perfectly centered.
+/// Middle is a fixed-width 2×2 grid (36px cells, 4px gap = 76px total).
 library;
 
 import 'dart:ui';
@@ -13,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app/colors.dart';
+import 'attachment_button.dart';
 import 'clipboard_button.dart';
 import 'clipboard_history.dart';
 import 'joystick_button.dart';
@@ -144,7 +150,7 @@ class _ModifierBarState extends State<ModifierBar> {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 0, 8, 2),
-      height: 86, // two rows + right column (joystick 50 + gap 4 + return 22 + padding 10)
+      height: 88, // two 36px rows + 4px gap + 12px vertical padding
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         color: c.modifierBarBg,
@@ -153,82 +159,84 @@ class _ModifierBarState extends State<ModifierBar> {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: Row(
             children: [
-              // Left zone: two rows of tool buttons
+              // LEFT: Terminal key pills (flex: 1)
               Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Row 1: esc|tab|ctrl pill (36px tall, flex:1 per key)
+                    _KeyGroupCapsule(
+                      ctrlState: _ctrlState,
+                      onEsc: _onEsc,
+                      onTab: _onTab,
+                      onCtrl: _onCtrlTap,
+                    ),
+                    const SizedBox(height: 4),
+                    // Row 2: ~|/|- pill (36px tall, flex:1 per key)
+                    // Symbols bypass Ctrl — use widget.onInput directly
+                    SymbolCapsule(onInput: widget.onInput),
+                  ],
+                ),
+              ),
+
+              // DIVIDER 1 (1px × 56px, margin 0 10px)
+              _SectionDivider(),
+
+              // MIDDLE: Tools 2×2 grid (fixed 76px wide)
+              SizedBox(
+                width: 76, // 36 + 4 + 36
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Row 1: esc+tab+ctrl | spacer
                     Row(
                       children: [
-                        _KeyGroupCapsule(
-                          ctrlState: _ctrlState,
-                          onEsc: _onEsc,
-                          onTab: _onTab,
-                          onCtrl: _onCtrlTap,
-                        ),
-                        const Spacer(),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    // Row 2: symbol capsule | spacer | clipboard
-                    Row(
-                      children: [
-                        // Symbols bypass Ctrl — use widget.onInput directly
-                        SymbolCapsule(onInput: widget.onInput),
-                        const Spacer(),
-                        ClipboardButton(
+                        const AttachmentButton(), // top-left
+                        const SizedBox(width: 4),
+                        ClipboardButton(          // top-right
                           historyState: widget.clipboardHistoryState,
                           onTap: _onShowClipboard,
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        KeyboardButton(           // bottom-left
+                          keyboardFocusNode: widget.keyboardFocusNode,
+                          autocompleteActiveNotifier:
+                              widget.autocompleteActiveNotifier,
+                        ),
+                        const SizedBox(width: 4),
+                        const VoiceButton(),      // bottom-right
                       ],
                     ),
                   ],
                 ),
               ),
 
-              // Center-right: voice (top) + keyboard (bottom)
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const VoiceButton(),
-                  const SizedBox(height: 4),
-                  KeyboardButton(
-                    keyboardFocusNode: widget.keyboardFocusNode,
-                    autocompleteActiveNotifier:
-                        widget.autocompleteActiveNotifier,
-                  ),
-                ],
-              ),
+              // DIVIDER 2
+              _SectionDivider(),
 
-              // Vertical divider before right column
-              Container(
-                width: 1,
-                height: 56,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  color: c.border,
-                  borderRadius: BorderRadius.circular(1),
+              // RIGHT: Nav + Submit (flex: 1, right-aligned)
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    JoystickButton(   // 44px circle
+                      onInput: _onInput,
+                      ctrlActive: _ctrlState != _CtrlState.inactive,
+                    ),
+                    const SizedBox(width: 8),
+                    _ReturnKey(onTap: () {  // 44px tall, 72px min-width
+                      HapticFeedback.mediumImpact();
+                      widget.onInput('\r');
+                    }),
+                  ],
                 ),
-              ),
-
-              // Right column: joystick (50px) + return (22px), vertically centered
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  JoystickButton(
-                    onInput: _onInput,
-                    ctrlActive: _ctrlState != _CtrlState.inactive,
-                  ),
-                  const SizedBox(height: 4),
-                  _ReturnKey(onTap: () {
-                    HapticFeedback.mediumImpact();
-                    widget.onInput('\r');
-                  }),
-                ],
               ),
             ],
           ),
@@ -241,6 +249,7 @@ class _ModifierBarState extends State<ModifierBar> {
 enum _CtrlState { inactive, sticky, locked }
 
 /// Esc + Tab + Ctrl paired capsule. Three keys in a connected group.
+/// Stretches to fill parent width; each key uses flex:1 for equal distribution.
 class _KeyGroupCapsule extends StatelessWidget {
   final _CtrlState ctrlState;
   final VoidCallback onEsc;
@@ -259,35 +268,41 @@ class _KeyGroupCapsule extends StatelessWidget {
     final c = AppColors.of(context);
 
     return Container(
+      height: 36,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         color: c.keyGroupResting.withAlpha(10), // capsule background tint
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          _GroupedKey(
-            label: 'esc',
-            isActive: false,
-            isLocked: false,
-            position: _KeyPosition.first,
-            onTap: onEsc,
+          Expanded(
+            child: _GroupedKey(
+              label: 'esc',
+              isActive: false,
+              isLocked: false,
+              position: _KeyPosition.first,
+              onTap: onEsc,
+            ),
           ),
-          SizedBox(width: 1, height: 34, child: ColoredBox(color: c.border)),
-          _GroupedKey(
-            label: 'tab',
-            isActive: false,
-            isLocked: false,
-            position: _KeyPosition.middle,
-            onTap: onTab,
+          SizedBox(width: 1, height: 36, child: ColoredBox(color: c.border)),
+          Expanded(
+            child: _GroupedKey(
+              label: 'tab',
+              isActive: false,
+              isLocked: false,
+              position: _KeyPosition.middle,
+              onTap: onTab,
+            ),
           ),
-          SizedBox(width: 1, height: 34, child: ColoredBox(color: c.border)),
-          _GroupedKey(
-            label: 'ctrl',
-            isActive: ctrlState != _CtrlState.inactive,
-            isLocked: ctrlState == _CtrlState.locked,
-            position: _KeyPosition.last,
-            onTap: onCtrl,
+          SizedBox(width: 1, height: 36, child: ColoredBox(color: c.border)),
+          Expanded(
+            child: _GroupedKey(
+              label: 'ctrl',
+              isActive: ctrlState != _CtrlState.inactive,
+              isLocked: ctrlState == _CtrlState.locked,
+              position: _KeyPosition.last,
+              onTap: onCtrl,
+            ),
           ),
         ],
       ),
@@ -342,8 +357,7 @@ class _GroupedKeyState extends State<_GroupedKey> {
           scale: _pressed ? 0.93 : 1.0,
           duration: const Duration(milliseconds: 80),
           child: Container(
-            width: 44,
-            height: 34,
+            height: 36,
             decoration: BoxDecoration(
               color: bg,
               borderRadius: switch (widget.position) {
@@ -386,16 +400,16 @@ class _GroupedKeyState extends State<_GroupedKey> {
   }
 }
 
-/// Subtle vertical divider between zones.
-class _BarDivider extends StatelessWidget {
+/// Subtle vertical divider between the three sections.
+class _SectionDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
 
     return Container(
       width: 1,
-      height: 16,
-      margin: const EdgeInsets.symmetric(horizontal: 2),
+      height: 56,
+      margin: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: c.border,
         borderRadius: BorderRadius.circular(1),
@@ -404,7 +418,7 @@ class _BarDivider extends StatelessWidget {
   }
 }
 
-/// Return key with warm amber gradient.
+/// Return key with warm amber gradient — 44px tall, 72px min-width.
 class _ReturnKey extends StatefulWidget {
   final VoidCallback onTap;
 
@@ -432,19 +446,20 @@ class _ReturnKeyState extends State<_ReturnKey> {
         scale: _pressed ? 0.93 : 1.0,
         duration: const Duration(milliseconds: 80),
         child: Container(
-          width: 50,
-          height: 22,
+          constraints: const BoxConstraints(minWidth: 72),
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: const Alignment(-0.5, -1),
-              end: const Alignment(0.5, 1),
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
               colors: [c.returnGradientStart, c.returnGradientEnd],
             ),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
                 color: c.returnGlow,
-                blurRadius: 20,
+                blurRadius: 12,
               ),
             ],
           ),
@@ -453,10 +468,10 @@ class _ReturnKeyState extends State<_ReturnKey> {
             'RETURN',
             style: TextStyle(
               fontFamily: 'JetBrains Mono',
-              fontSize: 8,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 1,
-              color: c.accentText,
+              color: c.returnText,
             ),
           ),
         ),

@@ -12,7 +12,7 @@ import 'package:flutter/material.dart';
 
 import '../app/colors.dart';
 
-/// A 34×34 circular mic icon button that renders in the modifier bar.
+/// A 36px circular mic icon button that renders in the modifier bar.
 ///
 /// Tapping does nothing. The button signals "coming soon" via its semantics
 /// label so screen readers can communicate its intent to assistive technology.
@@ -30,20 +30,16 @@ class VoiceButton extends StatelessWidget {
         // No-op: button is a placeholder, interaction is intentionally disabled.
         onTap: () {},
         child: Container(
-          width: 34,
-          height: 34,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: c.keyGroupResting,
-            border: Border.all(
-              color: c.joystickBorder,
-              width: 1,
-            ),
           ),
           child: Center(
             child: Icon(
               Icons.mic_none_rounded,
-              size: 14,
+              size: 16,
               color: c.keyGroupText,
             ),
           ),

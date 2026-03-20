@@ -1,4 +1,5 @@
 import 'package:cmux_companion/app/theme.dart';
+import 'package:cmux_companion/terminal/clipboard_history.dart';
 import 'package:cmux_companion/terminal/modifier_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +12,15 @@ void main() {
         body: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            ModifierBar(onInput: onInput ?? (_) {}),
+            ModifierBar(
+              onInput: onInput ?? (_) {},
+              ctrlActiveNotifier: ValueNotifier<bool>(false),
+              clipboardHistoryState: const ClipboardHistoryState(),
+              clipboardHistoryNotifier: ClipboardHistoryNotifier(connectionKey: 'test'),
+              keyboardFocusNode: FocusNode(),
+              autocompleteActiveNotifier: ValueNotifier<bool>(true),
+              onPaste: (_) {},
+            ),
           ],
         ),
       ),

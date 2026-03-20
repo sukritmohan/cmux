@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modifier Key Bar -- Merged Design Playground</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #050508;
+  color: #C8C8D4;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+  min-height: 100vh;
+  padding: 40px 24px 80px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   PAGE LAYOUT
+   ============================================================ */
+.page-header {
+  text-align: center;
+  margin-bottom: 48px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.page-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #E0E0EC;
+  margin-bottom: 6px;
+}
+.page-header p {
+  font-size: 13px;
+  color: #5A5A72;
+  line-height: 1.5;
+}
+
+/* ============================================================
+   DEVICES ROW
+   ============================================================ */
+.devices-row {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  flex-wrap: wrap;
+  margin-bottom: 56px;
+  align-items: flex-end;
+}
+.device-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.device-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #3E3E56;
+}
+
+/* ============================================================
+   DEVICE FRAMES
+   ============================================================ */
+.device-frame {
+  position: relative;
+  background: #0A0C10;
+  border: 2px solid #1A1C22;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.device-frame.phone {
+  width: 375px;
+  height: 560px;
+  border-radius: 36px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 24px 64px rgba(0,0,0,0.6);
+}
+.device-frame.foldable {
+  width: 580px;
+  height: 460px;
+  border-radius: 20px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 24px 64px rgba(0,0,0,0.6);
+}
+
+/* ============================================================
+   TERMINAL CHROME
+   ============================================================ */
+.terminal-topbar {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 13px;
+  color: #5A5C64;
+}
+.terminal-topbar .hamburger {
+  width: 18px;
+  height: 18px;
+  color: #5A5C64;
+}
+.terminal-topbar .tilde-badge {
+  background: #1A2018;
+  color: #5A8A50;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  font-weight: 500;
+}
+.terminal-topbar .tab { color: #6A6C74; font-weight: 500; }
+.terminal-topbar .tab.active { color: #B0B2BA; }
+.terminal-topbar .spacer { flex: 1; }
+.terminal-topbar .plus-icon { color: #5A5C64; font-size: 18px; }
+.terminal-topbar .split-icon {
+  background: #1A1E28;
+  color: #5080C0;
+  padding: 5px 8px;
+  border-radius: 6px;
+}
+
+.terminal-content {
+  flex: 1;
+  padding: 12px 14px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #6A6C74;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.terminal-content .prompt { color: #5A8A50; }
+.terminal-content .cmd { color: #B0B2BA; }
+.terminal-content .error { color: #888890; }
+.terminal-content .cursor-line { display: flex; align-items: center; }
+.terminal-content .cursor {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background: #D4A03C;
+  border-radius: 1px;
+  animation: blink 1.1s step-end infinite;
+  margin-left: 6px;
+}
+@keyframes blink { 0%,100% { opacity: 0.9; } 50% { opacity: 0; } }
+
+/* Fake keyboard */
+.fake-keyboard {
+  height: 150px;
+  background: #0E1014;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  padding: 8px 4px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.fake-keyboard.foldable-kb { height: 130px; }
+.kb-row { display: flex; gap: 4px; justify-content: center; padding: 0 2px; }
+.kb-key {
+  height: 36px;
+  flex: 1;
+  max-width: 34px;
+  background: #181A1E;
+  border-radius: 5px;
+  border: none;
+  color: #3A3C44;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.kb-key.space { max-width: 140px; flex: 4; }
+.kb-key.wide { max-width: 48px; flex: 1.4; }
+
+/* ============================================================
+   MODIFIER BAR
+
+   LAYOUT MODEL (flex row):
+   [section-keys] [divider] [section-tools] [divider] [section-nav-submit]
+
+   Total bar height: 84px (two rows of 36px keys + 4px gap + 8px vertical padding)
+   Bar padding: 6px 8px
+
+   LEFT SECTION (section-keys):
+     Two pill rows, each exactly the same width.
+     Row height: 36px
+     Gap between rows: 4px
+     Pill border-radius: 8px
+     Pill bg: #161820
+     Key padding: 0 14px (phone), 0 16px (foldable)
+     Key font: SF Mono, 13px, weight 400, color #8A8C94
+     Internal separators: 1px wide, 20px tall, rgba(255,255,255,0.06)
+
+   DIVIDERS:
+     Width: 1px
+     Height: 56px
+     Color: rgba(255,255,255,0.06)
+     Margin: 0 10px
+     Border-radius: 1px
+
+   MIDDLE SECTION (section-tools):
+     2x2 grid of circular icon buttons
+     Button size: 36px diameter
+     Button bg: #161820
+     Icon size: 16px
+     Icon color: #6A6C74
+     Gap: 4px horizontal, 4px vertical
+     Grid: [+] [clipboard]   (top row)
+            [keyboard] [voice]  (bottom row)
+
+   RIGHT SECTION (section-nav-submit):
+     Flex row, gap 8px, items centered vertically
+     Joystick: 44px circle
+     RETURN: 44px tall, 72px min-width
+   ============================================================ */
+
+.modifier-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  flex-shrink: 0;
+  gap: 0;
+  background: #0A0C10;
+}
+
+/* ----------------------------------------------------------
+   LEFT: Key pills -- flex:1 to match right section width
+   ---------------------------------------------------------- */
+.section-keys {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.key-row {
+  display: flex;
+  background: #161820;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 36px;
+  width: 100%;
+}
+
+/* Keys inside pills */
+.key-btn {
+  flex: 1;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: #8A8C94;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 80ms ease, color 80ms ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  position: relative;
+}
+.key-btn:hover { background: rgba(255,255,255,0.04); color: #B0B2BA; }
+.key-btn:active { background: rgba(255,255,255,0.07); color: #D0D2DA; }
+
+/* Ctrl sticky state: blue highlight + amber-tinted bg */
+.key-btn.ctrl-sticky {
+  background: rgba(224,160,48,0.15);
+  color: #4A90D9;
+}
+.key-btn.ctrl-sticky:hover {
+  background: rgba(224,160,48,0.22);
+  color: #5AA0E8;
+}
+
+/* Ctrl locked state: blue highlight + amber-tinted bg + amber underline bar */
+.key-btn.ctrl-locked {
+  background: rgba(224,160,48,0.15);
+  color: #4A90D9;
+}
+.key-btn.ctrl-locked:hover {
+  background: rgba(224,160,48,0.22);
+  color: #5AA0E8;
+}
+.key-btn.ctrl-locked::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 25%;
+  right: 25%;
+  height: 2px;
+  background: #E0A030;
+  border-radius: 1px;
+}
+
+/* Separator inside pill */
+.key-sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(255,255,255,0.06);
+  align-self: center;
+  flex-shrink: 0;
+}
+
+/* ----------------------------------------------------------
+   SECTION DIVIDERS
+   ---------------------------------------------------------- */
+.section-divider {
+  width: 1px;
+  height: 56px;
+  border-radius: 1px;
+  margin: 0 10px;
+  flex-shrink: 0;
+  align-self: center;
+  background: rgba(255,255,255,0.06);
+}
+
+/* ----------------------------------------------------------
+   MIDDLE: Tool buttons (2x2 grid)
+   ---------------------------------------------------------- */
+.section-tools {
+  display: grid;
+  grid-template-columns: 36px 36px;
+  grid-template-rows: 36px 36px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Circular icon button */
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #161820;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6A6C74;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 100ms ease, color 100ms ease, transform 150ms cubic-bezier(0.16,1,0.3,1);
+  position: relative;
+}
+.icon-btn:hover { background: #1E2028; color: #9A9CA4; }
+.icon-btn:active { transform: scale(0.92); background: #22242C; }
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Blue keyboard button (active state) */
+.icon-btn.keyboard-active {
+  background: #1A2A42;
+  color: #4A90D9;
+}
+.icon-btn.keyboard-active:hover {
+  background: #1E3050;
+  color: #5AA0E8;
+}
+
+/* Red voice/mic button (active state) */
+.icon-btn.voice-active {
+  background: #2A1418;
+  color: #D94A4A;
+}
+.icon-btn.voice-active:hover {
+  background: #321820;
+  color: #E85A5A;
+}
+
+/* Clipboard badge dot */
+.clipboard-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  background: #E0A030;
+  border-radius: 50%;
+  display: none;
+  pointer-events: none;
+}
+.clipboard-badge.visible {
+  display: block;
+}
+
+/* ----------------------------------------------------------
+   RIGHT: Joystick + RETURN
+   ---------------------------------------------------------- */
+.section-nav-submit {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Joystick -- 3D layered gradient + shadows */
+.joystick-btn {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #1E2028 0%, #141620 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6A6C74;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+  aspect-ratio: 1;
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.4),
+    0 4px 8px rgba(0,0,0,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 0 rgba(0,0,0,0.3);
+  transition: background 100ms ease, color 100ms ease, transform 150ms cubic-bezier(0.16,1,0.3,1), box-shadow 100ms ease;
+}
+.joystick-btn:hover {
+  background: linear-gradient(180deg, #242830 0%, #181A24 100%);
+  color: #9A9CA4;
+  border-color: rgba(255,255,255,0.12);
+}
+.joystick-btn:active {
+  transform: scale(0.94);
+  background: linear-gradient(180deg, #141620 0%, #10121A 100%);
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.3),
+    inset 0 1px 4px rgba(0,0,0,0.3);
+}
+.joystick-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* RETURN button -- 44px tall, amber gradient */
+.return-btn {
+  height: 44px;
+  min-width: 72px;
+  padding: 0 14px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #E8B84A 0%, #C8922E 100%);
+  border: none;
+  border-radius: 10px;
+  color: #3D2800;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 100ms ease, transform 150ms cubic-bezier(0.16,1,0.3,1), box-shadow 150ms ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.return-btn:hover {
+  background: linear-gradient(180deg, #F0C458 0%, #D09E34 100%);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.return-btn:active {
+  transform: scale(0.96);
+  background: linear-gradient(180deg, #D4A03C 0%, #B88228 100%);
+  box-shadow: 0 0 2px rgba(0,0,0,0.3), inset 0 1px 3px rgba(0,0,0,0.15);
+}
+
+/* ----------------------------------------------------------
+   ACTION SHEET (pops up from + button)
+   ---------------------------------------------------------- */
+.action-sheet-anchor { position: relative; }
+.action-sheet {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.92) translateY(4px);
+  width: 170px;
+  background: #1A1C22;
+  border-radius: 12px;
+  box-shadow: 0 10px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: bottom center;
+  transition: transform 120ms ease-in, opacity 120ms ease-in;
+  z-index: 100;
+}
+.action-sheet.open {
+  opacity: 1;
+  transform: translateX(-50%) scale(1) translateY(0);
+  pointer-events: auto;
+  transition: transform 220ms cubic-bezier(0.34,1.56,0.64,1), opacity 180ms ease-out;
+}
+.action-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 14px;
+  color: #C0C2CA;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 100ms ease;
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.action-sheet-item:hover { background: rgba(255,255,255,0.05); }
+.action-sheet-item:active { background: rgba(255,255,255,0.08); }
+.action-sheet-item svg {
+  width: 16px; height: 16px;
+  stroke: #7A7C84; fill: none;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.action-sheet-item + .action-sheet-item { border-top: 1px solid rgba(255,255,255,0.05); }
+.action-sheet-backdrop { display: none; position: fixed; inset: 0; z-index: 99; }
+.action-sheet-backdrop.active { display: block; }
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 1100px) { .devices-row { gap: 32px; } }
+@media (max-width: 900px) {
+  .devices-row { flex-direction: column; align-items: center; }
+  .device-frame.foldable { width: min(580px, calc(100vw - 48px)); }
+}
+@media (max-width: 420px) {
+  .device-frame.phone { width: min(375px, calc(100vw - 48px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .key-btn, .icon-btn, .joystick-btn, .return-btn { transition: opacity 80ms ease !important; }
+  .key-btn:active, .icon-btn:active, .joystick-btn:active, .return-btn:active { transform: none !important; opacity: 0.75; }
+  .action-sheet { transition: opacity 120ms ease !important; transform: translateX(-50%) scale(1) translateY(0) !important; }
+  .terminal-content .cursor { animation: none; opacity: 0.9; }
+}
+
+/* ============================================================
+   LIGHT MODE THEME
+   Premium stationery aesthetic — warm paper, shadow depth, amber emboss
+   ============================================================ */
+
+/* Device frame: warm pearl with soft shadow depth */
+.light .device-frame,
+.device-frame.light {
+  background: #F5F5F0;
+  border-color: rgba(0,0,0,0.08);
+}
+.device-frame.phone.light {
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.04),
+    0 8px 32px rgba(0,0,0,0.08),
+    0 24px 64px rgba(0,0,0,0.06);
+}
+.device-frame.foldable.light {
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.04),
+    0 8px 32px rgba(0,0,0,0.08),
+    0 24px 64px rgba(0,0,0,0.06);
+}
+
+/* Terminal chrome top bar: light warm surface */
+.light .terminal-topbar {
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  color: rgba(0,0,0,0.4);
+}
+.light .terminal-topbar .hamburger { color: rgba(0,0,0,0.35); }
+.light .terminal-topbar .tilde-badge {
+  background: rgba(27,140,78,0.08);
+  color: #1B8C4E;
+}
+.light .terminal-topbar .tab { color: rgba(0,0,0,0.32); }
+.light .terminal-topbar .tab.active { color: rgba(0,0,0,0.7); }
+.light .terminal-topbar .plus-icon { color: rgba(0,0,0,0.3); }
+.light .terminal-topbar .split-icon {
+  background: rgba(45,106,176,0.08);
+  color: #2D6AB0;
+}
+
+/* Terminal content: stays dark for authenticity and readability */
+.light .terminal-content {
+  background: #1A1A1F;
+  color: #6A6C74;
+}
+.light .terminal-content .prompt { color: #5A8A50; }
+.light .terminal-content .cmd { color: #B0B2BA; }
+.light .terminal-content .error { color: #888890; }
+.light .terminal-content .cursor { background: #D4A030; }
+
+/* Modifier bar: frosted white with subtle top edge */
+.light .modifier-bar {
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+/* Key pills: soft warm gray fills */
+.light .key-row {
+  background: rgba(0,0,0,0.04);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03);
+}
+.light .key-btn {
+  color: rgba(0,0,0,0.38);
+}
+.light .key-btn:hover {
+  background: rgba(0,0,0,0.04);
+  color: rgba(0,0,0,0.56);
+}
+.light .key-btn:active {
+  background: rgba(0,0,0,0.07);
+  color: rgba(0,0,0,0.72);
+}
+
+/* Ctrl sticky (light): warm amber tint + blue text */
+.light .key-btn.ctrl-sticky {
+  background: rgba(224,160,48,0.12);
+  color: #2D6AB0;
+}
+.light .key-btn.ctrl-sticky:hover {
+  background: rgba(224,160,48,0.18);
+  color: #3578C4;
+}
+
+/* Ctrl locked (light): same + amber underline */
+.light .key-btn.ctrl-locked {
+  background: rgba(224,160,48,0.12);
+  color: #2D6AB0;
+}
+.light .key-btn.ctrl-locked:hover {
+  background: rgba(224,160,48,0.18);
+  color: #3578C4;
+}
+.light .key-btn.ctrl-locked::after {
+  background: #D4A030;
+}
+
+/* Key separators */
+.light .key-sep {
+  background: rgba(0,0,0,0.06);
+}
+
+/* Section dividers */
+.light .section-divider {
+  background: rgba(0,0,0,0.07);
+}
+
+/* Icon buttons: warm surface circles */
+.light .icon-btn {
+  background: rgba(0,0,0,0.04);
+  color: rgba(0,0,0,0.35);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03);
+}
+.light .icon-btn:hover {
+  background: rgba(0,0,0,0.07);
+  color: rgba(0,0,0,0.5);
+}
+.light .icon-btn:active {
+  background: rgba(0,0,0,0.1);
+}
+
+/* Keyboard active (light): understated refined blue */
+.light .icon-btn.keyboard-active {
+  background: rgba(64,128,192,0.1);
+  color: #2D6AB0;
+  box-shadow: inset 0 0 0 1px rgba(64,128,192,0.12);
+}
+.light .icon-btn.keyboard-active:hover {
+  background: rgba(64,128,192,0.15);
+  color: #3578C4;
+}
+
+/* Voice active (light): muted warm red */
+.light .icon-btn.voice-active {
+  background: rgba(200,60,60,0.08);
+  color: #C03030;
+}
+.light .icon-btn.voice-active:hover {
+  background: rgba(200,60,60,0.12);
+  color: #D04040;
+}
+
+/* Clipboard badge (light): deeper amber, light border ring */
+.light .clipboard-badge {
+  background: #C08020;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.9);
+}
+
+/* Joystick (light): raised white disc with shadow depth */
+.light .joystick-btn {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F0F0EB 100%);
+  border: 1px solid rgba(0,0,0,0.08);
+  color: rgba(0,0,0,0.32);
+  box-shadow:
+    0 2px 6px rgba(0,0,0,0.06),
+    0 4px 12px rgba(0,0,0,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    inset 0 -1px 0 rgba(0,0,0,0.04);
+}
+.light .joystick-btn:hover {
+  background: linear-gradient(180deg, #FFFFFF 0%, #EAEAE5 100%);
+  color: rgba(0,0,0,0.48);
+  border-color: rgba(0,0,0,0.12);
+}
+.light .joystick-btn:active {
+  background: linear-gradient(180deg, #F0F0EB 0%, #E8E8E3 100%);
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.06),
+    inset 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* RETURN button (light): production tokens, richer amber on light */
+.light .return-btn {
+  background: linear-gradient(180deg, #D4A030 0%, #B88228 100%);
+  color: #3D2800;
+  box-shadow:
+    0 2px 6px rgba(180,120,30,0.2),
+    0 4px 12px rgba(180,120,30,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.light .return-btn:hover {
+  background: linear-gradient(180deg, #DCAA38 0%, #C08A2C 100%);
+  box-shadow:
+    0 2px 8px rgba(180,120,30,0.25),
+    0 4px 14px rgba(180,120,30,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.light .return-btn:active {
+  background: linear-gradient(180deg, #C89828 0%, #A87820 100%);
+  box-shadow:
+    0 1px 2px rgba(180,120,30,0.15),
+    inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Action sheet (light): white card with refined shadow */
+.light .action-sheet {
+  background: #FFFFFF;
+  box-shadow:
+    0 4px 16px rgba(0,0,0,0.08),
+    0 12px 40px rgba(0,0,0,0.06),
+    0 0 0 1px rgba(0,0,0,0.06);
+}
+.light .action-sheet-item {
+  color: rgba(0,0,0,0.7);
+}
+.light .action-sheet-item svg {
+  stroke: rgba(0,0,0,0.4);
+}
+.light .action-sheet-item:hover {
+  background: rgba(0,0,0,0.04);
+}
+.light .action-sheet-item:active {
+  background: rgba(0,0,0,0.07);
+}
+.light .action-sheet-item + .action-sheet-item {
+  border-top-color: rgba(0,0,0,0.06);
+}
+
+/* Fake keyboard (light): warm off-white keys with subtle lift */
+.light .fake-keyboard {
+  background: #EAEAE5;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.light .kb-key {
+  background: #FFFFFF;
+  color: rgba(0,0,0,0.3);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+/* ============================================================
+   SPEC ANNOTATIONS (shown below devices)
+   ============================================================ */
+.spec-section {
+  max-width: 720px;
+  margin: 0 auto 64px;
+}
+.spec-section h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #B0B2BA;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+}
+.spec-grid {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 6px 16px;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  line-height: 1.7;
+}
+.spec-label { color: #5A5C64; }
+.spec-value { color: #8A8C94; }
+.spec-value em { color: #D4A03C; font-style: normal; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Modifier Key Bar -- Merged Design</h1>
+  <p>Interactive playground for phone (375pt) and foldable (580pt) with Flutter app states.<br>
+  Click <strong>ctrl</strong> to cycle sticky/locked, <strong>clipboard</strong> for badge dot, <strong>keyboard</strong>/<strong>voice</strong> to toggle, <strong>(+)</strong> for action sheet.</p>
+</div>
+
+<!-- ============================================================
+     PHONE + FOLDABLE SIDE BY SIDE
+     ============================================================ -->
+<div class="devices-row">
+
+  <!-- ======================== PHONE ======================== -->
+  <div class="device-wrapper">
+    <span class="device-label">Phone -- 375pt</span>
+    <div class="device-frame phone">
+      <div class="terminal-topbar">
+        <svg class="hamburger" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <span class="tilde-badge">~</span>
+        <span class="tab active">Terminal</span>
+        <span class="tab">Terminal</span>
+        <span class="spacer"></span>
+        <span class="plus-icon">+</span>
+        <span class="split-icon"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg></span>
+      </div>
+      <div class="terminal-content">
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span>  ^C</div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span>  staff</div>
+        <div><span class="error">bash: staff: command not found</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div class="cursor-line"><span class="prompt">[sm@~]</span> <span class="cmd">$</span> <span class="cursor"></span></div>
+      </div>
+
+      <!-- MODIFIER BAR -->
+      <div class="modifier-bar">
+        <!-- LEFT: Terminal key pills -->
+        <div class="section-keys">
+          <div class="key-row">
+            <button class="key-btn">esc</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">tab</button>
+            <div class="key-sep"></div>
+            <button class="key-btn" data-ctrl="phone" onclick="cycleCtrl('phone')">ctrl</button>
+          </div>
+          <div class="key-row">
+            <button class="key-btn">~</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">|</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">/</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">-</button>
+          </div>
+        </div>
+
+        <!-- DIVIDER 1 -->
+        <div class="section-divider"></div>
+
+        <!-- MIDDLE: Tool buttons (2x2) -->
+        <div class="section-tools">
+          <div class="action-sheet-anchor">
+            <button class="icon-btn" aria-label="Add attachment" onclick="toggleActionSheet('phone')">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <div class="action-sheet" id="actionSheet-phone">
+              <button class="action-sheet-item" onclick="handleActionItem('phone')">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span>Photos</span>
+              </button>
+              <button class="action-sheet-item" onclick="handleActionItem('phone')">
+                <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span>Files</span>
+              </button>
+            </div>
+          </div>
+          <button class="icon-btn" aria-label="Clipboard" data-clipboard="phone" onclick="toggleClipboard('phone')">
+            <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+            <span class="clipboard-badge" id="clipBadge-phone"></span>
+          </button>
+          <button class="icon-btn keyboard-active" data-kbd="phone" aria-label="Toggle keyboard" onclick="toggleKbd('phone')">
+            <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6.01" y2="8"/><line x1="10" y1="8" x2="10.01" y2="8"/><line x1="14" y1="8" x2="14.01" y2="8"/><line x1="18" y1="8" x2="18.01" y2="8"/><line x1="6" y1="12" x2="6.01" y2="12"/><line x1="10" y1="12" x2="10.01" y2="12"/><line x1="14" y1="12" x2="14.01" y2="12"/><line x1="18" y1="12" x2="18.01" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>
+          </button>
+          <button class="icon-btn" data-voice="phone" aria-label="Voice input" onclick="toggleVoice('phone')">
+            <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+        </div>
+
+        <!-- DIVIDER 2 -->
+        <div class="section-divider"></div>
+
+        <!-- RIGHT: Joystick + RETURN -->
+        <div class="section-nav-submit">
+          <button class="joystick-btn" aria-label="Navigate with arrow keys">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9" stroke-width="1.5" opacity="0.15"/>
+              <polyline points="10,8 12,5 14,8"/>
+              <polyline points="10,16 12,19 14,16"/>
+              <polyline points="8,10 5,12 8,14"/>
+              <polyline points="16,10 19,12 16,14"/>
+            </svg>
+          </button>
+          <button class="return-btn">RETURN</button>
+        </div>
+      </div>
+
+      <div class="fake-keyboard">
+        <div class="kb-row"><span class="kb-key">q</span><span class="kb-key">w</span><span class="kb-key">e</span><span class="kb-key">r</span><span class="kb-key">t</span><span class="kb-key">y</span><span class="kb-key">u</span><span class="kb-key">i</span><span class="kb-key">o</span><span class="kb-key">p</span></div>
+        <div class="kb-row"><span class="kb-key">a</span><span class="kb-key">s</span><span class="kb-key">d</span><span class="kb-key">f</span><span class="kb-key">g</span><span class="kb-key">h</span><span class="kb-key">j</span><span class="kb-key">k</span><span class="kb-key">l</span></div>
+        <div class="kb-row"><span class="kb-key wide">^</span><span class="kb-key">z</span><span class="kb-key">x</span><span class="kb-key">c</span><span class="kb-key">v</span><span class="kb-key">b</span><span class="kb-key">n</span><span class="kb-key">m</span><span class="kb-key wide">del</span></div>
+        <div class="kb-row"><span class="kb-key wide">123</span><span class="kb-key wide">@</span><span class="kb-key space"></span><span class="kb-key wide">.</span><span class="kb-key wide">go</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== FOLDABLE ======================== -->
+  <div class="device-wrapper">
+    <span class="device-label">Foldable -- 580pt</span>
+    <div class="device-frame foldable">
+      <div class="terminal-topbar">
+        <svg class="hamburger" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <span class="tilde-badge">~</span>
+        <span class="tab active">Terminal</span>
+        <span class="tab">Terminal</span>
+        <span class="spacer"></span>
+        <span class="plus-icon">+</span>
+        <span class="split-icon"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg></span>
+      </div>
+      <div class="terminal-content">
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span>  docker build -t api:latest .</div>
+        <div><span class="error">Sending build context...</span></div>
+        <div><span class="error">Successfully built a3f8c1d</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span>  kubectl apply -f deploy.yaml</div>
+        <div><span class="error">deployment.apps/api configured</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div class="cursor-line"><span class="prompt">[sm@~]</span> <span class="cmd">$</span> <span class="cursor"></span></div>
+      </div>
+
+      <!-- MODIFIER BAR -->
+      <div class="modifier-bar">
+        <!-- LEFT: Terminal key pills -->
+        <div class="section-keys">
+          <div class="key-row">
+            <button class="key-btn">esc</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">tab</button>
+            <div class="key-sep"></div>
+            <button class="key-btn" data-ctrl="fold" onclick="cycleCtrl('fold')">ctrl</button>
+          </div>
+          <div class="key-row">
+            <button class="key-btn">~</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">|</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">/</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">-</button>
+          </div>
+        </div>
+
+        <!-- DIVIDER 1 -->
+        <div class="section-divider"></div>
+
+        <!-- MIDDLE: Tool buttons (2x2) -->
+        <div class="section-tools">
+          <div class="action-sheet-anchor">
+            <button class="icon-btn" aria-label="Add attachment" onclick="toggleActionSheet('fold')">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <div class="action-sheet" id="actionSheet-fold">
+              <button class="action-sheet-item" onclick="handleActionItem('fold')">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span>Photos</span>
+              </button>
+              <button class="action-sheet-item" onclick="handleActionItem('fold')">
+                <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span>Files</span>
+              </button>
+            </div>
+          </div>
+          <button class="icon-btn" aria-label="Clipboard" data-clipboard="fold" onclick="toggleClipboard('fold')">
+            <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+            <span class="clipboard-badge" id="clipBadge-fold"></span>
+          </button>
+          <button class="icon-btn keyboard-active" data-kbd="fold" aria-label="Toggle keyboard" onclick="toggleKbd('fold')">
+            <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6.01" y2="8"/><line x1="10" y1="8" x2="10.01" y2="8"/><line x1="14" y1="8" x2="14.01" y2="8"/><line x1="18" y1="8" x2="18.01" y2="8"/><line x1="6" y1="12" x2="6.01" y2="12"/><line x1="10" y1="12" x2="10.01" y2="12"/><line x1="14" y1="12" x2="14.01" y2="12"/><line x1="18" y1="12" x2="18.01" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>
+          </button>
+          <button class="icon-btn" data-voice="fold" aria-label="Voice input" onclick="toggleVoice('fold')">
+            <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+        </div>
+
+        <!-- DIVIDER 2 -->
+        <div class="section-divider"></div>
+
+        <!-- RIGHT: Joystick + RETURN -->
+        <div class="section-nav-submit">
+          <button class="joystick-btn" aria-label="Navigate with arrow keys">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9" stroke-width="1.5" opacity="0.15"/>
+              <polyline points="10,8 12,5 14,8"/>
+              <polyline points="10,16 12,19 14,16"/>
+              <polyline points="8,10 5,12 8,14"/>
+              <polyline points="16,10 19,12 16,14"/>
+            </svg>
+          </button>
+          <button class="return-btn">RETURN</button>
+        </div>
+      </div>
+
+      <div class="fake-keyboard foldable-kb">
+        <div class="kb-row"><span class="kb-key">q</span><span class="kb-key">w</span><span class="kb-key">e</span><span class="kb-key">r</span><span class="kb-key">t</span><span class="kb-key">y</span><span class="kb-key">u</span><span class="kb-key">i</span><span class="kb-key">o</span><span class="kb-key">p</span></div>
+        <div class="kb-row"><span class="kb-key">a</span><span class="kb-key">s</span><span class="kb-key">d</span><span class="kb-key">f</span><span class="kb-key">g</span><span class="kb-key">h</span><span class="kb-key">j</span><span class="kb-key">k</span><span class="kb-key">l</span></div>
+        <div class="kb-row"><span class="kb-key wide">^</span><span class="kb-key">z</span><span class="kb-key">x</span><span class="kb-key">c</span><span class="kb-key">v</span><span class="kb-key">b</span><span class="kb-key">n</span><span class="kb-key">m</span><span class="kb-key wide">del</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     LIGHT MODE: PHONE + FOLDABLE
+     ============================================================ -->
+<div class="page-header" style="margin-top: 16px;">
+  <h1>Light Mode</h1>
+  <p>Warm paper aesthetic, shadow-based depth, production color tokens from AppColors.light.<br>
+  Terminal content stays dark; modifier bar and chrome go light.</p>
+</div>
+
+<div class="devices-row">
+
+  <!-- ======================== PHONE LIGHT ======================== -->
+  <div class="device-wrapper">
+    <span class="device-label">Phone -- 375pt (Light)</span>
+    <div class="device-frame phone light">
+      <div class="terminal-topbar">
+        <svg class="hamburger" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <span class="tilde-badge">~</span>
+        <span class="tab active">Terminal</span>
+        <span class="tab">Terminal</span>
+        <span class="spacer"></span>
+        <span class="plus-icon">+</span>
+        <span class="split-icon"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg></span>
+      </div>
+      <div class="terminal-content">
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span>  ^C</div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span>  staff</div>
+        <div><span class="error">bash: staff: command not found</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div class="cursor-line"><span class="prompt">[sm@~]</span> <span class="cmd">$</span> <span class="cursor"></span></div>
+      </div>
+
+      <!-- MODIFIER BAR -->
+      <div class="modifier-bar">
+        <div class="section-keys">
+          <div class="key-row">
+            <button class="key-btn">esc</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">tab</button>
+            <div class="key-sep"></div>
+            <button class="key-btn" data-ctrl="phone-light" onclick="cycleCtrl('phone-light')">ctrl</button>
+          </div>
+          <div class="key-row">
+            <button class="key-btn">~</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">|</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">/</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">-</button>
+          </div>
+        </div>
+        <div class="section-divider"></div>
+        <div class="section-tools">
+          <div class="action-sheet-anchor">
+            <button class="icon-btn" aria-label="Add attachment" onclick="toggleActionSheet('phone-light')">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <div class="action-sheet" id="actionSheet-phone-light">
+              <button class="action-sheet-item" onclick="handleActionItem('phone-light')">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span>Photos</span>
+              </button>
+              <button class="action-sheet-item" onclick="handleActionItem('phone-light')">
+                <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span>Files</span>
+              </button>
+            </div>
+          </div>
+          <button class="icon-btn" aria-label="Clipboard" data-clipboard="phone-light" onclick="toggleClipboard('phone-light')">
+            <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+            <span class="clipboard-badge" id="clipBadge-phone-light"></span>
+          </button>
+          <button class="icon-btn keyboard-active" data-kbd="phone-light" aria-label="Toggle keyboard" onclick="toggleKbd('phone-light')">
+            <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6.01" y2="8"/><line x1="10" y1="8" x2="10.01" y2="8"/><line x1="14" y1="8" x2="14.01" y2="8"/><line x1="18" y1="8" x2="18.01" y2="8"/><line x1="6" y1="12" x2="6.01" y2="12"/><line x1="10" y1="12" x2="10.01" y2="12"/><line x1="14" y1="12" x2="14.01" y2="12"/><line x1="18" y1="12" x2="18.01" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>
+          </button>
+          <button class="icon-btn" data-voice="phone-light" aria-label="Voice input" onclick="toggleVoice('phone-light')">
+            <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+        </div>
+        <div class="section-divider"></div>
+        <div class="section-nav-submit">
+          <button class="joystick-btn" aria-label="Navigate with arrow keys">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9" stroke-width="1.5" opacity="0.15"/>
+              <polyline points="10,8 12,5 14,8"/>
+              <polyline points="10,16 12,19 14,16"/>
+              <polyline points="8,10 5,12 8,14"/>
+              <polyline points="16,10 19,12 16,14"/>
+            </svg>
+          </button>
+          <button class="return-btn">RETURN</button>
+        </div>
+      </div>
+
+      <div class="fake-keyboard">
+        <div class="kb-row"><span class="kb-key">q</span><span class="kb-key">w</span><span class="kb-key">e</span><span class="kb-key">r</span><span class="kb-key">t</span><span class="kb-key">y</span><span class="kb-key">u</span><span class="kb-key">i</span><span class="kb-key">o</span><span class="kb-key">p</span></div>
+        <div class="kb-row"><span class="kb-key">a</span><span class="kb-key">s</span><span class="kb-key">d</span><span class="kb-key">f</span><span class="kb-key">g</span><span class="kb-key">h</span><span class="kb-key">j</span><span class="kb-key">k</span><span class="kb-key">l</span></div>
+        <div class="kb-row"><span class="kb-key wide">^</span><span class="kb-key">z</span><span class="kb-key">x</span><span class="kb-key">c</span><span class="kb-key">v</span><span class="kb-key">b</span><span class="kb-key">n</span><span class="kb-key">m</span><span class="kb-key wide">del</span></div>
+        <div class="kb-row"><span class="kb-key wide">123</span><span class="kb-key wide">@</span><span class="kb-key space"></span><span class="kb-key wide">.</span><span class="kb-key wide">go</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== FOLDABLE LIGHT ======================== -->
+  <div class="device-wrapper">
+    <span class="device-label">Foldable -- 580pt (Light)</span>
+    <div class="device-frame foldable light">
+      <div class="terminal-topbar">
+        <svg class="hamburger" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <span class="tilde-badge">~</span>
+        <span class="tab active">Terminal</span>
+        <span class="tab">Terminal</span>
+        <span class="spacer"></span>
+        <span class="plus-icon">+</span>
+        <span class="split-icon"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg></span>
+      </div>
+      <div class="terminal-content">
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span>  docker build -t api:latest .</div>
+        <div><span class="error">Sending build context...</span></div>
+        <div><span class="error">Successfully built a3f8c1d</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span>  kubectl apply -f deploy.yaml</div>
+        <div><span class="error">deployment.apps/api configured</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div><span class="prompt">[sm@~]</span> <span class="cmd">$</span></div>
+        <div class="cursor-line"><span class="prompt">[sm@~]</span> <span class="cmd">$</span> <span class="cursor"></span></div>
+      </div>
+
+      <!-- MODIFIER BAR -->
+      <div class="modifier-bar">
+        <div class="section-keys">
+          <div class="key-row">
+            <button class="key-btn">esc</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">tab</button>
+            <div class="key-sep"></div>
+            <button class="key-btn" data-ctrl="fold-light" onclick="cycleCtrl('fold-light')">ctrl</button>
+          </div>
+          <div class="key-row">
+            <button class="key-btn">~</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">|</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">/</button>
+            <div class="key-sep"></div>
+            <button class="key-btn">-</button>
+          </div>
+        </div>
+        <div class="section-divider"></div>
+        <div class="section-tools">
+          <div class="action-sheet-anchor">
+            <button class="icon-btn" aria-label="Add attachment" onclick="toggleActionSheet('fold-light')">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <div class="action-sheet" id="actionSheet-fold-light">
+              <button class="action-sheet-item" onclick="handleActionItem('fold-light')">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span>Photos</span>
+              </button>
+              <button class="action-sheet-item" onclick="handleActionItem('fold-light')">
+                <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span>Files</span>
+              </button>
+            </div>
+          </div>
+          <button class="icon-btn" aria-label="Clipboard" data-clipboard="fold-light" onclick="toggleClipboard('fold-light')">
+            <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+            <span class="clipboard-badge" id="clipBadge-fold-light"></span>
+          </button>
+          <button class="icon-btn keyboard-active" data-kbd="fold-light" aria-label="Toggle keyboard" onclick="toggleKbd('fold-light')">
+            <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6.01" y2="8"/><line x1="10" y1="8" x2="10.01" y2="8"/><line x1="14" y1="8" x2="14.01" y2="8"/><line x1="18" y1="8" x2="18.01" y2="8"/><line x1="6" y1="12" x2="6.01" y2="12"/><line x1="10" y1="12" x2="10.01" y2="12"/><line x1="14" y1="12" x2="14.01" y2="12"/><line x1="18" y1="12" x2="18.01" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>
+          </button>
+          <button class="icon-btn" data-voice="fold-light" aria-label="Voice input" onclick="toggleVoice('fold-light')">
+            <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+        </div>
+        <div class="section-divider"></div>
+        <div class="section-nav-submit">
+          <button class="joystick-btn" aria-label="Navigate with arrow keys">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9" stroke-width="1.5" opacity="0.15"/>
+              <polyline points="10,8 12,5 14,8"/>
+              <polyline points="10,16 12,19 14,16"/>
+              <polyline points="8,10 5,12 8,14"/>
+              <polyline points="16,10 19,12 16,14"/>
+            </svg>
+          </button>
+          <button class="return-btn">RETURN</button>
+        </div>
+      </div>
+
+      <div class="fake-keyboard foldable-kb">
+        <div class="kb-row"><span class="kb-key">q</span><span class="kb-key">w</span><span class="kb-key">e</span><span class="kb-key">r</span><span class="kb-key">t</span><span class="kb-key">y</span><span class="kb-key">u</span><span class="kb-key">i</span><span class="kb-key">o</span><span class="kb-key">p</span></div>
+        <div class="kb-row"><span class="kb-key">a</span><span class="kb-key">s</span><span class="kb-key">d</span><span class="kb-key">f</span><span class="kb-key">g</span><span class="kb-key">h</span><span class="kb-key">j</span><span class="kb-key">k</span><span class="kb-key">l</span></div>
+        <div class="kb-row"><span class="kb-key wide">^</span><span class="kb-key">z</span><span class="kb-key">x</span><span class="kb-key">c</span><span class="kb-key">v</span><span class="kb-key">b</span><span class="kb-key">n</span><span class="kb-key">m</span><span class="kb-key wide">del</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Action sheet backdrops for light mode -->
+<div class="action-sheet-backdrop" id="actionBackdrop-phone-light" onclick="closeActionSheet('phone-light')"></div>
+<div class="action-sheet-backdrop" id="actionBackdrop-fold-light" onclick="closeActionSheet('fold-light')"></div>
+
+<!-- ============================================================
+     DESIGN SPECIFICATIONS
+     ============================================================ -->
+<div class="spec-section">
+  <h2>Layout Dimensions</h2>
+  <div class="spec-grid">
+    <span class="spec-label">Bar padding</span>
+    <span class="spec-value">6px top/bottom, 8px left/right</span>
+    <span class="spec-label">Bar height</span>
+    <span class="spec-value"><em>88px</em> total (76px content + 12px padding)</span>
+    <span class="spec-label">Key pill height</span>
+    <span class="spec-value">36px per row, 4px gap between</span>
+    <span class="spec-label">Key pills width</span>
+    <span class="spec-value"><em>flex:1</em> (matches right section width, both rows identical)</span>
+    <span class="spec-label">Divider</span>
+    <span class="spec-value">1px wide, 56px tall, rgba(255,255,255,0.06), margin 0 10px</span>
+    <span class="spec-label">Tool grid</span>
+    <span class="spec-value">2x2, 36px cells, 4px gap</span>
+    <span class="spec-label">Joystick</span>
+    <span class="spec-value">44px circle, 3D gradient top #1E2028 to bottom #141620, layered shadows</span>
+    <span class="spec-label">RETURN</span>
+    <span class="spec-value"><em>44px</em> tall (matches joystick), <em>72px</em> min-width, <em>10px</em> border-radius</span>
+  </div>
+</div>
+
+<div class="spec-section">
+  <h2>Color Tokens</h2>
+  <div class="spec-grid">
+    <span class="spec-label">Bar background</span>
+    <span class="spec-value">#0A0C10 (seamless with terminal)</span>
+    <span class="spec-label">Pill background</span>
+    <span class="spec-value">#161820</span>
+    <span class="spec-label">Key text</span>
+    <span class="spec-value">#8A8C94 (muted gray)</span>
+    <span class="spec-label">Key text hover</span>
+    <span class="spec-value">#B0B2BA</span>
+    <span class="spec-label">Key text active</span>
+    <span class="spec-value">#D0D2DA</span>
+    <span class="spec-label">Icon default</span>
+    <span class="spec-value">#6A6C74</span>
+    <span class="spec-label">Keyboard active bg</span>
+    <span class="spec-value"><em>#1A2A42</em></span>
+    <span class="spec-label">Keyboard active icon</span>
+    <span class="spec-value"><em>#4A90D9</em></span>
+    <span class="spec-label">Voice active bg</span>
+    <span class="spec-value"><em>#2A1418</em></span>
+    <span class="spec-label">Voice active icon</span>
+    <span class="spec-value"><em>#D94A4A</em></span>
+    <span class="spec-label">Joystick gradient</span>
+    <span class="spec-value">top <em>#1E2028</em> to bottom <em>#141620</em>, border rgba(255,255,255,0.08)</span>
+    <span class="spec-label">RETURN gradient</span>
+    <span class="spec-value">top <em>#E8B84A</em> to bottom <em>#C8922E</em></span>
+    <span class="spec-label">RETURN text</span>
+    <span class="spec-value"><em>#3D2800</em> warm dark brown</span>
+    <span class="spec-label">Divider color</span>
+    <span class="spec-value">rgba(255,255,255,0.06)</span>
+    <span class="spec-label">Internal sep</span>
+    <span class="spec-value">rgba(255,255,255,0.06), 1px x 20px</span>
+  </div>
+</div>
+
+<div class="spec-section">
+  <h2>Typography</h2>
+  <div class="spec-grid">
+    <span class="spec-label">Key labels</span>
+    <span class="spec-value">SF Mono / Fira Code, 13px, weight 400, lowercase</span>
+    <span class="spec-label">RETURN label</span>
+    <span class="spec-value">SF Mono / Fira Code, <em>11px</em>, weight <em>700</em>, letter-spacing 0.08em</span>
+  </div>
+</div>
+
+<div class="spec-section">
+  <h2>Interactive States (Flutter App)</h2>
+  <div class="spec-grid">
+    <span class="spec-label">Ctrl inactive</span>
+    <span class="spec-value">Default key styling, #8A8C94 text, transparent bg</span>
+    <span class="spec-label">Ctrl sticky</span>
+    <span class="spec-value">bg <em>rgba(224,160,48,0.15)</em>, text <em>#4A90D9</em> (blue highlight)</span>
+    <span class="spec-label">Ctrl locked</span>
+    <span class="spec-value">Same as sticky + <em>#E0A030</em> amber underline bar (2px) below text</span>
+    <span class="spec-label">Clipboard badge</span>
+    <span class="spec-value"><em>7px</em> circle, bg <em>#E0A030</em> (amber), top-right corner offset 3px</span>
+    <span class="spec-label">Clipboard badge show</span>
+    <span class="spec-value">Visible when history is non-empty (toggle on click for demo)</span>
+    <span class="spec-label">Keyboard toggle</span>
+    <span class="spec-value">Active: bg <em>#1A2A42</em>, icon <em>#4A90D9</em>. Inactive: default #161820/#6A6C74</span>
+    <span class="spec-label">Voice toggle</span>
+    <span class="spec-value">Active: bg <em>#2A1418</em>, icon <em>#D94A4A</em>. Inactive: default #161820/#6A6C74</span>
+  </div>
+</div>
+
+<div class="spec-section">
+  <h2>Interaction States (Base)</h2>
+  <div class="spec-grid">
+    <span class="spec-label">Key hover</span>
+    <span class="spec-value">bg rgba(255,255,255,0.04), text #B0B2BA</span>
+    <span class="spec-label">Key active</span>
+    <span class="spec-value">bg rgba(255,255,255,0.07), text #D0D2DA</span>
+    <span class="spec-label">Icon hover</span>
+    <span class="spec-value">bg #1E2028, color #9A9CA4</span>
+    <span class="spec-label">Icon active</span>
+    <span class="spec-value">scale(0.92), bg #22242C</span>
+    <span class="spec-label">RETURN hover</span>
+    <span class="spec-value">gradient #F0C458 to #D09E34, brighter highlight</span>
+    <span class="spec-label">RETURN active</span>
+    <span class="spec-value">scale(0.96), gradient #D4A03C to #B88228, shadow collapses</span>
+    <span class="spec-label">Joystick hover</span>
+    <span class="spec-value">gradient #242830 to #181A24, border rgba(255,255,255,0.12)</span>
+    <span class="spec-label">Joystick active</span>
+    <span class="spec-value">scale(0.94), gradient inverts, shadow collapses inward</span>
+  </div>
+</div>
+
+<div class="spec-section">
+  <h2>Animation Timing</h2>
+  <div class="spec-grid">
+    <span class="spec-label">Key transitions</span>
+    <span class="spec-value">80ms ease (bg + color)</span>
+    <span class="spec-label">Icon press</span>
+    <span class="spec-value">150ms cubic-bezier(0.16, 1, 0.3, 1) -- spring overshoot</span>
+    <span class="spec-label">RETURN press</span>
+    <span class="spec-value">150ms cubic-bezier(0.16, 1, 0.3, 1) + shadow 150ms ease</span>
+    <span class="spec-label">Action sheet open</span>
+    <span class="spec-value"><em>220ms</em> cubic-bezier(0.34, 1.56, 0.64, 1) -- bouncy spring</span>
+    <span class="spec-label">Action sheet close</span>
+    <span class="spec-value"><em>120ms</em> ease-in</span>
+    <span class="spec-label">Ctrl state cycle</span>
+    <span class="spec-value">80ms ease transitions between inactive/sticky/locked</span>
+  </div>
+</div>
+
+<div class="spec-section">
+  <h2>Joystick 3D Styling</h2>
+  <div class="spec-grid">
+    <span class="spec-label">Gradient</span>
+    <span class="spec-value">linear-gradient(180deg, <em>#1E2028</em> 0%, <em>#141620</em> 100%)</span>
+    <span class="spec-label">Border</span>
+    <span class="spec-value">1px solid rgba(255,255,255,0.08)</span>
+    <span class="spec-label">Outer shadows</span>
+    <span class="spec-value">0 2px 4px rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.2)</span>
+    <span class="spec-label">Inset highlights</span>
+    <span class="spec-value">inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.3)</span>
+    <span class="spec-label">Press state</span>
+    <span class="spec-value">Gradient inverts, shadow collapses to inset 0 1px 4px rgba(0,0,0,0.3)</span>
+  </div>
+</div>
+
+<!-- Action sheet backdrops -->
+<div class="action-sheet-backdrop" id="actionBackdrop-phone" onclick="closeActionSheet('phone')"></div>
+<div class="action-sheet-backdrop" id="actionBackdrop-fold" onclick="closeActionSheet('fold')"></div>
+
+<script>
+/* ============================================================
+   STATE MANAGEMENT
+   Per-device state for interactive demo
+   ============================================================ */
+var state = {
+  phone:         { ctrl: 0, kbd: true, voice: false, clip: false },
+  fold:          { ctrl: 0, kbd: true, voice: false, clip: false },
+  'phone-light': { ctrl: 0, kbd: true, voice: false, clip: false },
+  'fold-light':  { ctrl: 0, kbd: true, voice: false, clip: false }
+};
+
+var ctrlStates = ['inactive', 'sticky', 'locked'];
+
+/* ============================================================
+   CTRL STICKY/LOCKED CYCLE
+   Click ctrl to cycle: inactive -> sticky -> locked -> inactive
+   ============================================================ */
+function cycleCtrl(id) {
+  state[id].ctrl = (state[id].ctrl + 1) % 3;
+  var btn = document.querySelector('[data-ctrl="' + id + '"]');
+  var ctrlState = ctrlStates[state[id].ctrl];
+
+  // Remove all ctrl classes
+  btn.classList.remove('ctrl-sticky', 'ctrl-locked');
+
+  if (ctrlState === 'sticky') {
+    btn.classList.add('ctrl-sticky');
+  } else if (ctrlState === 'locked') {
+    btn.classList.add('ctrl-locked');
+  }
+}
+
+/* ============================================================
+   CLIPBOARD BADGE TOGGLE
+   Click clipboard to toggle badge dot visibility
+   ============================================================ */
+function toggleClipboard(id) {
+  state[id].clip = !state[id].clip;
+  var badge = document.getElementById('clipBadge-' + id);
+
+  if (state[id].clip) {
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+}
+
+/* ============================================================
+   KEYBOARD TOGGLE
+   Click to toggle blue active state
+   ============================================================ */
+function toggleKbd(id) {
+  state[id].kbd = !state[id].kbd;
+  var btn = document.querySelector('[data-kbd="' + id + '"]');
+
+  if (state[id].kbd) {
+    btn.classList.add('keyboard-active');
+  } else {
+    btn.classList.remove('keyboard-active');
+  }
+}
+
+/* ============================================================
+   VOICE TOGGLE
+   Click to toggle red active state
+   ============================================================ */
+function toggleVoice(id) {
+  state[id].voice = !state[id].voice;
+  var btn = document.querySelector('[data-voice="' + id + '"]');
+
+  if (state[id].voice) {
+    btn.classList.add('voice-active');
+  } else {
+    btn.classList.remove('voice-active');
+  }
+}
+
+/* ============================================================
+   ACTION SHEET
+   (+) button opens spring-animated popover
+   220ms cubic-bezier(0.34,1.56,0.64,1) open
+   120ms ease-in close
+   ============================================================ */
+var openSheet = null;
+
+function toggleActionSheet(id) {
+  if (openSheet === id) { closeActionSheet(id); }
+  else {
+    if (openSheet) closeActionSheet(openSheet);
+    openActionSheet(id);
+  }
+}
+function openActionSheet(id) {
+  openSheet = id;
+  document.getElementById('actionSheet-' + id).classList.add('open');
+  document.getElementById('actionBackdrop-' + id).classList.add('active');
+}
+function closeActionSheet(id) {
+  openSheet = null;
+  var sheet = document.getElementById('actionSheet-' + id);
+  var backdrop = document.getElementById('actionBackdrop-' + id);
+  if (sheet) sheet.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('active');
+}
+function handleActionItem(id) { closeActionSheet(id); }
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && openSheet) closeActionSheet(openSheet);
+});
+</script>
+
+</body>
+</html>
