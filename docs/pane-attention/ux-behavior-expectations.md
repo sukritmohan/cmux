@@ -36,9 +36,9 @@ When a terminal pane that the user is NOT looking at requires attention, cmux al
 - **Rapid bell spam**: Bell has its own 5-second cooldown. Rapid `\x07` sequences produce at most one notification per 5 seconds.
 - **Pane closes while in attention state**: Attention is cleared, no stale notifications remain.
 - **Android disconnected**: No notification delivered. No error shown to user — silent degradation.
-- **User focuses then unfocuses pane quickly**: Focusing resets the state machine to IDLE. Activity tracking restarts fresh when the pane is unfocused again.
-- **App loses focus entirely**: When the user switches away from cmux, all unfocused panes are eligible for tracking (same as when cmux is focused but the pane isn't).
-- **Pane was already active when unfocused**: If a pane is producing output when the user switches away, it enters ACTIVE state silently (no "activity" attention) but the silence timer starts — so if it later goes quiet, "silence" attention fires normally.
+- **User focuses then unfocuses pane quickly**: Focusing mutes notifications but does NOT reset the state machine. When unfocused again, if the pane is in a state that warrants attention (e.g., SILENT_AFTER_ACTIVE), the notification fires immediately.
+- **App loses focus entirely**: When the user switches away from cmux, all panes become "unfocused" for notification purposes. Any pane already in an attention-worthy state fires immediately.
+- **Pane was already active when unfocused**: The tracker already knows the pane is active (all panes are always tracked). No "activity" attention fires (it wasn't idle). But if it later goes quiet, "silence" attention fires normally.
 - **Surface moved between panes**: Activity tracking state transfers with the surface to the new pane. Timers continue running.
 
 ## Configuration

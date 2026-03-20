@@ -23,9 +23,12 @@ SurfaceActivityTracker (per-surface state machine)
 
 New class. Manages per-surface activity state machines.
 
-- **Responsibility**: Track output timestamps per surface, run silence/idle timers, fire attention notifications
-- **State**: Dictionary of `[SurfaceID: SurfaceActivityState]` where state includes current FSM state, last output timestamp, active timers
-- **Threading**: Timer callbacks dispatch attention notifications on main queue (minimal work: just posting a notification)
+- **Responsibility**: Track output timestamps per surface, run silence check timers, fire attention notifications
+- **State**: Dictionary of `[SurfaceID: SurfaceActivityState]` where state includes current FSM state, `lastOutputAt` timestamp, focus state, active timers
+- **All panes tracked**: Both focused and unfocused panes are tracked. Focus state only gates notification delivery, not state transitions. This ensures accurate idle/active state is always known when a pane becomes unfocused.
+- **Output hot path**: When a surface is active and streaming output, the only per-output work is a single `lastOutputAt = now` timestamp write. No timer manipulation per output event.
+- **Silence check**: A fixed-interval polling timer (~5s) fires and checks `now - lastOutputAt >= silenceThreshold`. Created once on IDLE→ACTIVE, cancelled on ACTIVE→SILENT_AFTER_ACTIVE.
+- **Threading**: Timers and state transitions run on a dedicated serial dispatch queue. Notification delivery dispatches to main queue via `async`.
 - **No content inspection**: Only tracks *when* output occurs, never *what* the output contains
 
 ### Output Detection Hook (`GhosttyTerminalView.swift`)
@@ -49,6 +52,14 @@ Receives `surface.attention` bridge events. Shows system notification via Flutte
 ### Why desktop-side tracking (not Ghostty-level)
 
 Tracking at the Swift/cmux layer keeps all notification logic in one place, avoids ghostty submodule changes, and makes configuration straightforward through the existing cmux config system. The output detection hook is a thin timestamp observation — the heavy lifting (timers, state machines, configuration) lives in pure Swift.
+
+### Why track all panes (not just unfocused)
+
+If only unfocused panes were tracked, we'd have no baseline when a pane loses focus — was it idle or actively streaming? We'd have to guess (defaulting to IDLE), which produces false "activity" notifications when a user unfocuses a busy pane. Tracking all panes means the state machine always has accurate state. Focus only gates notification delivery.
+
+### Why polling timer instead of per-output timer reset
+
+A streaming terminal can produce hundreds of output events per second. Cancelling and recreating a timer on each event would be wasteful. Instead, the output hot path is a single timestamp write (`lastOutputAt = now`). A fixed-interval polling timer (~5s) independently checks `now - lastOutputAt >= silenceThreshold`. This makes the per-output cost O(1) with negligible overhead regardless of output rate.
 
 ### Why no terminal content inspection
 

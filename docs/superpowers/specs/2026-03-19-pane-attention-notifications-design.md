@@ -23,7 +23,7 @@ An unfocused pane was idle for ≥ `idle_threshold` seconds (default: 5s), then 
 
 ## State Machine
 
-Each terminal surface has an independent activity tracker managed by `SurfaceActivityTracker`. Focused panes are exempt — no tracking or notifications while the user is actively viewing the pane.
+Each terminal surface has an independent activity tracker managed by `SurfaceActivityTracker`. **All panes are tracked** (focused and unfocused) so that accurate idle/active state is always known. However, **notifications are only fired for unfocused panes**. This ensures that when a user unfocuses a pane, the tracker already knows whether it was idle or active — no guessing.
 
 ```
           output received (after idle_threshold)
@@ -40,15 +40,28 @@ Each terminal surface has an independent activity tracker managed by `SurfaceAct
 
 | From | To | Condition | Action |
 |---|---|---|---|
-| IDLE | ACTIVE (silent) | Output received AND pane was idle < `idle_threshold` | Start silence timer, **no** attention fired (pane was already busy when unfocused) |
-| IDLE | ACTIVE | Output received AND pane was idle ≥ `idle_threshold` AND pane is unfocused | Fire "activity" attention, start silence timer |
-| ACTIVE | ACTIVE | Output received | Reset silence timer |
-| ACTIVE | SILENT_AFTER_ACTIVE | No output for `silence_threshold` AND pane is unfocused | Fire "silence" attention |
+| IDLE | ACTIVE (silent) | Output received AND pane was idle < `idle_threshold` | Update `lastOutputAt`, start silence check timer, **no** attention fired (pane was already busy) |
+| IDLE | ACTIVE | Output received AND pane was idle ≥ `idle_threshold` AND pane is unfocused | Update `lastOutputAt`, fire "activity" attention, start silence check timer |
+| IDLE | ACTIVE (silent) | Output received AND pane was idle ≥ `idle_threshold` AND pane is **focused** | Update `lastOutputAt`, start silence check timer, **no** attention fired (pane is focused) |
+| ACTIVE | ACTIVE | Output received | Update `lastOutputAt` only (single timestamp write — no timer reset) |
+| ACTIVE | SILENT_AFTER_ACTIVE | Silence check timer fires AND `now - lastOutputAt ≥ silence_threshold` AND pane is unfocused | Fire "silence" attention |
 | SILENT_AFTER_ACTIVE | IDLE | After cooldown period | Ready for next attention cycle |
-| Any | IDLE | Pane becomes focused | Cancel all timers, reset state |
-| Any | IDLE | Surface moved between panes | Transfer state to new pane context, keep timers running |
+| Any | — | Pane becomes focused | **No state reset.** State machine continues tracking. Notifications are muted while focused. |
+| Any | — | Pane becomes unfocused | Notifications are unmuted. If state is ACTIVE and `now - lastOutputAt ≥ silence_threshold`, immediately fire "silence" attention. |
+| Any | — | Surface moved between panes | Transfer state to new pane context, keep timers running |
 
-**App focus**: When the entire cmux application loses focus (user switches to another app), all unfocused panes are eligible for tracking. The existing `AppFocusState.isAppFocused()` check applies: attention notifications are always added to the store, but sound and dock badge only fire when the app is not focused (matching existing notification store behavior).
+### Output Tracking is Cheap
+
+The critical performance property: when a surface is in ACTIVE state and streaming output, the only work done per output event is **a single timestamp write** (`lastOutputAt = now`). No timer cancellation, no timer creation, no notifications. The silence check timer runs independently on a fixed interval and reads the timestamp when it fires.
+
+### Focused vs Unfocused Panes
+
+All panes are always tracked. The focus state only gates **notification delivery**, not state machine transitions. This means:
+- A focused pane transitions through IDLE → ACTIVE → SILENT_AFTER_ACTIVE normally
+- When the user unfocuses a pane, the tracker already has accurate state
+- If the pane was in SILENT_AFTER_ACTIVE when unfocused, attention fires immediately on unfocus
+
+**App focus**: When the entire cmux application loses focus (user switches to another app), all panes become "unfocused" for notification purposes. The existing `AppFocusState.isAppFocused()` check applies: attention notifications are always added to the store, but sound and dock badge only fire when the app is not focused (matching existing notification store behavior).
 
 ### Bell Override
 
@@ -200,7 +213,12 @@ The output detection hooks into the Ghostty surface's `wakeup_cb` callback, whic
 
 ### Timer Implementation
 
-Timers use `DispatchSource.makeTimerSource` on a **dedicated serial dispatch queue** (not the main queue, per the project's socket command threading policy). Timer fire callbacks dispatch minimal work (posting a notification) to the main queue via `DispatchQueue.main.async`. Timer scheduling, cancellation, and state machine transitions all happen on the dedicated queue.
+The silence check timer is a **fixed-interval polling timer**, not a per-output reset timer. It is created once when a surface enters ACTIVE state, fires every ~5 seconds, and checks `now - lastOutputAt >= silence_threshold`. This avoids the cost of cancelling and recreating timers on every output event (which could be hundreds of times per second for streaming output).
+
+- Timer uses `DispatchSource.makeTimerSource` on a **dedicated serial dispatch queue** (not the main queue, per the project's socket command threading policy)
+- When the timer fires and the silence threshold is met, it dispatches a minimal notification to the main queue via `DispatchQueue.main.async`
+- The timer is cancelled when the surface transitions out of ACTIVE (into SILENT_AFTER_ACTIVE or when the surface is destroyed)
+- The cooldown timer (after attention fires) is a simple one-shot `DispatchSource` timer — no polling needed
 
 ## Testing Strategy
 
