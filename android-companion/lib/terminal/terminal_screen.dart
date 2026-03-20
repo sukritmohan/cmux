@@ -285,8 +285,8 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
 
     // All succeeded — paste paths into terminal and submit.
     if (successPaths.isNotEmpty) {
-      final pathPayload = successPaths.values.join('\n');
-      _onPaste('$pathPayload\n');
+      final pathPayload = successPaths.values.join(' ');
+      _onPaste(' $pathPayload');
     }
 
     // Send Enter to submit the line (user's typed text is already in the
