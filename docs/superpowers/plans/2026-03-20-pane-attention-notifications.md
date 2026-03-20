@@ -4,7 +4,7 @@
 
 **Goal:** Detect when terminal panes need user attention (bell, output silence, output activity) and deliver notifications on desktop (dock badge + sound) and Android companion (push + in-app badge).
 
-**Architecture:** A per-surface state machine (`SurfaceActivityTracker`) observes output timestamps from Ghostty's `SET_TITLE` action callback (fires on each shell prompt/command change, providing a lightweight existing signal) and the `RING_BELL` action. The tracker runs fixed-interval polling timers on a dedicated serial dispatch queue to detect silence/activity transitions. Notification delivery goes through the existing `TerminalNotificationStore` (new attention-specific path that skips macOS banners) and `BridgeEventRelay` (new `surface.attention` event to Android).
+**Architecture:** A per-surface state machine (`SurfaceActivityTracker`) observes output timestamps from Ghostty's terminal output path (exact hook point to be investigated in Task 4 — options include `wakeup_cb` with content-change counter, pty read callback, or a new Ghostty action) and the `RING_BELL` action. The tracker runs fixed-interval polling timers on a dedicated serial dispatch queue to detect silence/activity transitions. Notification delivery uses `NotificationCenter` (matching existing bridge event patterns) — the tracker posts `.surfaceAttention` notifications, which are independently observed by `TerminalNotificationStore` (desktop badge + sound) and `BridgeEventRelay` (`surface.attention` event to Android).
 
 **Tech Stack:** Swift (macOS app), Dart/Flutter (Android companion), Ghostty C API callbacks, `DispatchSource` timers, Riverpod state management, `flutter_local_notifications` plugin.
 
@@ -28,7 +28,7 @@
 
 | File | What Changes |
 |---|---|
-| `Sources/GhosttyTerminalView.swift` | Hook `GHOSTTY_ACTION_SET_TITLE` to post output-detected timestamp. Hook `GHOSTTY_ACTION_RING_BELL` (surface-target) to call `SurfaceActivityTracker.triggerBellAttention`. |
+| `Sources/GhosttyTerminalView.swift` | Hook output detection callback (exact hook investigated in Task 4). Hook `GHOSTTY_ACTION_RING_BELL` (surface-target) to call `SurfaceActivityTracker.triggerBellAttention`. |
 | `Sources/TerminalNotificationStore.swift` | Add `TerminalNotification.Kind` enum (`.standard` vs `.attention`). Add `addAttentionNotification()` method that increments badge + plays sound but skips `UNUserNotificationCenter` banner. |
 | `Sources/Bridge/BridgeEventRelay.swift` | Add `.bridgeSurfaceAttention` notification name. Register observer #13 for `surface.attention` event emission. |
 | `Sources/TerminalController.swift` | Add V2 API commands: `attention.configure`, `attention.status`, `attention.enable`, `attention.disable`. |
@@ -41,7 +41,7 @@
 
 ## Critical Constraints (from CLAUDE.md)
 
-1. **Typing-latency paths are sacred.** The output detection hook goes in `GHOSTTY_ACTION_SET_TITLE` handler (already fires on shell prompt changes). The only work added is a single function call that writes a timestamp. Do NOT touch `hitTest()`, `TabItemView` body, or `forceRefresh()`.
+1. **Typing-latency paths are sacred.** The output detection hook must be investigated (Task 4) — candidate hooks include `wakeup_cb` with content-change counter, pty read path, or a new Ghostty action. Whatever hook is chosen, the only work added is a single function call that writes a timestamp. Do NOT touch `hitTest()`, `TabItemView` body, or `forceRefresh()`.
 2. **Socket threading policy.** `SurfaceActivityTracker` timers and state transitions run on a dedicated serial dispatch queue. Only the final notification delivery dispatches to main via `async`.
 3. **No content inspection.** The tracker only knows *when* output-related actions fire, never *what* the terminal content says.
 4. **All panes tracked.** Focus state gates notification delivery, not state machine transitions.
@@ -223,14 +223,21 @@ enum AttentionReason: String {
     }
 }
 
-/// Callback invoked when a surface triggers an attention notification.
-/// Called on the tracker's serial queue — callers must dispatch to main if needed.
-typealias AttentionCallback = (
-    _ surfaceId: UUID,
-    _ tabId: UUID,
-    _ reason: AttentionReason,
-    _ surfaceTitle: String
-) -> Void
+/// Notification posted when a surface triggers attention.
+/// UserInfo contains surfaceId, tabId, reason, and surfaceTitle.
+/// Posted on the main queue so observers (TerminalNotificationStore,
+/// BridgeEventRelay) can safely access UI state.
+extension Notification.Name {
+    static let surfaceAttention = Notification.Name("com.cmuxterm.surface.attention")
+}
+
+/// Keys for surfaceAttention notification userInfo.
+enum SurfaceAttentionKey {
+    static let surfaceId = "surfaceId"
+    static let tabId = "tabId"
+    static let reason = "reason"
+    static let surfaceTitle = "surfaceTitle"
+}
 
 /// Tracks per-surface output activity and fires attention notifications
 /// based on silence/activity heuristics and bell signals.
@@ -288,9 +295,6 @@ final class SurfaceActivityTracker {
 
     /// Per-surface state, keyed by surface UUID. Accessed only on `trackerQueue`.
     private var surfaces: [UUID: SurfaceActivityState] = [:]
-
-    /// Callback fired when a surface triggers attention. Set during initialization.
-    var onAttention: AttentionCallback?
 
     private init() {}
 
@@ -566,10 +570,18 @@ final class SurfaceActivityTracker {
 
         let tabId = state.tabId
         let title = state.surfaceTitle
-        let callback = onAttention
 
         DispatchQueue.main.async {
-            callback?(surfaceId, tabId, reason, title)
+            NotificationCenter.default.post(
+                name: .surfaceAttention,
+                object: nil,
+                userInfo: [
+                    SurfaceAttentionKey.surfaceId: surfaceId,
+                    SurfaceAttentionKey.tabId: tabId,
+                    SurfaceAttentionKey.reason: reason,
+                    SurfaceAttentionKey.surfaceTitle: title,
+                ]
+            )
         }
     }
 
@@ -750,27 +762,57 @@ enum (.standard vs .attention) to distinguish notification types."
 ## Task 4: Ghostty Integration — Output Detection + Bell Hook
 
 ### Description
-Wire the Ghostty action callbacks (`GHOSTTY_ACTION_SET_TITLE` and `GHOSTTY_ACTION_RING_BELL`) into `SurfaceActivityTracker`. Also register/unregister surfaces on creation/destruction.
+Investigate and wire the best Ghostty output detection hook into `SurfaceActivityTracker`. Also wire `GHOSTTY_ACTION_RING_BELL` and handle surface lifecycle (register/unregister).
 
 **Files:**
 - Modify: `Sources/GhosttyTerminalView.swift`
+- Possibly modify: Ghostty submodule (if a new callback is needed)
 
-**Key constraint:** `SET_TITLE` fires on shell prompt changes and command title updates. It is not per-byte output, but it fires frequently enough during interactive sessions and command execution to serve as a lightweight activity signal. The spec explicitly says "a thin bridging callback" is acceptable, and `SET_TITLE` is already a callback that fires with surface context.
+**Key constraint:** We need a hook that fires whenever the terminal surface receives output from the child process. The hook must have surface context (surface ID) available. Candidate hooks to investigate (in order of preference):
 
-- [ ] **Step 1: Hook `GHOSTTY_ACTION_SET_TITLE` to record output**
+1. **`wakeup_cb`** — fires when the surface has new content to render. Check if there's a content generation counter or dirty flag that can disambiguate "new output" from cursor blink/resize.
+2. **Ghostty's pty read path** — a callback in the I/O layer that fires when bytes are read from the child process. Most accurate but may require Ghostty fork changes.
+3. **A new `GHOSTTY_ACTION_OUTPUT_ACTIVITY` action** — add to Ghostty fork, fired when the terminal processes new input from the pty. Clean but requires submodule changes.
+4. **`GHOSTTY_ACTION_SET_TITLE`** (fallback) — fires on shell prompt/title changes. Less granular (misses streaming output without title changes) but works without any Ghostty changes.
 
-In `Sources/GhosttyTerminalView.swift`, inside the `case GHOSTTY_ACTION_SET_TITLE:` handler (around line 2171), after the existing title notification post, add a call to the tracker. Add this INSIDE the existing `if let tabId = surfaceView.tabId, let surfaceId = surfaceView.terminalSurface?.id` block:
+- [ ] **Step 1: Investigate output detection hooks in Ghostty**
 
-```swift
-            // Record output activity for pane attention tracking.
-            // This is the output detection hot path: only a timestamp write when ACTIVE.
-            SurfaceActivityTracker.shared.recordOutput(
-                surfaceId: surfaceId,
-                title: title
-            )
+Explore the Ghostty source to find the best hook point:
+
+```bash
+# Check wakeup_cb usage and what triggers it
+grep -r "wakeup_cb" ghostty/src/ --include="*.zig"
+
+# Check if there's a content-change or dirty flag on the surface
+grep -r "dirty\|content_gen\|has_output\|needs_render" ghostty/src/ --include="*.zig"
+
+# Check the pty read path
+grep -r "posix.read\|readPty\|pty_read\|io_thread" ghostty/src/ --include="*.zig"
+
+# Check how the Swift surface wrapper receives callbacks
+grep -r "wakeup\|GHOSTTY_ACTION" Sources/GhosttyTerminalView.swift
 ```
 
-This goes after the `DispatchQueue.main.async` block that posts `.ghosttyDidSetTitle`, still within the `if let tabId, surfaceId` guard.
+Document findings and choose the best hook. If `wakeup_cb` has a reliable content-change signal, use it. If not, add a lightweight callback to the Ghostty fork.
+
+- [ ] **Step 1b: Implement chosen output hook**
+
+Based on investigation, add the output detection call. The hook MUST:
+- Have surface context (surface ID) available
+- Be as lightweight as possible (single function call)
+- Fire when terminal output arrives, not on unrelated wakeups
+
+Example (if using wakeup_cb with content generation counter):
+```swift
+            // In the wakeup callback, check if content actually changed
+            let currentGen = ghostty_surface_content_generation(surface)
+            if currentGen != lastContentGeneration {
+                lastContentGeneration = currentGen
+                if let surfaceId = surfaceView.terminalSurface?.id {
+                    SurfaceActivityTracker.shared.recordOutput(surfaceId: surfaceId)
+                }
+            }
+```
 
 - [ ] **Step 2: Hook `GHOSTTY_ACTION_RING_BELL` (surface-target) for bell attention**
 
@@ -858,63 +900,22 @@ Set up the `SurfaceActivityTracker.onAttention` callback to deliver notification
 - Modify: `Sources/GhosttyTerminalView.swift` (or `Sources/AppDelegate.swift` — wherever app initialization happens)
 - Modify: `Sources/Bridge/BridgeEventRelay.swift`
 
-- [ ] **Step 1: Add `bridgeSurfaceAttention` notification name in `BridgeEventRelay.swift`**
+- [ ] **Step 1: Register observer #13 in `BridgeEventRelay.registerObservers()`**
 
-In the `Notification.Name` extension at the top of `Sources/Bridge/BridgeEventRelay.swift`:
-
-```swift
-    /// Posted when a surface triggers an attention notification.
-    static let bridgeSurfaceAttention = Notification.Name("bridge.surface.attention")
-```
-
-Add a key for reason in `BridgeNotificationKey`:
-```swift
-    static let attentionReason = "bridge.attentionReason"
-    static let surfaceTitle = "bridge.surfaceTitle"
-```
-
-- [ ] **Step 2: Register observer #13 in `BridgeEventRelay.registerObservers()`**
+The BridgeEventRelay directly observes `.surfaceAttention` (the same notification posted by the tracker). No intermediate notification name needed — this matches the NotificationCenter-based decoupling pattern.
 
 Add at the end of `registerObservers()`:
 
 ```swift
         // 13. surface.attention — fired when a pane triggers attention
         observers.append(NotificationCenter.default.addObserver(
-            forName: .bridgeSurfaceAttention, object: nil, queue: nil
+            forName: .surfaceAttention, object: nil, queue: .main
         ) { [weak self] notification in
-            guard let tabId = notification.userInfo?[GhosttyNotificationKey.tabId] as? UUID else { return }
-            guard let surfaceId = notification.userInfo?[GhosttyNotificationKey.surfaceId] as? UUID else { return }
-            let reason = notification.userInfo?[BridgeNotificationKey.attentionReason] as? String ?? "unknown"
-            let paneId = notification.userInfo?[BridgeNotificationKey.paneId] as? String ?? ""
-            let title = notification.userInfo?[BridgeNotificationKey.surfaceTitle] as? String ?? ""
-            self?.emit(event: "surface.attention", data: [
-                "workspace_id": tabId.uuidString,
-                "surface_id": surfaceId.uuidString,
-                "pane_id": paneId,
-                "reason": reason,
-                "surface_title": title,
-            ])
-        })
-```
+            guard let tabId = notification.userInfo?[SurfaceAttentionKey.tabId] as? UUID else { return }
+            guard let surfaceId = notification.userInfo?[SurfaceAttentionKey.surfaceId] as? UUID else { return }
+            guard let reason = notification.userInfo?[SurfaceAttentionKey.reason] as? AttentionReason else { return }
+            let title = notification.userInfo?[SurfaceAttentionKey.surfaceTitle] as? String ?? ""
 
-Update the comment "Registers observers for all 12 bridge event types" to say "13".
-
-- [ ] **Step 3: Wire the attention callback in app initialization**
-
-In `GhosttyApp.swift` initialization (or `AppDelegate`), after the tracker singleton is available, set up the callback. Find the appropriate initialization point (likely in `AppDelegate.applicationDidFinishLaunching` or similar):
-
-```swift
-        // Wire attention tracker to notification delivery
-        SurfaceActivityTracker.shared.onAttention = { surfaceId, tabId, reason, surfaceTitle in
-            // Desktop: add attention notification (badge + sound, no banner)
-            TerminalNotificationStore.shared.addAttentionNotification(
-                tabId: tabId,
-                surfaceId: surfaceId,
-                reason: reason,
-                title: surfaceTitle
-            )
-
-            // Bridge: post notification for Android companion.
             // Resolve pane ID using workspace.paneId(forPanelId:) — same pattern
             // as other bridge events (pane.focused, surface.reordered, etc.)
             let paneId: String = {
@@ -922,16 +923,40 @@ In `GhosttyApp.swift` initialization (or `AppDelegate`), after the tracker singl
                     .first(where: { $0.id == tabId }) else { return "" }
                 return workspace.paneId(forPanelId: surfaceId)?.id.uuidString ?? ""
             }()
-            NotificationCenter.default.post(
-                name: .bridgeSurfaceAttention,
-                object: nil,
-                userInfo: [
-                    GhosttyNotificationKey.tabId: tabId,
-                    GhosttyNotificationKey.surfaceId: surfaceId,
-                    BridgeNotificationKey.paneId: paneId,
-                    BridgeNotificationKey.attentionReason: reason.rawValue,
-                    BridgeNotificationKey.surfaceTitle: surfaceTitle,
-                ]
+
+            self?.emit(event: "surface.attention", data: [
+                "workspace_id": tabId.uuidString,
+                "surface_id": surfaceId.uuidString,
+                "pane_id": paneId,
+                "reason": reason.rawValue,
+                "surface_title": title,
+            ])
+        })
+```
+
+Update the comment "Registers observers for all 12 bridge event types" to say "13".
+
+- [ ] **Step 3: Register TerminalNotificationStore as observer for `.surfaceAttention`**
+
+In `TerminalNotificationStore` initialization, add an observer for the tracker's notification:
+
+```swift
+        // Observe surface attention notifications from the activity tracker
+        NotificationCenter.default.addObserver(
+            forName: .surfaceAttention,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let surfaceId = notification.userInfo?[SurfaceAttentionKey.surfaceId] as? UUID,
+                  let tabId = notification.userInfo?[SurfaceAttentionKey.tabId] as? UUID,
+                  let reason = notification.userInfo?[SurfaceAttentionKey.reason] as? AttentionReason,
+                  let title = notification.userInfo?[SurfaceAttentionKey.surfaceTitle] as? String
+            else { return }
+            self?.addAttentionNotification(
+                tabId: tabId,
+                surfaceId: surfaceId,
+                reason: reason,
+                title: title
             )
         }
 ```
