@@ -248,6 +248,14 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       status: VoiceStatus.processing,
       recordingDuration: null,
     );
+
+    // Safety timeout: if no transcriptions arrive within 5 seconds of
+    // stopping, return to idle to avoid a permanently stuck spinner.
+    Future<void>.delayed(const Duration(seconds: 5), () {
+      if (state.status == VoiceStatus.processing && !state.hasActiveChips) {
+        state = state.copyWith(status: VoiceStatus.idle);
+      }
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -383,9 +391,11 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     final energy = computeRMSEnergy(chunk);
     final isSilent = energy < _kSilenceThreshold;
 
+    // Always send frames to Mac — let the Mac-side VAD handle speech detection.
+    // Phone-side silence suppression is disabled for now; the record package's
+    // PCM energy scale varies by device and needs calibration.
+    manager.sendBinary(VoiceAudioFrame.encode(chunk));
     if (!isSilent) {
-      // Non-silent frame: encode and transmit.
-      manager.sendBinary(VoiceAudioFrame.encode(chunk));
       _lastSpeechTime = DateTime.now();
     }
 
