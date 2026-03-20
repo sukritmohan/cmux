@@ -1,40 +1,128 @@
 /// Attachment (+) button for the modifier bar tools grid.
 ///
 /// Renders a 36px circular button with a (+) icon. Tapping opens a spring-
-/// animated action sheet popover with Photos and Files placeholder options.
-/// Both options are non-functional placeholders for now.
+/// animated action sheet popover with Photos and Files options. Long-pressing
+/// clears all staged attachments.
 ///
-/// The action sheet is 170px wide with a 12px border radius and appears above
-/// the button with a spring entry animation.
+/// Photos option uses ImagePicker to pick multiple images from the gallery.
+/// Files option uses FilePicker to pick multiple files of any type.
+/// Both validate file size (50MB max) and generate thumbnails for images.
 library;
 
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../app/colors.dart';
+import 'attachment_service.dart';
+
+// ---------------------------------------------------------------------------
+// MIME type detection
+// ---------------------------------------------------------------------------
+
+/// Maps a file extension to its MIME type.
+///
+/// Covers common image, video, document, and archive formats.
+/// Returns "application/octet-stream" for unrecognized extensions.
+String mimeTypeFromExtension(String filename) {
+  final dot = filename.lastIndexOf('.');
+  if (dot < 0 || dot == filename.length - 1) return 'application/octet-stream';
+
+  final ext = filename.substring(dot + 1).toLowerCase();
+
+  return switch (ext) {
+    'jpg' || 'jpeg' => 'image/jpeg',
+    'png' => 'image/png',
+    'gif' => 'image/gif',
+    'webp' => 'image/webp',
+    'mp4' => 'video/mp4',
+    'mov' => 'video/quicktime',
+    'pdf' => 'application/pdf',
+    'txt' => 'text/plain',
+    'zip' => 'application/zip',
+    _ => 'application/octet-stream',
+  };
+}
+
+/// Whether a MIME type represents an image format we can generate thumbnails for.
+bool _isImageMime(String mimeType) => mimeType.startsWith('image/');
+
+// ---------------------------------------------------------------------------
+// Thumbnail generation
+// ---------------------------------------------------------------------------
+
+/// Maximum thumbnail dimension (width or height) in pixels.
+const _kThumbnailMaxDimension = 120;
+
+/// Generates a small JPEG thumbnail from image bytes.
+///
+/// Decodes the image, scales it so the longest side is at most
+/// [_kThumbnailMaxDimension] pixels, and re-encodes as JPEG.
+/// Returns null if decoding or encoding fails for any reason.
+Future<Uint8List?> _generateThumbnail(String filePath) async {
+  try {
+    final fileBytes = await File(filePath).readAsBytes();
+    final codec = await ui.instantiateImageCodec(
+      fileBytes,
+      targetWidth: _kThumbnailMaxDimension,
+      targetHeight: _kThumbnailMaxDimension,
+    );
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+
+    final byteData = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    image.dispose();
+    codec.dispose();
+
+    if (byteData == null) return null;
+    return byteData.buffer.asUint8List();
+  } catch (e) {
+    debugPrint('[AttachmentButton] Thumbnail generation failed: $e');
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// AttachmentButton
+// ---------------------------------------------------------------------------
 
 /// A 36px circular (+) button that opens an attachment action sheet.
 ///
 /// Inputs:
-///   None — both action sheet options are non-functional placeholders.
+///   [isDisabled] — when true, the button is grayed out and taps are ignored.
 ///
 /// The action sheet popover appears above the button on tap, with a spring
 /// animation (overshoot curve). Tapping outside or selecting an option
 /// dismisses it.
-class AttachmentButton extends StatefulWidget {
-  const AttachmentButton({super.key});
+///
+/// Long-pressing the (+) button clears all staged attachments.
+class AttachmentButton extends ConsumerStatefulWidget {
+  /// When true, the button renders at reduced opacity and ignores all taps.
+  final bool isDisabled;
+
+  const AttachmentButton({super.key, this.isDisabled = false});
 
   @override
-  State<AttachmentButton> createState() => _AttachmentButtonState();
+  ConsumerState<AttachmentButton> createState() => _AttachmentButtonState();
 }
 
-class _AttachmentButtonState extends State<AttachmentButton>
+class _AttachmentButtonState extends ConsumerState<AttachmentButton>
     with SingleTickerProviderStateMixin {
   bool _pressed = false;
   bool _sheetOpen = false;
   late final AnimationController _sheetController;
   late final Animation<double> _sheetScale;
   late final Animation<double> _sheetOpacity;
+
+  final _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -67,6 +155,7 @@ class _AttachmentButtonState extends State<AttachmentButton>
   }
 
   void _toggleSheet() {
+    if (widget.isDisabled) return;
     HapticFeedback.lightImpact();
     if (_sheetOpen) {
       _closeSheet();
@@ -82,39 +171,191 @@ class _AttachmentButtonState extends State<AttachmentButton>
     });
   }
 
+  /// Long-press handler: clears all staged attachments.
+  void _onLongPress() {
+    if (widget.isDisabled) return;
+    final state = ref.read(attachmentProvider);
+    if (!state.isNotEmpty) return;
+
+    HapticFeedback.mediumImpact();
+    ref.read(attachmentProvider.notifier).clear();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All attachments cleared'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // File picking
+  // -----------------------------------------------------------------------
+
+  /// Picks multiple images from the gallery via ImagePicker, validates size,
+  /// generates thumbnails, and stages them as attachments.
+  Future<void> _onPhotos() async {
+    _closeSheet();
+
+    try {
+      final pickedFiles = await _imagePicker.pickMultiImage();
+      if (pickedFiles.isEmpty) return;
+
+      final rejectedNames = <String>[];
+      final validItems = <AttachmentItem>[];
+
+      for (final xFile in pickedFiles) {
+        final file = File(xFile.path);
+        final fileSize = await file.length();
+
+        if (fileSize > kMaxFileSizeBytes) {
+          rejectedNames.add(xFile.name);
+          continue;
+        }
+
+        final mimeType = mimeTypeFromExtension(xFile.name);
+        final thumbnail = _isImageMime(mimeType)
+            ? await _generateThumbnail(xFile.path)
+            : null;
+
+        validItems.add(AttachmentItem(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          filename: xFile.name,
+          filePath: xFile.path,
+          mimeType: mimeType,
+          thumbnailBytes: thumbnail,
+        ));
+
+        // Ensure unique IDs when picking multiple files rapidly.
+        await Future.delayed(const Duration(microseconds: 1));
+      }
+
+      if (validItems.isNotEmpty) {
+        ref.read(attachmentProvider.notifier).addAll(validItems);
+      }
+
+      _showRejectionSnackBar(rejectedNames);
+    } catch (e) {
+      debugPrint('[AttachmentButton] Photo pick failed: $e');
+    }
+  }
+
+  /// Picks multiple files of any type via FilePicker, validates size,
+  /// generates thumbnails for images, and stages them as attachments.
+  Future<void> _onFiles() async {
+    _closeSheet();
+
+    try {
+      final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+      if (result == null || result.files.isEmpty) return;
+
+      final rejectedNames = <String>[];
+      final validItems = <AttachmentItem>[];
+
+      for (final platformFile in result.files) {
+        final path = platformFile.path;
+        if (path == null) continue;
+
+        final file = File(path);
+        final fileSize = await file.length();
+
+        if (fileSize > kMaxFileSizeBytes) {
+          rejectedNames.add(platformFile.name);
+          continue;
+        }
+
+        final mimeType = mimeTypeFromExtension(platformFile.name);
+        final thumbnail = _isImageMime(mimeType)
+            ? await _generateThumbnail(path)
+            : null;
+
+        validItems.add(AttachmentItem(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          filename: platformFile.name,
+          filePath: path,
+          mimeType: mimeType,
+          thumbnailBytes: thumbnail,
+        ));
+
+        // Ensure unique IDs when picking multiple files rapidly.
+        await Future.delayed(const Duration(microseconds: 1));
+      }
+
+      if (validItems.isNotEmpty) {
+        ref.read(attachmentProvider.notifier).addAll(validItems);
+      }
+
+      _showRejectionSnackBar(rejectedNames);
+    } catch (e) {
+      debugPrint('[AttachmentButton] File pick failed: $e');
+    }
+  }
+
+  /// Shows a SnackBar listing files that were rejected for exceeding the
+  /// 50MB size limit. Does nothing if [names] is empty.
+  void _showRejectionSnackBar(List<String> names) {
+    if (names.isEmpty || !mounted) return;
+
+    final label = names.length == 1
+        ? '"${names.first}" exceeds the 50 MB limit'
+        : '${names.length} files exceed the 50 MB limit';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(label),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Build
+  // -----------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final disabled = widget.isDisabled;
 
     return Stack(
       clipBehavior: Clip.none,
       children: [
         // The (+) button.
         GestureDetector(
-          onTapDown: (_) => setState(() => _pressed = true),
-          onTapUp: (_) {
-            setState(() => _pressed = false);
-            _toggleSheet();
-          },
-          onTapCancel: () => setState(() => _pressed = false),
+          onTapDown: disabled ? null : (_) => setState(() => _pressed = true),
+          onTapUp: disabled
+              ? null
+              : (_) {
+                  setState(() => _pressed = false);
+                  _toggleSheet();
+                },
+          onTapCancel: disabled
+              ? null
+              : () => setState(() => _pressed = false),
+          onLongPress: disabled ? null : _onLongPress,
           child: Semantics(
             label: 'Add attachment',
             button: true,
             child: AnimatedScale(
-              scale: _pressed ? 0.92 : 1.0,
+              scale: _pressed ? 0.93 : 1.0,
               duration: const Duration(milliseconds: 80),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: c.keyGroupResting,
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.add_rounded,
-                    size: 18,
-                    color: c.keyGroupText,
+              child: Opacity(
+                opacity: disabled ? 0.35 : 1.0,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: c.keyGroupResting,
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.add_rounded,
+                      size: 18,
+                      color: c.keyGroupText,
+                    ),
                   ),
                 ),
               ),
@@ -153,8 +394,8 @@ class _AttachmentButtonState extends State<AttachmentButton>
                 );
               },
               child: _ActionSheet(
-                onPhotos: _closeSheet,
-                onFiles: _closeSheet,
+                onPhotos: _onPhotos,
+                onFiles: _onFiles,
               ),
             ),
           ),

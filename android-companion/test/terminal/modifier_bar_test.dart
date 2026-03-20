@@ -1,4 +1,5 @@
 import 'package:cmux_companion/app/theme.dart';
+import 'package:cmux_companion/terminal/attachment_service.dart';
 import 'package:cmux_companion/terminal/clipboard_history.dart';
 import 'package:cmux_companion/terminal/modifier_bar.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,9 @@ void main() {
           children: [
             ModifierBar(
               onInput: onInput ?? (_) {},
+              onSubmit: () {},
+              isUploading: false,
+              attachmentState: const AttachmentState(),
               ctrlActiveNotifier: ValueNotifier<bool>(false),
               clipboardHistoryState: const ClipboardHistoryState(),
               clipboardHistoryNotifier: ClipboardHistoryNotifier(connectionKey: 'test'),
@@ -60,16 +64,35 @@ void main() {
       expect(find.byIcon(Icons.content_paste), findsOneWidget);
     });
 
-    testWidgets('RETURN key fires callback with carriage return', (tester) async {
-      String? sent;
-      await tester.pumpWidget(buildTestWidget(
-        onInput: (data) => sent = data,
+    testWidgets('RETURN key fires onSubmit callback', (tester) async {
+      bool submitCalled = false;
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.darkTheme,
+        home: Scaffold(
+          body: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ModifierBar(
+                onInput: (_) {},
+                onSubmit: () => submitCalled = true,
+                isUploading: false,
+                attachmentState: const AttachmentState(),
+                ctrlActiveNotifier: ValueNotifier<bool>(false),
+                clipboardHistoryState: const ClipboardHistoryState(),
+                clipboardHistoryNotifier: ClipboardHistoryNotifier(connectionKey: 'test'),
+                keyboardFocusNode: FocusNode(),
+                autocompleteActiveNotifier: ValueNotifier<bool>(true),
+                onPaste: (_) {},
+              ),
+            ],
+          ),
+        ),
       ));
 
       await tester.tap(find.text('RETURN'));
       await tester.pumpAndSettle();
 
-      expect(sent, '\r');
+      expect(submitCalled, isTrue);
     });
 
     testWidgets('arrow keys fire correct escape sequences', (tester) async {

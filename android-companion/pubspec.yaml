@@ -27,6 +27,10 @@ dependencies:
   # Clipboard history persistence
   shared_preferences: ^2.3.4
 
+  # File/image picking for attachments
+  image_picker: ^1.1.2
+  file_picker: ^8.1.6
+
   # Routing
   go_router: ^14.8.1
 

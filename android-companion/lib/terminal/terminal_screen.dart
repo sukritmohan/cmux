@@ -35,6 +35,8 @@ import '../state/pane_provider.dart';
 import '../state/surface_provider.dart';
 import '../state/workspace_provider.dart';
 import '../workspace/workspace_drawer.dart';
+import 'attachment_service.dart';
+import 'attachment_strip.dart';
 import 'clipboard_history.dart';
 import 'modifier_bar.dart';
 import 'terminal_view.dart';
@@ -190,6 +192,61 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     _sendInput('\x1b[200~$text\x1b[201~');
   }
 
+  /// Central submit handler — intercepts RETURN when attachments are staged.
+  ///
+  /// If no attachments are pending, sends '\r' as normal. Otherwise, uploads
+  /// all attachments, collects inbox paths, pastes them into the terminal via
+  /// bracketed paste, then sends '\r' to submit the line.
+  Future<void> _onSubmit() async {
+    final attachState = ref.read(attachmentProvider);
+    if (!attachState.isNotEmpty) {
+      _sendInput('\r');
+      return;
+    }
+
+    final notifier = ref.read(attachmentProvider.notifier);
+
+    // Clear any previous errors before retrying.
+    if (attachState.hasErrors) {
+      notifier.clearErrors();
+    }
+
+    // Upload all staged files.
+    final successPaths = await notifier.uploadAll();
+
+    // Check for failures — if any item still has errors, don't paste.
+    final postUploadState = ref.read(attachmentProvider);
+    if (postUploadState.hasErrors) {
+      // Remove successful items, keep failed ones.
+      notifier.removeSuccessful(successPaths.keys.toSet());
+      if (mounted) {
+        final failedNames = postUploadState.errorItems
+            .map((e) => e.filename)
+            .join(', ');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send $failedNames'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
+    // All succeeded — paste paths into terminal and submit.
+    if (successPaths.isNotEmpty) {
+      final pathPayload = successPaths.values.join('\n');
+      _onPaste('$pathPayload\n');
+    }
+
+    // Send Enter to submit the line (user's typed text is already in the
+    // terminal's line buffer on the desktop side).
+    _sendInput('\r');
+
+    // Clear all attachments.
+    notifier.clear();
+  }
+
   void _openMinimap() {
     final wsState = ref.read(workspaceProvider);
     final activeWsId = wsState.activeWorkspaceId;
@@ -297,6 +354,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                   autocompleteActiveNotifier: _autocompleteActiveNotifier,
                   onCopy: (text) =>
                       ref.read(clipboardHistoryProvider.notifier).add(text),
+                  onSubmitOverride: ref.watch(attachmentProvider).isNotEmpty ? _onSubmit : null,
                 )
               : Center(
                   child: Text(
@@ -339,6 +397,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     });
 
     final focusedSurfaceId = surfaceState.focusedSurfaceId;
+    final attachState = ref.watch(attachmentProvider);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -373,9 +432,20 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                   ),
                 ),
 
+                // Attachment strip (only when attachments are staged)
+                if (_showModifierBar && attachState.isNotEmpty)
+                  AttachmentStrip(
+                    state: attachState,
+                    onRemove: (id) =>
+                        ref.read(attachmentProvider.notifier).remove(id),
+                  ),
+
                 // Modifier bar (only for terminal + browser)
                 if (_showModifierBar) ModifierBar(
                   onInput: _sendInput,
+                  onSubmit: _onSubmit,
+                  isUploading: attachState.isUploading,
+                  attachmentState: attachState,
                   ctrlActiveNotifier: _ctrlActiveNotifier,
                   clipboardHistoryState: ref.watch(clipboardHistoryProvider),
                   clipboardHistoryNotifier:

@@ -86,6 +86,11 @@ class AppColorScheme {
   final Color sheetSearch;
   final Color sheetSearchBorder;
 
+  // -- Attachment strip --
+  final Color attachmentTabError;
+  final Color attachmentUploadPulse;
+  final Color attachmentStatusText;
+
   // -- Connection indicator --
   final Color connectedColor;
 
@@ -144,6 +149,9 @@ class AppColorScheme {
     required this.sheetHandle,
     required this.sheetSearch,
     required this.sheetSearchBorder,
+    required this.attachmentTabError,
+    required this.attachmentUploadPulse,
+    required this.attachmentStatusText,
     required this.connectedColor,
   });
 }
@@ -206,6 +214,9 @@ abstract final class AppColors {
     sheetHandle: Color(0x26FFFFFF),           // rgba(255,255,255,0.15)
     sheetSearch: Color(0x0AFFFFFF),           // rgba(255,255,255,0.04)
     sheetSearchBorder: Color(0x0FFFFFFF),     // rgba(255,255,255,0.06)
+    attachmentTabError: Color(0x80F85149),   // rgba(248,81,73,0.50)
+    attachmentUploadPulse: Color(0x3378B4FF), // rgba(120,180,255,0.20)
+    attachmentStatusText: Color(0xB378B4FF), // rgba(120,180,255,0.70)
     connectedColor: Color(0xFF50C878),
   );
 
@@ -265,6 +276,9 @@ abstract final class AppColors {
     sheetHandle: Color(0x26000000),
     sheetSearch: Color(0x0A000000),
     sheetSearchBorder: Color(0x0F000000),
+    attachmentTabError: Color(0x80D32F2F),   // rgba(211,47,47,0.50)
+    attachmentUploadPulse: Color(0x264080C0), // rgba(64,128,192,0.15)
+    attachmentStatusText: Color(0xB34080C0), // rgba(64,128,192,0.70)
     connectedColor: Color(0xFF2D8A4E),
   );
 

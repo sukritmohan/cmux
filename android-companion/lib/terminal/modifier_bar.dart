@@ -19,6 +19,7 @@ import 'package:flutter/services.dart';
 
 import '../app/colors.dart';
 import 'attachment_button.dart';
+import 'attachment_service.dart';
 import 'clipboard_button.dart';
 import 'clipboard_history.dart';
 import 'joystick_button.dart';
@@ -49,9 +50,21 @@ class ModifierBar extends StatefulWidget {
   /// Callback for pasting clipboard text (wraps in bracketed paste mode).
   final ValueChanged<String> onPaste;
 
+  /// Submit handler that intercepts RETURN when attachments are staged.
+  final VoidCallback onSubmit;
+
+  /// Whether an upload is currently in progress (disables input, shows spinner).
+  final bool isUploading;
+
+  /// Current attachment state for threading isAtLimit to the (+) button.
+  final AttachmentState attachmentState;
+
   const ModifierBar({
     super.key,
     required this.onInput,
+    required this.onSubmit,
+    required this.isUploading,
+    required this.attachmentState,
     required this.ctrlActiveNotifier,
     required this.clipboardHistoryState,
     required this.clipboardHistoryNotifier,
@@ -194,7 +207,9 @@ class _ModifierBarState extends State<ModifierBar> {
                   children: [
                     Row(
                       children: [
-                        const AttachmentButton(), // top-left
+                        AttachmentButton(
+                          isDisabled: widget.isUploading || widget.attachmentState.isAtLimit,
+                        ), // top-left
                         const SizedBox(width: 4),
                         ClipboardButton(          // top-right
                           historyState: widget.clipboardHistoryState,
@@ -231,10 +246,13 @@ class _ModifierBarState extends State<ModifierBar> {
                       ctrlActive: _ctrlState != _CtrlState.inactive,
                     ),
                     const SizedBox(width: 8),
-                    _ReturnKey(onTap: () {  // 44px tall, 72px min-width
-                      HapticFeedback.mediumImpact();
-                      widget.onInput('\r');
-                    }),
+                    _ReturnKey(
+                      isUploading: widget.isUploading,
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        widget.onSubmit();
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -419,10 +437,12 @@ class _SectionDivider extends StatelessWidget {
 }
 
 /// Return key with warm amber gradient — 44px tall, 72px min-width.
+/// Shows a spinner instead of "RETURN" text when uploading attachments.
 class _ReturnKey extends StatefulWidget {
   final VoidCallback onTap;
+  final bool isUploading;
 
-  const _ReturnKey({required this.onTap});
+  const _ReturnKey({required this.onTap, this.isUploading = false});
 
   @override
   State<_ReturnKey> createState() => _ReturnKeyState();
@@ -464,16 +484,25 @@ class _ReturnKeyState extends State<_ReturnKey> {
             ],
           ),
           alignment: Alignment.center,
-          child: Text(
-            'RETURN',
-            style: TextStyle(
-              fontFamily: 'JetBrains Mono',
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1,
-              color: c.returnText,
-            ),
-          ),
+          child: widget.isUploading
+              ? SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: c.returnText,
+                  ),
+                )
+              : Text(
+                  'RETURN',
+                  style: TextStyle(
+                    fontFamily: 'JetBrains Mono',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
+                    color: c.returnText,
+                  ),
+                ),
         ),
       ),
     );

@@ -78,6 +78,10 @@ class TerminalView extends ConsumerStatefulWidget {
   /// Callback to record copied text in clipboard history.
   final ValueChanged<String>? onCopy;
 
+  /// When non-null, Enter key invokes this instead of sending '\r'.
+  /// Set by terminal_screen.dart when attachments are staged.
+  final VoidCallback? onSubmitOverride;
+
   const TerminalView({
     super.key,
     required this.surfaceId,
@@ -87,6 +91,7 @@ class TerminalView extends ConsumerStatefulWidget {
     this.externalFocusNode,
     this.autocompleteActiveNotifier,
     this.onCopy,
+    this.onSubmitOverride,
   });
 
   @override
@@ -376,6 +381,25 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
         }
       }
 
+      // If attachments are staged and the user typed a newline, invoke the
+      // submit override instead of sending '\r' to the terminal.
+      if (added.contains('\n') && widget.onSubmitOverride != null) {
+        // Send any non-newline chars first, then invoke submit.
+        final beforeNewline = added.replaceAll('\n', '');
+        if (beforeNewline.isNotEmpty) {
+          _sendInput(beforeNewline);
+        }
+        widget.onSubmitOverride!();
+        _lastText = newText;
+        if (_textController.text.length > 100) {
+          _resettingBuffer = true;
+          _textController.text = '';
+          _lastText = '';
+          _resettingBuffer = false;
+        }
+        return;
+      }
+
       // Convert newlines to carriage returns for terminal.
       _sendInput(added.replaceAll('\n', '\r'));
     } else if (newText.length < _lastText.length) {
@@ -407,6 +431,10 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     String? data;
 
     if (key == LogicalKeyboardKey.enter) {
+      if (widget.onSubmitOverride != null) {
+        widget.onSubmitOverride!();
+        return KeyEventResult.handled;
+      }
       data = '\r';
     } else if (key == LogicalKeyboardKey.backspace) {
       data = '\x7f';
