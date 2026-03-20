@@ -200,7 +200,14 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
   }
 
   void _onSurfaceSelected(String surfaceId) {
+    final hadFocus = _keyboardFocusNode.hasFocus;
     ref.read(surfaceProvider.notifier).focusSurface(surfaceId);
+    if (hadFocus) {
+      // Re-request focus after the new TerminalView builds with the shared node.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _keyboardFocusNode.requestFocus();
+      });
+    }
   }
 
   void _onWorkspaceSelected(String workspaceId) {
@@ -574,8 +581,18 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     // moment the tab actually changes (heavier than the threshold-crossing tap).
     HapticFeedback.mediumImpact();
 
+    // Capture keyboard state before the rebuild so we can restore it.
+    final hadFocus = _keyboardFocusNode.hasFocus;
+
     // Update local surface focus.
     ref.read(surfaceProvider.notifier).focusSurface(targetId);
+
+    if (hadFocus) {
+      // Re-request focus after the new TerminalView builds with the shared node.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _keyboardFocusNode.requestFocus();
+      });
+    }
 
     // Notify desktop to mirror the focus change.
     final manager = ref.read(connectionManagerProvider);

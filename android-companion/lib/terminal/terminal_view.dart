@@ -947,7 +947,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                         : TextField(
                             controller: _textController,
                             focusNode: _focusNode,
-                            autofocus: true,
+                            autofocus: false,
                             maxLines: null,
                             keyboardType: TextInputType.text,
                             textInputAction: TextInputAction.none,

@@ -152,15 +152,16 @@ final class WhisperBridge {
             "audio_length": audioData.count
         ]
 
-        ioQueue.async {
-            do {
-                var jsonData = try JSONSerialization.data(withJSONObject: command)
-                jsonData.append(contentsOf: [UInt8(ascii: "\n")])
-                stdinPipe.fileHandleForWriting.write(jsonData)
-                stdinPipe.fileHandleForWriting.write(audioData)
-            } catch {
-                NSLog("[WhisperBridge] failed to serialize transcribe command: %@", error.localizedDescription)
-            }
+        // Write directly — NOT on ioQueue, which is blocked by the readStdout loop.
+        // FileHandle.write is thread-safe for a pipe's write end.
+        do {
+            var jsonData = try JSONSerialization.data(withJSONObject: command)
+            jsonData.append(contentsOf: [UInt8(ascii: "\n")])
+            stdinPipe.fileHandleForWriting.write(jsonData)
+            stdinPipe.fileHandleForWriting.write(audioData)
+            NSLog("[WhisperBridge] sent transcribe command for segment %d (%d audio bytes)", segmentId, audioData.count)
+        } catch {
+            NSLog("[WhisperBridge] failed to serialize transcribe command: %@", error.localizedDescription)
         }
     }
 
