@@ -49,12 +49,14 @@ void main() {
       final result = TriggerWordDetector.check('hello world enter');
       expect(result.hasTrigger, isTrue);
       expect(result.cleanText, equals('hello world'));
+      expect(result.triggerWord, equals('enter'));
     });
 
     test('detects "run" as trailing trigger word', () {
       final result = TriggerWordDetector.check('ls -la run');
       expect(result.hasTrigger, isTrue);
       expect(result.cleanText, equals('ls -la'));
+      expect(result.triggerWord, equals('run'));
     });
 
     test('detects "execute" as trailing trigger word', () {
@@ -112,24 +114,22 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('TranscriptionChip', () {
-    test('creates chip with pending status', () {
+    test('creates chip with pending status by default', () {
       final chip = TranscriptionChip(
-        segmentId: 'seg-1',
+        segmentId: 1,
         text: 'hello world',
-        hasTrigger: false,
-        status: ChipStatus.pending,
-        createdAt: DateTime(2024),
       );
 
-      expect(chip.segmentId, equals('seg-1'));
+      expect(chip.segmentId, equals(1));
       expect(chip.text, equals('hello world'));
       expect(chip.hasTrigger, isFalse);
       expect(chip.status, equals(ChipStatus.pending));
+      expect(chip.createdAt, isNotNull);
     });
 
     test('commitText returns plain text when no trigger', () {
       final chip = TranscriptionChip(
-        segmentId: 'seg-1',
+        segmentId: 1,
         text: 'git status',
         hasTrigger: false,
         status: ChipStatus.pending,
@@ -141,7 +141,7 @@ void main() {
 
     test('commitText appends \\r when trigger detected', () {
       final chip = TranscriptionChip(
-        segmentId: 'seg-2',
+        segmentId: 2,
         text: 'ls -la',
         hasTrigger: true,
         status: ChipStatus.pending,
@@ -153,7 +153,7 @@ void main() {
 
     test('copyWith transitions status from pending to committing', () {
       final chip = TranscriptionChip(
-        segmentId: 'seg-3',
+        segmentId: 3,
         text: 'echo hello',
         hasTrigger: false,
         status: ChipStatus.pending,
@@ -163,14 +163,14 @@ void main() {
       final committing = chip.copyWith(status: ChipStatus.committing);
       expect(committing.status, equals(ChipStatus.committing));
       // Other fields unchanged.
-      expect(committing.segmentId, equals('seg-3'));
+      expect(committing.segmentId, equals(3));
       expect(committing.text, equals('echo hello'));
       expect(committing.hasTrigger, isFalse);
     });
 
     test('dismissed chip has dismissed status', () {
       final chip = TranscriptionChip(
-        segmentId: 'seg-4',
+        segmentId: 4,
         text: 'dismissed text',
         hasTrigger: false,
         status: ChipStatus.dismissed,
@@ -182,14 +182,14 @@ void main() {
 
     test('equality is by segmentId', () {
       final a = TranscriptionChip(
-        segmentId: 'seg-5',
+        segmentId: 5,
         text: 'text a',
         hasTrigger: false,
         status: ChipStatus.pending,
         createdAt: DateTime(2024),
       );
       final b = TranscriptionChip(
-        segmentId: 'seg-5',
+        segmentId: 5,
         text: 'text b',
         hasTrigger: true,
         status: ChipStatus.committed,
@@ -212,7 +212,7 @@ void main() {
         recordingMode: RecordingMode.holdToRecord,
         chips: [
           TranscriptionChip(
-            segmentId: 'seg-1',
+            segmentId: 1,
             text: 'hello',
             hasTrigger: false,
             status: ChipStatus.pending,
@@ -230,7 +230,7 @@ void main() {
         recordingMode: RecordingMode.holdToRecord,
         chips: [
           TranscriptionChip(
-            segmentId: 'seg-1',
+            segmentId: 1,
             text: 'hello',
             hasTrigger: false,
             status: ChipStatus.committing,
@@ -248,14 +248,14 @@ void main() {
         recordingMode: RecordingMode.holdToRecord,
         chips: [
           TranscriptionChip(
-            segmentId: 'seg-1',
+            segmentId: 1,
             text: 'hello',
             hasTrigger: false,
             status: ChipStatus.committed,
             createdAt: DateTime(2024),
           ),
           TranscriptionChip(
-            segmentId: 'seg-2',
+            segmentId: 2,
             text: 'world',
             hasTrigger: false,
             status: ChipStatus.dismissed,
@@ -283,7 +283,7 @@ void main() {
         recordingMode: RecordingMode.holdToRecord,
         chips: [
           TranscriptionChip(
-            segmentId: 'seg-1',
+            segmentId: 1,
             text: 'hello',
             hasTrigger: false,
             status: ChipStatus.pending,
@@ -295,11 +295,17 @@ void main() {
       expect(state.isStripVisible, isTrue);
     });
 
+    test('isStripVisible is true when processing even with no chips', () {
+      final state = VoiceState(
+        status: VoiceStatus.processing,
+      );
+
+      expect(state.isStripVisible, isTrue);
+    });
+
     test('isStripVisible is false when idle with no active chips', () {
       final state = VoiceState(
         status: VoiceStatus.idle,
-        recordingMode: RecordingMode.holdToRecord,
-        chips: const [],
       );
 
       expect(state.isStripVisible, isFalse);
@@ -332,7 +338,7 @@ void main() {
       );
 
       final chip = TranscriptionChip(
-        segmentId: 'seg-1',
+        segmentId: 1,
         text: 'hello',
         hasTrigger: false,
         status: ChipStatus.pending,
@@ -341,7 +347,7 @@ void main() {
       final updated = original.copyWith(chips: [chip]);
 
       expect(updated.chips.length, equals(1));
-      expect(updated.chips.first.segmentId, equals('seg-1'));
+      expect(updated.chips.first.segmentId, equals(1));
     });
   });
 

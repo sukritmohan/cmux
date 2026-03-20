@@ -14,11 +14,9 @@
 ///
 ///   // Build a chip for the strip UI.
 ///   final chip = TranscriptionChip(
-///     segmentId: 'seg-1',
+///     segmentId: 1,
 ///     text: result.cleanText,
 ///     hasTrigger: result.hasTrigger,
-///     status: ChipStatus.pending,
-///     createdAt: DateTime.now(),
 ///   );
 library;
 
@@ -104,7 +102,14 @@ class TriggerWordResult {
   /// trimmed text when [hasTrigger] is false.
   final String cleanText;
 
-  const TriggerWordResult({required this.hasTrigger, required this.cleanText});
+  /// The matched trigger word (lowercase), or null if no trigger was found.
+  final String? triggerWord;
+
+  const TriggerWordResult({
+    required this.hasTrigger,
+    required this.cleanText,
+    this.triggerWord,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -118,7 +123,7 @@ class TriggerWordResult {
 /// Only whole-word (whitespace-delimited) trailing matches count — substrings
 /// like "center" and prefixes like "rerun" do NOT trigger.
 abstract final class TriggerWordDetector {
-  static const List<String> _triggers = ['enter', 'run', 'execute'];
+  static const Set<String> _triggers = {'enter', 'run', 'execute'};
 
   /// Checks [text] for a trailing trigger word.
   ///
@@ -137,7 +142,11 @@ abstract final class TriggerWordDetector {
     if (_triggers.contains(lastWord)) {
       // Remove the last word and re-join, then trim any trailing whitespace.
       final withoutTrigger = words.sublist(0, words.length - 1).join(' ').trim();
-      return TriggerWordResult(hasTrigger: true, cleanText: withoutTrigger);
+      return TriggerWordResult(
+        hasTrigger: true,
+        cleanText: withoutTrigger,
+        triggerWord: lastWord,
+      );
     }
 
     return TriggerWordResult(hasTrigger: false, cleanText: trimmed);
@@ -169,7 +178,7 @@ enum ChipStatus { pending, committing, committed, dismissed }
 /// a carriage-return submit to the terminal.
 class TranscriptionChip {
   /// Unique identifier for this transcription segment.
-  final String segmentId;
+  final int segmentId;
 
   /// Transcription text displayed in the chip (trigger word already stripped).
   final String text;
@@ -183,13 +192,13 @@ class TranscriptionChip {
   /// When the chip was created (used for ordering and age-based dismissal).
   final DateTime createdAt;
 
-  const TranscriptionChip({
+  TranscriptionChip({
     required this.segmentId,
     required this.text,
-    required this.hasTrigger,
-    required this.status,
-    required this.createdAt,
-  });
+    this.hasTrigger = false,
+    this.status = ChipStatus.pending,
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
 
   // -- Computed --
 
@@ -201,7 +210,7 @@ class TranscriptionChip {
 
   /// Returns a new [TranscriptionChip] with the given fields overridden.
   TranscriptionChip copyWith({
-    String? segmentId,
+    int? segmentId,
     String? text,
     bool? hasTrigger,
     ChipStatus? status,
@@ -265,8 +274,8 @@ class VoiceState {
   /// Current operational status.
   final VoiceStatus status;
 
-  /// Whether the user uses hold-to-record or tap-toggle.
-  final RecordingMode recordingMode;
+  /// How the current (or last) session was initiated, or null if no session yet.
+  final RecordingMode? recordingMode;
 
   /// Transcription chips currently in the strip, ordered by [createdAt].
   final List<TranscriptionChip> chips;
@@ -284,9 +293,9 @@ class VoiceState {
   final String? errorMessage;
 
   const VoiceState({
-    required this.status,
-    required this.recordingMode,
-    required this.chips,
+    this.status = VoiceStatus.idle,
+    this.recordingMode,
+    this.chips = const [],
     this.recordingDuration,
     this.setupProgress,
     this.setupMessage,
@@ -304,9 +313,11 @@ class VoiceState {
 
   /// Whether the transcript strip should be shown.
   ///
-  /// True when actively recording or when at least one actionable chip exists.
+  /// True when recording, processing, or when at least one actionable chip exists.
   bool get isStripVisible =>
-      status == VoiceStatus.recording || hasActiveChips;
+      status == VoiceStatus.recording ||
+      status == VoiceStatus.processing ||
+      hasActiveChips;
 
   // -- Mutations --
 
