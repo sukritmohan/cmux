@@ -21,6 +21,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../app/colors.dart';
 import '../app/providers.dart';
 import '../browser/browser_view.dart';
@@ -41,6 +43,9 @@ import 'clipboard_history.dart';
 import 'modifier_bar.dart';
 import 'terminal_view.dart';
 import 'top_bar.dart';
+import 'voice_protocol.dart';
+import 'voice_service.dart';
+import 'voice_strip.dart';
 
 class TerminalScreen extends ConsumerStatefulWidget {
   const TerminalScreen({super.key});
@@ -211,8 +216,9 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
       notifier.clearErrors();
     }
 
-    // Upload all staged files.
-    final successPaths = await notifier.uploadAll();
+    // Upload all staged files via RPC to the desktop.
+    final manager = ref.read(connectionManagerProvider);
+    final successPaths = await notifier.uploadAll(manager);
 
     // Check for failures — if any item still has errors, don't paste.
     final postUploadState = ref.read(attachmentProvider);
@@ -396,8 +402,31 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
       }
     });
 
+    // When a voice chip transitions to "committing", send its text to the
+    // terminal and mark it committed. This mirrors how attachment upload sends
+    // file paths to the pty.
+    ref.listen<VoiceState>(voiceProvider, (previous, next) {
+      for (final chip in next.chips) {
+        if (chip.status != ChipStatus.committing) continue;
+
+        // Check the chip was not already committing in the previous state to
+        // avoid re-sending on rebuilds.
+        final prevChip = previous?.chips
+            .where((c) => c.segmentId == chip.segmentId)
+            .firstOrNull;
+        if (prevChip?.status == ChipStatus.committing) continue;
+
+        // Send the chip text to the terminal pty.
+        _sendInput(chip.commitText);
+
+        // Mark the chip as committed so it fades out.
+        ref.read(voiceProvider.notifier).markCommitted(chip.segmentId);
+      }
+    });
+
     final focusedSurfaceId = surfaceState.focusedSurfaceId;
     final attachState = ref.watch(attachmentProvider);
+    final voiceState = ref.watch(voiceProvider);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -406,6 +435,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
         workspaces: wsState.workspaces,
         activeWorkspaceId: wsState.activeWorkspaceId,
         onWorkspaceSelected: _onWorkspaceSelected,
+        onSettings: () {
+          _scaffoldKey.currentState?.closeDrawer();
+          context.go('/pair?rescan=true');
+        },
       ),
       body: SafeArea(
         child: Stack(
@@ -438,6 +471,15 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                     state: attachState,
                     onRemove: (id) =>
                         ref.read(attachmentProvider.notifier).remove(id),
+                  ),
+
+                // Voice transcription strip (slides in during recording
+                // or when transcription chips are active)
+                if (_showModifierBar)
+                  VoiceStrip(
+                    state: voiceState,
+                    onDismiss: (segmentId) =>
+                        ref.read(voiceProvider.notifier).dismissChip(segmentId),
                   ),
 
                 // Modifier bar (only for terminal + browser)
@@ -473,6 +515,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
               ConnectionOverlay(
                 status: connectionStatus,
                 onReconnect: _initConnection,
+                onRepair: () => context.go('/pair?rescan=true'),
               ),
           ],
         ),

@@ -91,6 +91,17 @@ class AppColorScheme {
   final Color attachmentUploadPulse;
   final Color attachmentStatusText;
 
+  // -- Voice strip --
+  final Color voiceRecordingRed;
+  final Color voiceRecordingBg;
+  final Color voiceCommitGreen;
+  final Color voiceCommitBorder;
+  final Color voiceChipBg;
+  final Color voiceChipBorder;
+  final Color voiceStripBg;
+  final Color voiceTimerText;
+  final Color voiceSetupAmber;
+
   // -- Connection indicator --
   final Color connectedColor;
 
@@ -152,6 +163,15 @@ class AppColorScheme {
     required this.attachmentTabError,
     required this.attachmentUploadPulse,
     required this.attachmentStatusText,
+    required this.voiceRecordingRed,
+    required this.voiceRecordingBg,
+    required this.voiceCommitGreen,
+    required this.voiceCommitBorder,
+    required this.voiceChipBg,
+    required this.voiceChipBorder,
+    required this.voiceStripBg,
+    required this.voiceTimerText,
+    required this.voiceSetupAmber,
     required this.connectedColor,
   });
 }
@@ -217,6 +237,15 @@ abstract final class AppColors {
     attachmentTabError: Color(0x80F85149),   // rgba(248,81,73,0.50)
     attachmentUploadPulse: Color(0x3378B4FF), // rgba(120,180,255,0.20)
     attachmentStatusText: Color(0xB378B4FF), // rgba(120,180,255,0.70)
+    voiceRecordingRed: Color(0xFFFF4444),
+    voiceRecordingBg: Color(0x33FF4444),
+    voiceCommitGreen: Color(0xFF50C878),
+    voiceCommitBorder: Color(0x4D50C878),
+    voiceChipBg: Color(0x14FFFFFF),
+    voiceChipBorder: Color(0x1FFFFFFF),
+    voiceStripBg: Color(0xE6101018),
+    voiceTimerText: Color(0xFFFF4444),
+    voiceSetupAmber: Color(0xFFE0A030),
     connectedColor: Color(0xFF50C878),
   );
 
@@ -279,6 +308,15 @@ abstract final class AppColors {
     attachmentTabError: Color(0x80D32F2F),   // rgba(211,47,47,0.50)
     attachmentUploadPulse: Color(0x264080C0), // rgba(64,128,192,0.15)
     attachmentStatusText: Color(0xB34080C0), // rgba(64,128,192,0.70)
+    voiceRecordingRed: Color(0xFFD32F2F),
+    voiceRecordingBg: Color(0x26D32F2F),
+    voiceCommitGreen: Color(0xFF2D8A4E),
+    voiceCommitBorder: Color(0x4D2D8A4E),
+    voiceChipBg: Color(0x0A000000),
+    voiceChipBorder: Color(0x14000000),
+    voiceStripBg: Color(0xE6F5F5F0),
+    voiceTimerText: Color(0xFFD32F2F),
+    voiceSetupAmber: Color(0xFFB07810),
     connectedColor: Color(0xFF2D8A4E),
   );
 

@@ -226,7 +226,7 @@ class _ModifierBarState extends State<ModifierBar> {
                               widget.autocompleteActiveNotifier,
                         ),
                         const SizedBox(width: 4),
-                        const VoiceButton(),      // bottom-right
+                        VoiceButton(),            // bottom-right
                       ],
                     ),
                   ],
