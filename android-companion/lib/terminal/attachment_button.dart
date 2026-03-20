@@ -122,6 +122,9 @@ class _AttachmentButtonState extends ConsumerState<AttachmentButton>
   late final Animation<double> _sheetScale;
   late final Animation<double> _sheetOpacity;
 
+  OverlayEntry? _overlayEntry;
+  final _layerLink = LayerLink();
+
   final _imagePicker = ImagePicker();
 
   @override
@@ -150,8 +153,15 @@ class _AttachmentButtonState extends ConsumerState<AttachmentButton>
 
   @override
   void dispose() {
+    _removeOverlay();
     _sheetController.dispose();
     super.dispose();
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry?.dispose();
+    _overlayEntry = null;
   }
 
   void _toggleSheet() {
@@ -161,14 +171,62 @@ class _AttachmentButtonState extends ConsumerState<AttachmentButton>
       _closeSheet();
     } else {
       setState(() => _sheetOpen = true);
+      _showOverlay();
       _sheetController.forward();
     }
   }
 
   void _closeSheet() {
     _sheetController.reverse().then((_) {
-      if (mounted) setState(() => _sheetOpen = false);
+      if (mounted) {
+        _removeOverlay();
+        setState(() => _sheetOpen = false);
+      }
     });
+  }
+
+  void _showOverlay() {
+    final c = AppColors.of(context);
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          // Full-screen backdrop to catch taps outside.
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _closeSheet,
+              behavior: HitTestBehavior.translucent,
+              child: const SizedBox.expand(),
+            ),
+          ),
+          // The sheet, anchored above the button.
+          CompositedTransformFollower(
+            link: _layerLink,
+            targetAnchor: Alignment.topCenter,
+            followerAnchor: Alignment.bottomCenter,
+            offset: const Offset(0, -8),
+            child: AnimatedBuilder(
+              animation: _sheetController,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _sheetOpacity.value,
+                  child: Transform.scale(
+                    scale: _sheetScale.value,
+                    alignment: Alignment.bottomCenter,
+                    child: child,
+                  ),
+                );
+              },
+              child: _ActionSheet(
+                onPhotos: _onPhotos,
+                onFiles: _onFiles,
+                colors: c,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    Overlay.of(context).insert(_overlayEntry!);
   }
 
   /// Long-press handler: clears all staged attachments.
@@ -319,105 +377,70 @@ class _AttachmentButtonState extends ConsumerState<AttachmentButton>
     final c = AppColors.of(context);
     final disabled = widget.isDisabled;
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // The (+) button.
-        GestureDetector(
-          onTapDown: disabled ? null : (_) => setState(() => _pressed = true),
-          onTapUp: disabled
-              ? null
-              : (_) {
-                  setState(() => _pressed = false);
-                  _toggleSheet();
-                },
-          onTapCancel: disabled
-              ? null
-              : () => setState(() => _pressed = false),
-          onLongPress: disabled ? null : _onLongPress,
-          child: Semantics(
-            label: 'Add attachment',
-            button: true,
-            child: AnimatedScale(
-              scale: _pressed ? 0.93 : 1.0,
-              duration: const Duration(milliseconds: 80),
-              child: Opacity(
-                opacity: disabled ? 0.35 : 1.0,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: c.keyGroupResting,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.add_rounded,
-                      size: 18,
-                      color: c.keyGroupText,
-                    ),
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: GestureDetector(
+        onTapDown: disabled ? null : (_) => setState(() => _pressed = true),
+        onTapUp: disabled
+            ? null
+            : (_) {
+                setState(() => _pressed = false);
+                _toggleSheet();
+              },
+        onTapCancel: disabled
+            ? null
+            : () => setState(() => _pressed = false),
+        onLongPress: disabled ? null : _onLongPress,
+        child: Semantics(
+          label: 'Add attachment',
+          button: true,
+          child: AnimatedScale(
+            scale: _pressed ? 0.93 : 1.0,
+            duration: const Duration(milliseconds: 80),
+            child: Opacity(
+              opacity: disabled ? 0.35 : 1.0,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: c.keyGroupResting,
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.add_rounded,
+                    size: 18,
+                    color: c.keyGroupText,
                   ),
                 ),
               ),
             ),
           ),
         ),
-
-        // Action sheet popover (positioned above the button).
-        if (_sheetOpen) ...[
-          // Backdrop to catch taps outside.
-          Positioned.fill(
-            left: -200,
-            right: -200,
-            top: -400,
-            bottom: -200,
-            child: GestureDetector(
-              onTap: _closeSheet,
-              behavior: HitTestBehavior.translucent,
-              child: const SizedBox.expand(),
-            ),
-          ),
-          // The sheet itself.
-          Positioned(
-            bottom: 44, // above the button with 8px gap
-            left: -67, // center the 170px sheet on the 36px button
-            child: AnimatedBuilder(
-              animation: _sheetController,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: _sheetOpacity.value,
-                  child: Transform.scale(
-                    scale: _sheetScale.value,
-                    alignment: Alignment.bottomCenter,
-                    child: child,
-                  ),
-                );
-              },
-              child: _ActionSheet(
-                onPhotos: _onPhotos,
-                onFiles: _onFiles,
-              ),
-            ),
-          ),
-        ],
-      ],
+      ),
     );
   }
 }
 
 /// Action sheet popover with Photos and Files options.
+///
+/// Accepts [colors] explicitly because this widget renders in Flutter's
+/// [Overlay] layer, which may not share the same inherited widget tree as the
+/// button that spawned it.
 class _ActionSheet extends StatelessWidget {
   final VoidCallback onPhotos;
   final VoidCallback onFiles;
+  final AppColorScheme colors;
 
   const _ActionSheet({
     required this.onPhotos,
     required this.onFiles,
+    required this.colors,
   });
 
   @override
   Widget build(BuildContext context) {
-    final c = AppColors.of(context);
+    final c = colors;
 
     return Container(
       width: 170,
@@ -445,6 +468,7 @@ class _ActionSheet extends StatelessWidget {
             icon: Icons.photo_library_outlined,
             label: 'Photos',
             onTap: onPhotos,
+            colors: c,
           ),
           Container(
             height: 1,
@@ -454,6 +478,7 @@ class _ActionSheet extends StatelessWidget {
             icon: Icons.folder_outlined,
             label: 'Files',
             onTap: onFiles,
+            colors: c,
           ),
         ],
       ),
@@ -466,16 +491,18 @@ class _ActionSheetItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final AppColorScheme colors;
 
   const _ActionSheetItem({
     required this.icon,
     required this.label,
     required this.onTap,
+    required this.colors,
   });
 
   @override
   Widget build(BuildContext context) {
-    final c = AppColors.of(context);
+    final c = colors;
 
     return GestureDetector(
       onTap: () {
