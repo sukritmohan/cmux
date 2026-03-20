@@ -182,6 +182,14 @@ class ConnectionManager with WidgetsBindingObserver {
     return tracked.future;
   }
 
+  /// Sends a raw binary frame over the WebSocket.
+  ///
+  /// Used for voice audio frames: the caller is responsible for prepending
+  /// the 4-byte channel ID header (see [VoiceAudioFrame.encode]).
+  void sendBinary(Uint8List data) {
+    _channel?.sink.add(data);
+  }
+
   /// Disconnect from the bridge server. Does not reconnect.
   void disconnect() {
     _shouldReconnect = false;
