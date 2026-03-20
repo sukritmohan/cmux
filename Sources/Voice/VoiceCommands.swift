@@ -8,8 +8,6 @@
 /// `BridgeConnection`.
 ///
 /// **Threading:** All handlers are called on the bridge server's serial queue.
-/// The `handleSetup` download is intentionally dispatched to a background queue so the
-/// caller's queue is never blocked.
 
 import Foundation
 
@@ -30,71 +28,63 @@ enum VoiceCommands {
         id: Any?,
         encode: (_ id: Any?, _ result: Any) -> String
     ) -> String {
-        let (ready, reason) = voiceChannel.whisper.checkReady()
-        var result: [String: Any] = ["ready": ready]
-        if let reason { result["reason"] = reason }
+        // Check WhisperSetup singleton first — it manages the full environment.
+        let setup = WhisperSetup.shared
+        if setup.isWhisperReady {
+            // Double-check that the bridge can actually start (model + venv present).
+            let (bridgeReady, reason) = voiceChannel.whisper.checkReady()
+            var result: [String: Any] = ["ready": bridgeReady]
+            if let reason { result["reason"] = reason }
+            return encode(id, result)
+        }
+
+        // Not ready — report the setup status.
+        var result: [String: Any] = ["ready": false]
+        if setup.isSettingUp {
+            result["reason"] = setup.statusMessage
+        } else {
+            result["reason"] = "Whisper environment not ready. "
+                + "Setup will start automatically on app launch."
+        }
         return encode(id, result)
     }
 
     // MARK: - voice.setup
 
-    /// Handle `voice.setup` — download the MLX Whisper model from Hugging Face.
+    /// Handle `voice.setup` — setup is now managed by the desktop app automatically.
     ///
-    /// If the model is already installed this returns `status: already_installed`
-    /// immediately.  Otherwise it spawns `python3 -c snapshot_download(...)` on a
-    /// background thread and returns `status: downloading` straight away.  Progress and
-    /// completion are pushed to the phone as `voice.setup_progress` / `voice.error`
-    /// events via `sendEvent`.
+    /// The Mac runs `setup_whisper_env.sh` in the background on app launch via
+    /// `WhisperSetup`. If setup failed previously, this triggers a retry.
     ///
     /// - Parameters:
     ///   - voiceChannel: The per-connection voice channel.
     ///   - id: The JSON-RPC request ID.
     ///   - encode: JSON-RPC success encoder.
-    ///   - sendEvent: Closure that pushes an event notification to the phone.
-    /// - Returns: Encoded JSON response (`status: "already_installed"` or `"downloading"`).
+    /// - Returns: Encoded JSON response with current setup status.
     static func handleSetup(
         voiceChannel: VoiceChannel,
         id: Any?,
-        encode: (_ id: Any?, _ result: Any) -> String,
-        sendEvent: @escaping (_ method: String, _ params: [String: Any]) -> Void
+        encode: (_ id: Any?, _ result: Any) -> String
     ) -> String {
-        let (ready, _) = voiceChannel.whisper.checkReady()
-        if ready {
+        let setup = WhisperSetup.shared
+
+        if setup.isWhisperReady {
             return encode(id, ["status": "already_installed"])
         }
 
-        // Launch the download in a background thread so the bridge queue is not blocked.
-        DispatchQueue.global(qos: .userInitiated).async {
-            let modelDir = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".cmux/models/whisper-small-mlx").path
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            process.arguments = [
-                "python3", "-c",
-                """
-                from huggingface_hub import snapshot_download
-                snapshot_download('mlx-community/whisper-small-mlx', local_dir='\(modelDir)')
-                """
-            ]
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = pipe
-            do {
-                try process.run()
-                process.waitUntilExit()
-                if process.terminationStatus == 0 {
-                    sendEvent("voice.setup_progress", ["percent": 100, "message": "Download complete"])
-                } else {
-                    sendEvent("voice.error",
-                              ["message": "Model download failed (exit \(process.terminationStatus))"])
-                }
-            } catch {
-                sendEvent("voice.error",
-                          ["message": "Download error: \(error.localizedDescription)"])
-            }
+        if setup.isSettingUp {
+            return encode(id, [
+                "status": "managed_by_desktop",
+                "message": setup.statusMessage
+            ])
         }
 
-        return encode(id, ["status": "downloading"])
+        // Setup isn't running and isn't ready — trigger a retry.
+        setup.retrySetup()
+        return encode(id, [
+            "status": "managed_by_desktop",
+            "message": "Retrying setup…"
+        ])
     }
 
     // MARK: - voice.start

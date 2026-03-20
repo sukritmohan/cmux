@@ -117,6 +117,7 @@
 		AA000001VOICE000000000002 /* WhisperBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002VOICE000000000002 /* WhisperBridge.swift */; };
 		AA000001VOICE000000000003 /* VoiceChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002VOICE000000000003 /* VoiceChannel.swift */; };
 		AA000001VOICE000000000004 /* VoiceCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002VOICE000000000004 /* VoiceCommands.swift */; };
+		AA000001VOICE000000000005 /* WhisperSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002VOICE000000000005 /* WhisperSetup.swift */; };
 			/* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -281,6 +282,7 @@
 		AA000002VOICE000000000002 /* WhisperBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperBridge.swift; sourceTree = "<group>"; };
 		AA000002VOICE000000000003 /* VoiceChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceChannel.swift; sourceTree = "<group>"; };
 		AA000002VOICE000000000004 /* VoiceCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCommands.swift; sourceTree = "<group>"; };
+		AA000002VOICE000000000005 /* WhisperSetup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperSetup.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -547,6 +549,7 @@
 				AA000002VOICE000000000002 /* WhisperBridge.swift */,
 				AA000002VOICE000000000003 /* VoiceChannel.swift */,
 				AA000002VOICE000000000004 /* VoiceCommands.swift */,
+				AA000002VOICE000000000005 /* WhisperSetup.swift */,
 			);
 			path = Voice;
 			sourceTree = "<group>";
@@ -764,6 +767,7 @@
 			AA000001VOICE000000000002 /* WhisperBridge.swift in Sources */,
 			AA000001VOICE000000000003 /* VoiceChannel.swift in Sources */,
 			AA000001VOICE000000000004 /* VoiceCommands.swift in Sources */,
+			AA000001VOICE000000000005 /* WhisperSetup.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

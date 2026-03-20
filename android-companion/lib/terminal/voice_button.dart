@@ -120,7 +120,16 @@ class _VoiceButtonState extends ConsumerState<VoiceButton>
 
       case VoiceStatus.setupRequired:
         HapticFeedback.lightImpact();
-        notifier.requestSetup(manager);
+        // Setup is managed by the Mac desktop app automatically.
+        // Show a toast to inform the user instead of triggering setup from phone.
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Voice setup in progress on your Mac'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
     }
   }
 

@@ -2278,6 +2278,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         installShortcutMonitor()
         installShortcutDefaultsObserver()
         NSApp.servicesProvider = self
+
+        // Start Whisper environment setup in the background so the model is ready
+        // by the time the user initiates voice recording from their phone.
+        if !isRunningUnderXCTest {
+            WhisperSetup.shared.ensureReady()
+        }
 #if DEBUG
         UpdateTestSupport.applyIfNeeded(to: updateController.viewModel)
         if env["CMUX_UI_TEST_MODE"] == "1" {

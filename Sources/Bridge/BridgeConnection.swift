@@ -847,17 +847,12 @@ final class BridgeConnection {
         sendText(response)
     }
 
-    /// Handle `voice.setup` — initiates the MLX Whisper model download if not present.
+    /// Handle `voice.setup` — setup is managed by the desktop app automatically.
     private func handleVoiceSetup(id: Any?) {
         let response = VoiceCommands.handleSetup(
             voiceChannel: voiceChannel,
             id: id,
-            encode: { [weak self] reqId, result in self?.encodeOk(id: reqId, result: result) ?? "" },
-            sendEvent: { [weak self] method, params in
-                guard let self else { return }
-                let notification: [String: Any] = ["method": method, "params": params]
-                self.sendText(self.encodeJSON(notification))
-            }
+            encode: { [weak self] reqId, result in self?.encodeOk(id: reqId, result: result) ?? "" }
         )
         sendText(response)
     }

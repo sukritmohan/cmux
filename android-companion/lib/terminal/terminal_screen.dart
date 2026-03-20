@@ -390,9 +390,13 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
 
   /// Shows a rename dialog for a tab when long-pressed.
   void _onSurfaceLongPressed(String surfaceId) {
+    debugPrint('[TerminalScreen] _onSurfaceLongPressed: $surfaceId');
     final surface = ref.read(surfaceProvider).surfaces
         .where((s) => s.id == surfaceId).firstOrNull;
-    if (surface == null) return;
+    if (surface == null) {
+      debugPrint('[TerminalScreen] _onSurfaceLongPressed: surface not found');
+      return;
+    }
 
     final controller = TextEditingController(text: surface.title);
     showDialog<void>(

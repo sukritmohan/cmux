@@ -212,17 +212,31 @@ final class BridgeEventRelay: @unchecked Sendable {
             ])
         })
 
-        // 11. surface.title_changed — existing notification, fired when a terminal title updates
+        // 11. surface.title_changed — existing notification, fired when a terminal title updates.
+        // Resolves through the workspace's custom title chain so user-set names take priority.
         observers.append(NotificationCenter.default.addObserver(
-            forName: .ghosttyDidSetTitle, object: nil, queue: nil
+            forName: .ghosttyDidSetTitle, object: nil, queue: .main
         ) { [weak self] notification in
             guard let tabId = notification.userInfo?[GhosttyNotificationKey.tabId] as? UUID else { return }
             guard let surfaceId = notification.userInfo?[GhosttyNotificationKey.surfaceId] as? UUID else { return }
-            let title = notification.userInfo?[GhosttyNotificationKey.title] as? String ?? ""
+            let shellTitle = notification.userInfo?[GhosttyNotificationKey.title] as? String ?? ""
+
+            // If the panel has a custom title set by the user, emit that instead of the
+            // shell-set title so Android doesn't overwrite user renames.
+            let resolvedTitle: String
+            if let tabManager = AppDelegate.shared?.tabManagerFor(tabId: tabId),
+               let workspace = tabManager.tabs.first(where: { $0.id == tabId }),
+               let customTitle = workspace.panelCustomTitles[surfaceId],
+               !customTitle.isEmpty {
+                resolvedTitle = customTitle
+            } else {
+                resolvedTitle = shellTitle
+            }
+
             self?.emit(event: "surface.title_changed", data: [
                 "workspace_id": tabId.uuidString,
                 "surface_id": surfaceId.uuidString,
-                "title": title,
+                "title": resolvedTitle,
             ])
         })
 

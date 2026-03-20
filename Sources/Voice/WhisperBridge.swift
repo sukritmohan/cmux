@@ -71,6 +71,22 @@ final class WhisperBridge {
             .appendingPathComponent(".cmux/models/whisper-small-mlx")
     }
 
+    /// Directory where the Whisper Python venv is installed.
+    private static var venvDir: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".cmux/whisper-env")
+    }
+
+    /// Path to the venv's Python interpreter.
+    private static var venvPython: URL {
+        venvDir.appendingPathComponent("bin/python3")
+    }
+
+    /// Path to the `.ready` marker written by `setup_whisper_env.sh`.
+    private static var readyMarker: URL {
+        venvDir.appendingPathComponent(".ready")
+    }
+
     /// Resolve the whisper_server.py path: check the app bundle first (release build),
     /// fall back to the source-relative path (development / unpackaged run).
     private static var scriptURL: URL {
@@ -96,18 +112,40 @@ final class WhisperBridge {
 
     /// Check whether the bridge is ready to start.
     ///
-    /// - Returns: A tuple where `ready` is `true` when the model directory exists on disk,
+    /// Verifies that both the Python venv `.ready` marker and the model directory
+    /// exist on disk. Returns a human-readable reason when not ready.
+    ///
+    /// - Returns: A tuple where `ready` is `true` when both the venv and model are present,
     ///   and `reason` contains a human-readable explanation when `ready` is `false`.
     func checkReady() -> (ready: Bool, reason: String?) {
+        // Check venv ready marker.
+        let markerPath = Self.readyMarker.path
+        guard FileManager.default.fileExists(atPath: markerPath) else {
+            if WhisperSetup.shared.isSettingUp {
+                return (false, "Whisper environment is being set up. Please wait.")
+            }
+            return (
+                false,
+                "Whisper environment not set up. "
+                    + "Setup should start automatically on next app launch."
+            )
+        }
+
+        // Check venv Python exists.
+        let pythonPath = Self.venvPython.path
+        guard FileManager.default.fileExists(atPath: pythonPath) else {
+            return (false, "Whisper Python interpreter not found at \(pythonPath).")
+        }
+
+        // Check model directory.
         let modelURL = Self.modelDirectoryURL
         var isDir: ObjCBool = false
         let exists = FileManager.default.fileExists(atPath: modelURL.path, isDirectory: &isDir)
-
         guard exists && isDir.boolValue else {
             return (
                 false,
                 "Whisper model not found at \(modelURL.path). "
-                    + "Download whisper-small-mlx to that directory to enable transcription."
+                    + "Setup should download it automatically."
             )
         }
 
@@ -213,8 +251,18 @@ final class WhisperBridge {
         }
 
         let newProcess = Process()
-        newProcess.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        newProcess.arguments = ["python3", scriptPath]
+
+        // Use the venv Python if available, fall back to system python3.
+        let venvPythonPath = Self.venvPython.path
+        if FileManager.default.fileExists(atPath: venvPythonPath) {
+            newProcess.executableURL = URL(fileURLWithPath: venvPythonPath)
+            newProcess.arguments = [scriptPath]
+            NSLog("[WhisperBridge] using venv python: %@", venvPythonPath)
+        } else {
+            newProcess.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            newProcess.arguments = ["python3", scriptPath]
+            NSLog("[WhisperBridge] venv python not found, falling back to system python3")
+        }
 
         let newStdinPipe = Pipe()
         let newStdoutPipe = Pipe()

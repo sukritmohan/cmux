@@ -224,18 +224,22 @@ class _TabBarStripState extends State<TabBarStrip> {
               underlineOpacity = progress!.abs();
             }
 
-            return GestureDetector(
-              onTap: () => widget.onSurfaceSelected(surface.id),
-              onLongPress: widget.onSurfaceLongPressed != null
-                  ? () => widget.onSurfaceLongPressed!(surface.id)
-                  : null,
-              child: _TabChip(
-                title: surface.title,
-                icon: Icons.terminal,
-                isActive: isActive,
-                accentColor: c.accent,
-                showConnectionDot: isActive && surface.hasRunningProcess,
-                underlineOpacity: underlineOpacity,
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => widget.onSurfaceSelected(surface.id),
+                onLongPress: widget.onSurfaceLongPressed != null
+                    ? () => widget.onSurfaceLongPressed!(surface.id)
+                    : null,
+                borderRadius: BorderRadius.circular(AppColors.radiusSm),
+                child: _TabChip(
+                  title: surface.title,
+                  icon: Icons.terminal,
+                  isActive: isActive,
+                  accentColor: c.accent,
+                  showConnectionDot: isActive && surface.hasRunningProcess,
+                  underlineOpacity: underlineOpacity,
+                ),
               ),
             );
           },
