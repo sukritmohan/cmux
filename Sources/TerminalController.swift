@@ -3311,7 +3311,9 @@ class TerminalController {
                         [
                             "id": panel.id.uuidString,
                             "type": panel.panelType.rawValue,
-                            "title": panel.displayTitle
+                            "title": ws.panelCustomTitles[panel.id]
+                                ?? ws.panelTitles[panel.id]
+                                ?? panel.displayTitle
                         ] as [String: Any]
                     }
                 ]
@@ -4299,11 +4301,26 @@ class TerminalController {
                 }
                 let title = titleRaw.trimmingCharacters(in: .whitespacesAndNewlines)
                 workspace.setPanelCustomTitle(panelId: surfaceId, title: title)
+                // Emit title change event so Android picks up the rename.
+                BridgeEventRelay.shared.emit(event: "surface.title_changed", data: [
+                    "workspace_id": workspace.id.uuidString,
+                    "surface_id": surfaceId.uuidString,
+                    "title": title,
+                ])
                 finish(["title": title])
 
             case "clear_name":
                 workspace.setPanelCustomTitle(panelId: surfaceId, title: nil)
-                finish()
+                let resolvedTitle = workspace.panelTitles[surfaceId]
+                    ?? workspace.panels[surfaceId]?.displayTitle
+                    ?? "Terminal"
+                // Emit title change event so Android picks up the cleared name.
+                BridgeEventRelay.shared.emit(event: "surface.title_changed", data: [
+                    "workspace_id": workspace.id.uuidString,
+                    "surface_id": surfaceId.uuidString,
+                    "title": resolvedTitle,
+                ])
+                finish(["title": resolvedTitle])
 
             case "pin":
                 workspace.setPanelPinned(panelId: surfaceId, pinned: true)

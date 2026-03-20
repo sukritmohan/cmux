@@ -16,6 +16,7 @@ class TopBar extends StatelessWidget {
   final List<Surface> surfaces;
   final String? focusedSurfaceId;
   final ValueChanged<String> onSurfaceSelected;
+  final ValueChanged<String>? onSurfaceLongPressed;
   final VoidCallback onMenuTap;
   final PaneType activePaneType;
   final ValueChanged<PaneType> onPaneTypeChanged;
@@ -34,6 +35,7 @@ class TopBar extends StatelessWidget {
     required this.surfaces,
     this.focusedSurfaceId,
     required this.onSurfaceSelected,
+    this.onSurfaceLongPressed,
     required this.onMenuTap,
     this.activePaneType = PaneType.terminal,
     required this.onPaneTypeChanged,
@@ -73,6 +75,7 @@ class TopBar extends StatelessWidget {
             surfaces: surfaces,
             focusedSurfaceId: focusedSurfaceId,
             onSurfaceSelected: onSurfaceSelected,
+            onSurfaceLongPressed: onSurfaceLongPressed,
             paneType: activePaneType,
             swipeProgress: swipeProgress,
             swipeTargetIndex: swipeTargetIndex,

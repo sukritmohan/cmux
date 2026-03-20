@@ -44,6 +44,7 @@ class TabBarStrip extends StatefulWidget {
   final List<Surface> surfaces;
   final String? focusedSurfaceId;
   final ValueChanged<String> onSurfaceSelected;
+  final ValueChanged<String>? onSurfaceLongPressed;
   final PaneType? paneType;
 
   /// Normalised swipe progress in the range [-1.0, 1.0].
@@ -62,6 +63,7 @@ class TabBarStrip extends StatefulWidget {
     required this.surfaces,
     this.focusedSurfaceId,
     required this.onSurfaceSelected,
+    this.onSurfaceLongPressed,
     this.paneType,
     this.swipeProgress,
     this.swipeTargetIndex,
@@ -224,6 +226,9 @@ class _TabBarStripState extends State<TabBarStrip> {
 
             return GestureDetector(
               onTap: () => widget.onSurfaceSelected(surface.id),
+              onLongPress: widget.onSurfaceLongPressed != null
+                  ? () => widget.onSurfaceLongPressed!(surface.id)
+                  : null,
               child: _TabChip(
                 title: surface.title,
                 icon: Icons.terminal,

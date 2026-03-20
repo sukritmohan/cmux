@@ -388,6 +388,64 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     setState(() => _activePaneType = type);
   }
 
+  /// Shows a rename dialog for a tab when long-pressed.
+  void _onSurfaceLongPressed(String surfaceId) {
+    final surface = ref.read(surfaceProvider).surfaces
+        .where((s) => s.id == surfaceId).firstOrNull;
+    if (surface == null) return;
+
+    final controller = TextEditingController(text: surface.title);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rename Tab'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Tab name'),
+          onSubmitted: (_) {
+            Navigator.pop(ctx);
+            final newTitle = controller.text.trim();
+            if (newTitle.isNotEmpty) {
+              _renameSurface(surfaceId, newTitle);
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              final newTitle = controller.text.trim();
+              if (newTitle.isNotEmpty) {
+                _renameSurface(surfaceId, newTitle);
+              }
+            },
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Sends a rename RPC to the desktop and optimistically updates local state.
+  void _renameSurface(String surfaceId, String title) {
+    final manager = ref.read(connectionManagerProvider);
+    manager.sendRequest('surface.action', params: {
+      'surface_id': surfaceId,
+      'action': 'rename',
+      'title': title,
+    });
+    // Optimistically update local state.
+    ref.read(surfaceProvider.notifier).onSurfaceTitleChanged({
+      'surface_id': surfaceId,
+      'title': title,
+    });
+  }
+
   // ── Spring constants ─────────────────────────────────────────────────────
 
   /// Commit spring: ~300ms with slight overshoot for a satisfying completion feel.
@@ -842,6 +900,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
                       surfaces: surfaceState.surfaces,
                       focusedSurfaceId: focusedSurfaceId,
                       onSurfaceSelected: _onSurfaceSelected,
+                      onSurfaceLongPressed: _onSurfaceLongPressed,
                       onMenuTap: _openDrawer,
                       activePaneType: _activePaneType,
                       onPaneTypeChanged: _onPaneTypeChanged,

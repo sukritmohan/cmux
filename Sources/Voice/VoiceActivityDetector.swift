@@ -23,7 +23,9 @@ final class VoiceActivityDetector {
     // MARK: - Configuration
 
     /// How much louder than the noise floor speech must be to trigger detection.
-    private static let energyMultiplier: Float = 2.5
+    /// Kept low (1.5×) because the phone's silence suppression already filters
+    /// the quietest frames, so what arrives is biased toward speech.
+    private static let energyMultiplier: Float = 1.5
 
     /// Duration of initial silence used to calibrate the ambient noise floor.
     private static let calibrationDuration: TimeInterval = 0.5
@@ -105,9 +107,18 @@ final class VoiceActivityDetector {
     /// Use this to emit a final partial segment when the user ends the session
     /// before a natural silence gap closes the current segment.
     func flushRemaining() {
-        guard isSpeaking else { return }
-        NSLog("[VAD] flushRemaining — flushing open segment on stop")
-        flushSegment()
+        if isSpeaking {
+            NSLog("[VAD] flushRemaining — flushing open speech segment on stop")
+            flushSegment()
+        } else if !segmentBuffer.isEmpty {
+            // The user stopped recording before the VAD detected formal speech
+            // (e.g. energy was close to threshold). Flush whatever we have — it's
+            // better to send a marginal segment to Whisper than to lose audio.
+            NSLog("[VAD] flushRemaining — flushing %d bytes of non-speech audio on stop", segmentBuffer.count)
+            isSpeaking = true  // so flushSegment emits it
+            speechStartTime = speechStartTime ?? Date()
+            flushSegment()
+        }
     }
 
     // MARK: - Private: Calibration
@@ -144,6 +155,11 @@ final class VoiceActivityDetector {
     private func handleDetectionPhase(energy: Float, pcmData: Data, now: Date) {
         let isSpeechFrame = energy >= energyThreshold
 
+        // Always buffer post-calibration audio so flushRemaining has data even
+        // if the VAD never formally detected speech (threshold too high for
+        // this particular recording).
+        segmentBuffer.append(pcmData)
+
         if isSpeechFrame {
             lastSpeechTime = now
 
@@ -151,11 +167,8 @@ final class VoiceActivityDetector {
                 // Silence → speech transition
                 isSpeaking = true
                 speechStartTime = now
-                segmentBuffer = Data()
                 NSLog("[VAD] speech start — energy=%.4f threshold=%.4f", energy, energyThreshold)
             }
-
-            segmentBuffer.append(pcmData)
 
             // Force-flush if the segment has grown too long.
             if let start = speechStartTime,
@@ -165,8 +178,6 @@ final class VoiceActivityDetector {
             }
         } else {
             if isSpeaking {
-                // Append near-silence frames to avoid clipping the tail of speech.
-                segmentBuffer.append(pcmData)
 
                 let silenceDuration = now.timeIntervalSince(lastSpeechTime ?? now)
                 if silenceDuration >= Self.silenceGap {

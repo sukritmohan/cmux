@@ -336,6 +336,7 @@ final class WhisperBridge {
 
         if let segmentId = json["segment_id"] as? Int,
            let text = json["text"] as? String {
+            NSLog("[WhisperBridge] Got transcription from subprocess: segment=%d text=%@", segmentId, text)
             dispatchTranscription(segmentId: segmentId, text: text)
             return
         }

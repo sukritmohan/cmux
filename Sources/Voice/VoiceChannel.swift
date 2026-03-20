@@ -68,7 +68,9 @@ final class VoiceChannel {
 
         // Wire Whisper → phone: relay transcription results and errors as JSON-RPC events.
         whisper.onTranscription = { [weak self] segmentId, text in
+            NSLog("[VoiceChannel] Received transcription for segment %d: %@", segmentId, text)
             self?.sendEvent?("voice.transcription", ["segment_id": segmentId, "text": text])
+            NSLog("[VoiceChannel] Sent voice.transcription event to phone for segment %d", segmentId)
         }
         whisper.onError = { [weak self] message in
             self?.sendEvent?("voice.error", ["message": message])
