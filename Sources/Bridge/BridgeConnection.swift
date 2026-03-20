@@ -33,6 +33,19 @@ final class BridgeConnection {
     /// Keyed by surface UUID. Only accessed from `DispatchQueue.main` blocks.
     private var savedDesktopSizes: [UUID: (width: UInt32, height: UInt32)] = [:]
 
+    /// Voice channel for this connection — manages per-connection VAD + Whisper state.
+    /// Created lazily on the first `voice.*` RPC call or the first voice binary frame.
+    private lazy var voiceChannel: VoiceChannel = {
+        let channel = VoiceChannel()
+        // Wire the channel's outbound events back to the WebSocket as JSON-RPC notifications.
+        channel.sendEvent = { [weak self] method, params in
+            guard let self else { return }
+            let notification: [String: Any] = ["method": method, "params": params]
+            self.sendText(self.encodeJSON(notification))
+        }
+        return channel
+    }()
+
     /// Number of consecutive WebSocket pings that received no pong response.
     /// Reset to 0 on each received pong. BridgeServer disconnects after 3 missed pongs.
     var missedPongs = 0
@@ -110,6 +123,7 @@ final class BridgeConnection {
         savedDesktopSizes.removeAll()
 
         connection.cancel()
+        voiceChannel.teardown()
         BridgePTYStream.shared.removeAllSubscriptions(forConnection: id)
         BridgeCellStream.shared.removeAllSubscriptions(forConnection: id)
         BridgeServer.shared.removeConnection(id)
@@ -261,8 +275,9 @@ final class BridgeConnection {
                     self.handleTextMessage(text)
                 }
             case .binary:
-                // Binary frames from client are not expected in Phase 1.
-                break
+                if let data = content {
+                    self.handleBinaryFrame(data)
+                }
             case .ping, .pong:
                 // Handled by Network.framework's autoReplyPing.
                 break
@@ -275,6 +290,30 @@ final class BridgeConnection {
             // Continue reading.
             self.readNextMessage()
         }
+    }
+
+    // MARK: - Binary Frame Dispatch
+
+    /// Demultiplexes an incoming binary WebSocket frame.
+    ///
+    /// Binary frames carry a 4-byte little-endian channel ID prefix followed by the
+    /// payload.  Channel ID `0xFFFFFFFF` is reserved for voice audio; all other channel
+    /// IDs are currently unused for inbound frames (PTY data flows server → client only).
+    ///
+    /// - Parameter data: The raw binary WebSocket payload including the 4-byte header.
+    private func handleBinaryFrame(_ data: Data) {
+        // Need at least 4 bytes for the channel ID header.
+        guard data.count >= 4 else { return }
+
+        // Read the 4-byte little-endian channel ID.
+        let channelId = data.withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+
+        // Channel 0xFFFFFFFF carries raw voice audio (16-bit PCM, 16 kHz mono).
+        if channelId == 0xFFFF_FFFF {
+            let audioData = data.subdata(in: 4..<data.count)
+            voiceChannel.processAudioFrame(audioData)
+        }
+        // Other inbound binary channel IDs are reserved for future use.
     }
 
     // MARK: - Message Dispatch
@@ -340,6 +379,16 @@ final class BridgeConnection {
         case "system.unsubscribe_events":
             subscribedToEvents = false
             sendText(encodeOk(id: id, result: ["subscribed": false]))
+        case "file.transfer":
+            handleFileTransfer(id: id, params: params)
+        case "voice.check_ready":
+            handleVoiceCheckReady(id: id)
+        case "voice.setup":
+            handleVoiceSetup(id: id)
+        case "voice.start":
+            handleVoiceStart(id: id)
+        case "voice.stop":
+            handleVoiceStop(id: id)
         default:
             dispatchToTerminalController(method: method, id: id, params: params)
         }
@@ -781,10 +830,140 @@ final class BridgeConnection {
         sendText(encodeOk(id: id, result: ["unsubscribed": true, "surface_id": surfaceId.uuidString]))
     }
 
+    // MARK: - Voice Command Handlers
+
+    /// Handle `voice.check_ready` — returns whether the Whisper model is installed.
+    private func handleVoiceCheckReady(id: Any?) {
+        let response = VoiceCommands.handleCheckReady(
+            voiceChannel: voiceChannel,
+            id: id,
+            encode: { [weak self] reqId, result in self?.encodeOk(id: reqId, result: result) ?? "" }
+        )
+        sendText(response)
+    }
+
+    /// Handle `voice.setup` — initiates the MLX Whisper model download if not present.
+    private func handleVoiceSetup(id: Any?) {
+        let response = VoiceCommands.handleSetup(
+            voiceChannel: voiceChannel,
+            id: id,
+            encode: { [weak self] reqId, result in self?.encodeOk(id: reqId, result: result) ?? "" },
+            sendEvent: { [weak self] method, params in
+                guard let self else { return }
+                let notification: [String: Any] = ["method": method, "params": params]
+                self.sendText(self.encodeJSON(notification))
+            }
+        )
+        sendText(response)
+    }
+
+    /// Handle `voice.start` — begins a new voice session for this connection.
+    private func handleVoiceStart(id: Any?) {
+        guard let queue = connectionQueue else {
+            sendText(encodeError(id: id, code: "not_ready", message: "Connection not started"))
+            return
+        }
+        let response = VoiceCommands.handleStart(
+            voiceChannel: voiceChannel,
+            id: id,
+            queue: queue,
+            encode: { [weak self] reqId, result in self?.encodeOk(id: reqId, result: result) ?? "" }
+        )
+        sendText(response)
+    }
+
+    /// Handle `voice.stop` — ends the active voice session for this connection.
+    private func handleVoiceStop(id: Any?) {
+        let response = VoiceCommands.handleStop(
+            voiceChannel: voiceChannel,
+            id: id,
+            encode: { [weak self] reqId, result in self?.encodeOk(id: reqId, result: result) ?? "" }
+        )
+        sendText(response)
+    }
+
     // MARK: - Terminal Controller Dispatch
 
     /// Forwards a command to `TerminalController.dispatchV2` on the main thread.
     ///
+    // MARK: - File Transfer
+
+    /// Handles the `file.transfer` RPC — receives a base64-encoded file from a
+    /// mobile companion and writes it to `~/.cmux/inbox/`.
+    ///
+    /// Runs entirely off-main (no UI state involved) per the socket command
+    /// threading policy.
+    ///
+    /// - Parameters:
+    ///   - id: The JSON-RPC request ID.
+    ///   - params: Must contain `"filename"` (String), `"data"` (base64 String),
+    ///     and `"mime_type"` (String).
+    private func handleFileTransfer(id: Any?, params: [String: Any]) {
+        NSLog("[BridgeConnection] file.transfer: handler entered, params keys: %@",
+              params.keys.sorted().joined(separator: ", "))
+
+        guard let filename = params["filename"] as? String, !filename.isEmpty else {
+            NSLog("[BridgeConnection] file.transfer: missing filename")
+            sendText(encodeError(id: id, code: "invalid_params", message: "Missing filename"))
+            return
+        }
+        guard let dataString = params["data"] as? String, !dataString.isEmpty else {
+            NSLog("[BridgeConnection] file.transfer: missing data")
+            sendText(encodeError(id: id, code: "invalid_params", message: "Missing data"))
+            return
+        }
+        guard let _ = params["mime_type"] as? String else {
+            NSLog("[BridgeConnection] file.transfer: missing mime_type")
+            sendText(encodeError(id: id, code: "invalid_params", message: "Missing mime_type"))
+            return
+        }
+
+        NSLog("[BridgeConnection] file.transfer: decoding base64 (%d chars) for %@",
+              dataString.count, filename)
+
+        guard let fileData = Data(base64Encoded: dataString) else {
+            NSLog("[BridgeConnection] file.transfer: base64 decode failed")
+            sendText(encodeError(id: id, code: "invalid_params", message: "Invalid base64 data"))
+            return
+        }
+
+        let fm = FileManager.default
+        let inboxDir = fm.homeDirectoryForCurrentUser
+            .appendingPathComponent(".cmux/inbox", isDirectory: true)
+
+        do {
+            try fm.createDirectory(at: inboxDir, withIntermediateDirectories: true)
+        } catch {
+            sendText(encodeError(id: id, code: "io_error",
+                                 message: "Failed to create inbox directory: \(error.localizedDescription)"))
+            return
+        }
+
+        // Deduplicate filename: if it already exists, append a timestamp suffix.
+        var finalName = filename
+        var destURL = inboxDir.appendingPathComponent(finalName)
+
+        if fm.fileExists(atPath: destURL.path) {
+            let stem = (filename as NSString).deletingPathExtension
+            let ext = (filename as NSString).pathExtension
+            let suffix = Int(Date().timeIntervalSince1970) % 1000
+            finalName = ext.isEmpty ? "\(stem)-\(suffix)" : "\(stem)-\(suffix).\(ext)"
+            destURL = inboxDir.appendingPathComponent(finalName)
+        }
+
+        do {
+            try fileData.write(to: destURL)
+        } catch {
+            sendText(encodeError(id: id, code: "io_error",
+                                 message: "Failed to write file: \(error.localizedDescription)"))
+            return
+        }
+
+        let finalPath = "~/.cmux/inbox/\(finalName)"
+        NSLog("[BridgeConnection] file.transfer: wrote %d bytes to %@", fileData.count, finalPath)
+        sendText(encodeOk(id: id, result: ["inbox_path": finalPath]))
+    }
+
     /// Per the socket command threading policy, commands that manipulate AppKit/Ghostty
     /// UI state must run on the main actor. Uses `DispatchQueue.main.async` to avoid
     /// blocking the bridge server queue, then sends the response back on this connection.

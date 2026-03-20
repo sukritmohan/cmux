@@ -113,6 +113,10 @@
 		D2A7B3F41E8C5D92A0F1B6E3 /* BridgePTYObserverContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3C8D5E72F9A4B01D7E2C8F4 /* BridgePTYObserverContext.swift */; };
 		E1B1788D2832ADB3C3BA6EF9 /* BridgeEventRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D21AF61142A9ADAFB273DDAA /* BridgeEventRelay.swift */; };
 		F7188F96614616C3AA181C84 /* BridgeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E291031ACAC49FA67CE9914B /* BridgeSettingsView.swift */; };
+		AA000001VOICE000000000001 /* VoiceActivityDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002VOICE000000000001 /* VoiceActivityDetector.swift */; };
+		AA000001VOICE000000000002 /* WhisperBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002VOICE000000000002 /* WhisperBridge.swift */; };
+		AA000001VOICE000000000003 /* VoiceChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002VOICE000000000003 /* VoiceChannel.swift */; };
+		AA000001VOICE000000000004 /* VoiceCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002VOICE000000000004 /* VoiceCommands.swift */; };
 			/* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -273,6 +277,10 @@
 		A3C8D5E72F9A4B01D7E2C8F4 /* BridgePTYObserverContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgePTYObserverContext.swift; sourceTree = "<group>"; };
 		D21AF61142A9ADAFB273DDAA /* BridgeEventRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeEventRelay.swift; sourceTree = "<group>"; };
 		E291031ACAC49FA67CE9914B /* BridgeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeSettingsView.swift; sourceTree = "<group>"; };
+		AA000002VOICE000000000001 /* VoiceActivityDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceActivityDetector.swift; sourceTree = "<group>"; };
+		AA000002VOICE000000000002 /* WhisperBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperBridge.swift; sourceTree = "<group>"; };
+		AA000002VOICE000000000003 /* VoiceChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceChannel.swift; sourceTree = "<group>"; };
+		AA000002VOICE000000000004 /* VoiceCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCommands.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -437,6 +445,7 @@
 				A5001222 /* WindowAccessor.swift */,
 				A5001611 /* SessionPersistence.swift */,
 				B261E2BE8AC888910A3C45CF /* Bridge */,
+				AA000003VOICE000000000000 /* Voice */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -529,6 +538,17 @@
 				E291031ACAC49FA67CE9914B /* BridgeSettingsView.swift */,
 			);
 			path = Bridge;
+			sourceTree = "<group>";
+		};
+		AA000003VOICE000000000000 /* Voice */ = {
+			isa = PBXGroup;
+			children = (
+				AA000002VOICE000000000001 /* VoiceActivityDetector.swift */,
+				AA000002VOICE000000000002 /* WhisperBridge.swift */,
+				AA000002VOICE000000000003 /* VoiceChannel.swift */,
+				AA000002VOICE000000000004 /* VoiceCommands.swift */,
+			);
+			path = Voice;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -740,6 +760,10 @@
 				D2A7B3F41E8C5D92A0F1B6E3 /* BridgePTYObserverContext.swift in Sources */,
 				E1B1788D2832ADB3C3BA6EF9 /* BridgeEventRelay.swift in Sources */,
 				F7188F96614616C3AA181C84 /* BridgeSettingsView.swift in Sources */,
+			AA000001VOICE000000000001 /* VoiceActivityDetector.swift in Sources */,
+			AA000001VOICE000000000002 /* WhisperBridge.swift in Sources */,
+			AA000001VOICE000000000003 /* VoiceChannel.swift in Sources */,
+			AA000001VOICE000000000004 /* VoiceCommands.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
