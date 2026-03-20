@@ -33,6 +33,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/colors.dart';
 import '../app/providers.dart';
 import '../native/ghostty_vt.dart';
+import '../state/surface_provider.dart';
 import 'cell_frame_parser.dart';
 
 /// Target font size matching the design spec (font-size: 11.5px).
@@ -300,6 +301,15 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
     // Reset blink phase on new frame (cursor moved or content changed).
     _cursorBlinkOn = true;
+
+    // Store a snapshot of this frame so the adjacent-terminal pre-renderer can
+    // display this surface's content when the user swipes to a neighbouring tab.
+    ref.read(surfaceProvider.notifier).updateSnapshot(
+      widget.surfaceId,
+      result.cells,
+      result.cols,
+      result.rows,
+    );
 
     setState(() {
       _cells = result.cells;

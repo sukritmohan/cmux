@@ -20,12 +20,14 @@ class WorkspaceDrawer extends ConsumerStatefulWidget {
   final List<Workspace> workspaces;
   final String? activeWorkspaceId;
   final ValueChanged<String> onWorkspaceSelected;
+  final VoidCallback? onSettings;
 
   const WorkspaceDrawer({
     super.key,
     required this.workspaces,
     this.activeWorkspaceId,
     required this.onWorkspaceSelected,
+    this.onSettings,
   });
 
   @override
@@ -125,6 +127,15 @@ class _WorkspaceDrawerState extends ConsumerState<WorkspaceDrawer> {
                       },
                     ),
                   ),
+
+                  if (widget.onSettings != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: _SettingsButton(
+                        colors: c,
+                        onTap: widget.onSettings!,
+                      ),
+                    ),
 
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
@@ -257,6 +268,42 @@ class _SegmentButton extends StatelessWidget {
               color: isActive ? colors.textPrimary : colors.textMuted,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Settings row with gear icon.
+class _SettingsButton extends StatelessWidget {
+  final AppColorScheme colors;
+  final VoidCallback onTap;
+
+  const _SettingsButton({required this.colors, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          children: [
+            Icon(
+              Icons.settings_outlined,
+              size: 16,
+              color: colors.textMuted,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Settings',
+              style: TextStyle(
+                fontSize: 13,
+                color: colors.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );

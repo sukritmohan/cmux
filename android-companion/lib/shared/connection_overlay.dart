@@ -15,11 +15,13 @@ const _warningOrange = Color(0xFFD29922);
 class ConnectionOverlay extends StatelessWidget {
   final ConnectionStatus status;
   final VoidCallback onReconnect;
+  final VoidCallback? onRepair;
 
   const ConnectionOverlay({
     super.key,
     required this.status,
     required this.onReconnect,
+    this.onRepair,
   });
 
   @override
@@ -66,6 +68,19 @@ class ConnectionOverlay extends StatelessWidget {
                 fontSize: 16,
               ),
             ),
+            if (onRepair != null) ...[
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: onRepair,
+                child: Text(
+                  'Re-pair',
+                  style: TextStyle(
+                    color: c.textMuted,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
           ],
         );
 
@@ -102,6 +117,19 @@ class ConnectionOverlay extends StatelessWidget {
               icon: const Icon(Icons.refresh, size: 18),
               label: const Text('Reconnect'),
             ),
+            if (onRepair != null) ...[
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: onRepair,
+                child: Text(
+                  'Re-pair',
+                  style: TextStyle(
+                    color: c.textMuted,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
           ],
         );
 

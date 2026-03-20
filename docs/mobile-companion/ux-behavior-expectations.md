@@ -236,7 +236,45 @@ Radii: xs=4, sm=6, md=10, lg=14, xl=20
 |---------|---------|--------|
 | Left edge swipe | Pan from x < 20px, velocity > 200 | Open workspace drawer |
 | Pinch out | Scale < 0.7 | Show minimap overlay |
+| Horizontal swipe | Direction-locked horizontal on terminal surface | Switch tabs (see below) |
 | Directional swipe | Velocity > 200 | Send arrow key escape sequence |
+
+### Swipe-to-Switch-Tabs
+
+Horizontal swipe gestures on the terminal surface switch between tabs with interactive drag tracking and slide animations.
+
+**Scope:**
+- Only active on the terminal surface (not keyboard, modifier bar, tab bar, or non-terminal panes)
+- Only active when multiple tabs exist (single-tab suppresses the gesture entirely)
+
+**Direction lock:**
+- First ~10px of finger movement determines axis (horizontal vs vertical)
+- Once locked, the other axis is ignored for the remainder of the gesture
+- Edge swipes (x < 20px) bypass direction lock entirely and always open the drawer
+
+**Interactive drag:**
+- Terminal content translates 1:1 with finger position
+- Adjacent terminal's last known content (static snapshot) slides in from the edge
+- Tab bar underline crossfades between current and target tab proportionally
+
+**Commit vs cancel:**
+- Commit: displacement > 35% of terminal width, OR velocity > 800 px/s
+- Cancel: below both thresholds, springs back to center
+- Edge behavior: rubber-band bounce (0.3x dampening) at first/last tab
+
+**Haptic feedback:**
+- Light haptic at 35% threshold crossing
+- Medium haptic on commit
+- No haptic on cancel or rubber-band
+
+**Animation:**
+- Spring-based animations for commit (~300ms, slight overshoot), cancel (snappier), and rubber-band (tight bounce)
+- New touch during animation snaps the in-flight animation to its end state
+
+**State sync:**
+- On commit, sends `surface.focus` RPC to desktop to keep state in sync
+- Scroll remainder resets on tab switch
+- Text selection cleared on swipe start
 
 ### Pairing Screen
 

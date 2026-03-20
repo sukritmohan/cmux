@@ -22,6 +22,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../connection/connection_manager.dart';
+
 // ---------------------------------------------------------------------------
 // AttachmentItem
 // ---------------------------------------------------------------------------
@@ -147,8 +149,8 @@ class AttachmentState {
 /// StateNotifier managing the attachment staging area.
 ///
 /// Handles add/remove/clear operations with deduplication and limit
-/// enforcement. The [uploadAll] method reads file bytes in an isolate
-/// and returns inbox paths (currently stubbed).
+/// enforcement. The [uploadAll] method reads file bytes in an isolate,
+/// base64-encodes them, and sends a `file.transfer` RPC to the desktop.
 class AttachmentNotifier extends StateNotifier<AttachmentState> {
   AttachmentNotifier() : super(const AttachmentState());
 
@@ -223,14 +225,14 @@ class AttachmentNotifier extends StateNotifier<AttachmentState> {
     );
   }
 
-  /// Upload all staged attachments to the desktop.
+  /// Upload all staged attachments to the desktop via `file.transfer` RPC.
   ///
   /// For each item, reads file bytes in an isolate, base64-encodes them,
-  /// and calls the (currently stubbed) file.transfer RPC.
+  /// and sends them to the desktop which writes them to `~/.cmux/inbox/`.
   ///
   /// Returns a map of item ID → inbox path for successful uploads.
   /// Failed items are marked with [hasError] = true.
-  Future<Map<String, String>> uploadAll() async {
+  Future<Map<String, String>> uploadAll(ConnectionManager manager) async {
     final items = state.items;
     if (items.isEmpty) return {};
 
@@ -240,9 +242,19 @@ class AttachmentNotifier extends StateNotifier<AttachmentState> {
 
     for (final item in items) {
       try {
-        final path = await _stubbedFileTransfer(item)
-            .timeout(const Duration(seconds: 30));
-        successPaths[item.id] = path;
+        // Read and base64-encode in an isolate to avoid UI freezes.
+        final base64Data = await compute(_readAndEncodeFile, item.filePath);
+
+        final response = await manager.sendRequest('file.transfer', params: {
+          'filename': item.filename,
+          'data': base64Data,
+          'mime_type': item.mimeType,
+        }).timeout(const Duration(seconds: 30));
+
+        if (!response.ok) {
+          throw Exception(response.error?.message ?? 'Transfer failed');
+        }
+        successPaths[item.id] = response.result!['inbox_path'] as String;
       } catch (e) {
         debugPrint('[AttachmentUpload] Failed to upload ${item.filename}: $e');
         markError(item.id);
@@ -251,23 +263,6 @@ class AttachmentNotifier extends StateNotifier<AttachmentState> {
 
     setUploading(false);
     return successPaths;
-  }
-
-  /// Stubbed file transfer — reads and encodes file bytes to exercise the
-  /// real codepath, then returns a synthetic inbox path.
-  Future<String> _stubbedFileTransfer(AttachmentItem item) async {
-    // Read and base64-encode in an isolate to avoid UI freezes.
-    await compute(_readAndEncodeFile, item.filePath);
-
-    // Simulate network delay.
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    debugPrint(
-      '[AttachmentUpload] Stubbed: file.transfer not implemented on desktop '
-      '— returning synthetic path for ${item.filename}',
-    );
-
-    return '~/.cmux/inbox/${item.filename}';
   }
 }
 

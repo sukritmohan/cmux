@@ -130,8 +130,9 @@ CmuxCompanionApp (MaterialApp.router)
     ├── TopBar             — Tab strip + pane type dropdown
     │   ├── TabBarStrip    — Scrollable surface tabs
     │   └── PaneTypeDropdown — Terminal/Browser/Files/Shell selector
-    ├── GestureLayer       — Edge swipe, pinch, arrow swipe detection
+    ├── GestureLayer       — Edge swipe, pinch, scroll, tab swipe detection
     │   └── TerminalView   — Pure cell renderer (CustomPainter)
+    ├── TerminalSnapshotPainter — Static cell snapshot for swipe pre-rendering
     ├── ModifierBar        — Esc/Ctrl/Alt/Tab + arrow keys + Enter
     ├── WorkspaceDrawer    — Left-edge drawer with workspace list
     │   └── WorkspaceTile  — Single workspace item
@@ -219,7 +220,9 @@ lib/
 
 **TerminalScreen as orchestrator:** The terminal screen owns the connection init, workspace fetch, surface sync, and input routing. TerminalView is a pure renderer that only subscribes to cell streams and paints — no navigation or state management.
 
-**Gesture layer wraps terminal content:** GestureLayer sits between the Column layout and the TerminalView, intercepting edge swipes (drawer), pinches (minimap), and directional swipes (arrow keys) without interfering with the terminal's own tap-to-focus and keyboard handling.
+**Gesture layer wraps terminal content:** GestureLayer sits between the Column layout and the TerminalView, intercepting edge swipes (drawer), pinches (minimap), directional swipes (arrow keys), and horizontal tab swipes without interfering with the terminal's own tap-to-focus and keyboard handling. A direction-lock state machine (10px dead zone) distinguishes horizontal tab swipes from vertical scroll gestures. Edge swipes (x < 20px) bypass direction lock entirely.
+
+**Swipe-to-switch-tabs architecture:** Tab swipe uses a `ValueNotifier<double>` swipe offset driving `Transform.translate` via `ValueListenableBuilder` to avoid full widget tree rebuilds at 60fps. Adjacent terminal content is shown via a static `TerminalSnapshotPainter` that renders the last known cell frame — no live subscription is created for the adjacent surface. Spring-based animations handle commit/cancel/rubber-band transitions with differentiated spring constants. The `SurfaceNotifier` stores cell snapshots per surface, updated on every cell frame arrival, and cleaned up on surface close.
 
 **Pane type dropdown uses Overlay:** The dropdown is rendered as an OverlayEntry anchored via CompositedTransformTarget/Follower, so it floats above the tab bar without being clipped by the top bar's bounds.
 

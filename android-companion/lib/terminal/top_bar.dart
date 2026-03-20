@@ -21,6 +21,14 @@ class TopBar extends StatelessWidget {
   final ValueChanged<PaneType> onPaneTypeChanged;
   final VoidCallback? onNewTab;
 
+  /// Normalised swipe progress [-1.0, 1.0] passed through to [TabBarStrip].
+  /// See [TabBarStrip.swipeProgress] for semantics.
+  final double? swipeProgress;
+
+  /// Index of the surface being swiped toward, passed through to [TabBarStrip].
+  /// See [TabBarStrip.swipeTargetIndex] for semantics.
+  final int? swipeTargetIndex;
+
   const TopBar({
     super.key,
     required this.surfaces,
@@ -30,6 +38,8 @@ class TopBar extends StatelessWidget {
     this.activePaneType = PaneType.terminal,
     required this.onPaneTypeChanged,
     this.onNewTab,
+    this.swipeProgress,
+    this.swipeTargetIndex,
   });
 
   @override
@@ -56,12 +66,16 @@ class TopBar extends StatelessWidget {
             ),
           ),
 
-          // Scrollable tab strip (browser mode shows static tabs)
+          // Scrollable tab strip (browser mode shows static tabs).
+          // swipeProgress and swipeTargetIndex are forwarded so the strip can
+          // crossfade underline indicators during horizontal swipe gestures.
           TabBarStrip(
             surfaces: surfaces,
             focusedSurfaceId: focusedSurfaceId,
             onSurfaceSelected: onSurfaceSelected,
             paneType: activePaneType,
+            swipeProgress: swipeProgress,
+            swipeTargetIndex: swipeTargetIndex,
           ),
 
           // New tab button
