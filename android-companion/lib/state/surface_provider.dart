@@ -159,6 +159,12 @@ class SurfaceNotifier extends StateNotifier<SurfaceState> {
     final focusedId = state.focusedSurfaceId;
     if (focusedId == null) return;
 
+    // Skip the state rebuild if the focused surface has no dot.
+    final hasDot = state.surfaces.any(
+      (s) => s.id == focusedId && s.hasUnreadNotification,
+    );
+    if (!hasDot) return;
+
     final updated = state.surfaces.map((s) {
       if (s.id == focusedId) return s.copyWith(hasUnreadNotification: false);
       return s;
@@ -187,7 +193,7 @@ class SurfaceNotifier extends StateNotifier<SurfaceState> {
 
     state = SurfaceState(
       surfaces: merged,
-      focusedSurfaceId: focusedId ?? surfaces.firstOrNull?.id,
+      focusedSurfaceId: focusedId ?? merged.firstOrNull?.id,
     );
   }
 
