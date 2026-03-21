@@ -59,6 +59,9 @@ class ConnectionManager with WidgetsBindingObserver {
   int? _port;
   String? _token;
 
+  /// The bridge host (typically the Mac's Tailscale IP).
+  String? get host => _host;
+
   // Keepalive
   Timer? _pingTimer;
 

@@ -77,10 +77,14 @@ class WorkspacePanel {
   final String type;
   final String? title;
 
+  /// Current URL for browser panels. Null for non-browser panels.
+  final String? url;
+
   const WorkspacePanel({
     required this.id,
     required this.type,
     this.title,
+    this.url,
   });
 
   factory WorkspacePanel.fromJson(Map<String, dynamic> json) {
@@ -88,6 +92,7 @@ class WorkspacePanel {
       id: json['id'] as String? ?? '',
       type: json['type'] as String? ?? 'terminal',
       title: json['title'] as String?,
+      url: json['url'] as String?,
     );
   }
 }

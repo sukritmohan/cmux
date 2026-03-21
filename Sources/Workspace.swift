@@ -4795,6 +4795,9 @@ final class Workspace: Identifiable, ObservableObject {
     /// Subscriptions for panel updates (e.g., browser title changes)
     private var panelSubscriptions: [UUID: AnyCancellable] = [:]
 
+    /// Bridge event subscriptions for browser panels (navigation state push events).
+    private var bridgeBrowserSubscriptions: [UUID: AnyCancellable] = [:]
+
     /// When true, suppresses auto-creation in didSplitPane (programmatic splits handle their own panels)
     private var isProgrammaticSplit = false
     private var debugStressPreloadSelectionDepth = 0
@@ -5282,6 +5285,7 @@ final class Workspace: Identifiable, ObservableObject {
             )
         }
         panelSubscriptions[browserPanel.id] = subscription
+        bridgeBrowserSubscriptions[browserPanel.id] = BridgeBrowserHandler.observe(browserPanel)
         setPreferredBrowserProfileID(browserPanel.profileID)
     }
 
@@ -6712,6 +6716,16 @@ final class Workspace: Identifiable, ObservableObject {
         installBrowserPanelSubscription(browserPanel)
         browserPanel.setRemoteWorkspaceStatus(browserRemoteWorkspaceStatusSnapshot())
 
+        NotificationCenter.default.post(
+            name: .bridgeBrowserCreated,
+            object: nil,
+            userInfo: [
+                GhosttyNotificationKey.surfaceId: browserPanel.id,
+                BridgeNotificationKey.url: browserPanel.currentURL?.absoluteString ?? "",
+                GhosttyNotificationKey.title: browserPanel.pageTitle,
+            ]
+        )
+
         return browserPanel
     }
 
@@ -6783,6 +6797,16 @@ final class Workspace: Identifiable, ObservableObject {
 
         installBrowserPanelSubscription(browserPanel)
         browserPanel.setRemoteWorkspaceStatus(browserRemoteWorkspaceStatusSnapshot())
+
+        NotificationCenter.default.post(
+            name: .bridgeBrowserCreated,
+            object: nil,
+            userInfo: [
+                GhosttyNotificationKey.surfaceId: browserPanel.id,
+                BridgeNotificationKey.url: browserPanel.currentURL?.absoluteString ?? "",
+                GhosttyNotificationKey.title: browserPanel.pageTitle,
+            ]
+        )
 
         return browserPanel
     }
@@ -6908,6 +6932,7 @@ final class Workspace: Identifiable, ObservableObject {
         panels.removeAll(keepingCapacity: false)
         surfaceIdToPanelId.removeAll(keepingCapacity: false)
         panelSubscriptions.removeAll(keepingCapacity: false)
+        bridgeBrowserSubscriptions.removeAll(keepingCapacity: false)
         pruneSurfaceMetadata(validSurfaceIds: [])
         restoredTerminalScrollbackByPanelId.removeAll(keepingCapacity: false)
         terminalInheritanceFontPointsByPanelId.removeAll(keepingCapacity: false)
@@ -9137,6 +9162,21 @@ extension Workspace: BonsplitDelegate {
                 GhosttyNotificationKey.surfaceId: panelId,
             ]
         )
+
+        // If the closed panel is a browser, post a browser-specific close event
+        // so bridge clients can update their browser tab state.
+        if panels[panelId] is BrowserPanel {
+            NotificationCenter.default.post(
+                name: .bridgeBrowserClosed,
+                object: nil,
+                userInfo: [
+                    GhosttyNotificationKey.surfaceId: panelId,
+                ]
+            )
+        }
+
+        // Tear down the bridge browser subscription before panel cleanup.
+        bridgeBrowserSubscriptions.removeValue(forKey: panelId)
 
         let panel = panels[panelId]
 

@@ -47,6 +47,9 @@ dependencies:
   # FFI
   ffi: ^2.1.4
 
+  # WebView for browser pane
+  webview_flutter: ^4.10.0
+
   # Google Fonts (IBM Plex Sans, IBM Plex Mono)
   google_fonts: ^6.2.1
 

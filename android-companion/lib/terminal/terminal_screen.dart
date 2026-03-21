@@ -27,6 +27,7 @@ import 'package:go_router/go_router.dart';
 
 import '../app/colors.dart';
 import '../app/providers.dart';
+import '../browser/browser_tab_provider.dart';
 import '../browser/browser_view.dart';
 import '../connection/connection_state.dart';
 import '../files/file_explorer_view.dart';
@@ -204,6 +205,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     final activeWs = wsState.activeWorkspace;
     if (activeWs == null) return;
 
+    // Sync terminal surfaces
     final surfaces = activeWs.panels
         .where((p) => p.type == 'terminal')
         .map((p) => Surface(
@@ -215,6 +217,21 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
 
     ref.read(surfaceProvider.notifier).setSurfaces(
       surfaces,
+      focusedId: activeWs.focusedPanelId,
+    );
+
+    // Sync browser surfaces
+    final browserSurfaces = activeWs.panels
+        .where((p) => p.type == 'browser')
+        .map((p) => BrowserSurface(
+              id: p.id,
+              url: p.url,
+              title: p.title,
+            ))
+        .toList();
+
+    ref.read(browserTabProvider.notifier).setSurfaces(
+      browserSurfaces,
       focusedId: activeWs.focusedPanelId,
     );
   }
@@ -372,9 +389,27 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     );
   }
 
-  /// Creates a new pane by splitting right from the focused pane on desktop.
+  /// Creates a new pane/tab. For terminal mode, splits right from the focused
+  /// pane on desktop. For browser mode, creates a new browser tab.
   Future<void> _onNewTab() async {
     final manager = ref.read(connectionManagerProvider);
+
+    if (_activePaneType == PaneType.browser) {
+      try {
+        final result = await manager.sendRequest('browser.tab.new');
+        final surfaceId = result.result?['surface_id'] as String?;
+        if (surfaceId != null) {
+          ref.read(browserTabProvider.notifier).onBrowserCreated({
+            'surface_id': surfaceId,
+            'url': result.result?['url'] as String?,
+          });
+        }
+      } catch (e) {
+        debugPrint('[TerminalScreen] browser.tab.new error: $e');
+      }
+      return;
+    }
+
     try {
       final result = await manager.sendRequest(
         'pane.create',
@@ -406,6 +441,41 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
       return;
     }
     setState(() => _activePaneType = type);
+  }
+
+  /// Switches the active browser tab when tapped in the tab strip.
+  void _onBrowserSurfaceSelected(String surfaceId) {
+    ref.read(browserTabProvider.notifier).setActiveSurface(surfaceId);
+  }
+
+  /// Shows a close confirmation for a browser tab when long-pressed.
+  void _onBrowserSurfaceLongPressed(String surfaceId) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Close Tab'),
+        content: const Text('Close this browser tab?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              final manager = ref.read(connectionManagerProvider);
+              manager.sendRequest('browser.tab.close', params: {
+                'surface_id': surfaceId,
+              });
+              ref.read(browserTabProvider.notifier).onBrowserClosed({
+                'surface_id': surfaceId,
+              });
+            },
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Shows a rename dialog for a tab when long-pressed.
@@ -923,6 +993,8 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
                       if (idx >= 0) swipeTargetIndex = idx;
                     }
 
+                    final browserState = ref.watch(browserTabProvider);
+
                     return TopBar(
                       surfaces: surfaceState.surfaces,
                       focusedSurfaceId: focusedSurfaceId,
@@ -932,6 +1004,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
                       activePaneType: _activePaneType,
                       onPaneTypeChanged: _onPaneTypeChanged,
                       onNewTab: _onNewTab,
+                      browserSurfaces: browserState.surfaces,
+                      activeBrowserSurfaceId: browserState.activeSurfaceId,
+                      onBrowserSurfaceSelected: _onBrowserSurfaceSelected,
+                      onBrowserSurfaceLongPressed: _onBrowserSurfaceLongPressed,
                       // Pass null when not actively swiping to keep strip in
                       // normal (non-crossfade) rendering mode.
                       swipeProgress: swipeProgress != 0.0 ? swipeProgress : null,

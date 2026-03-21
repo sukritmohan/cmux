@@ -114,6 +114,7 @@
 		B946EE4A871790D832593600 /* BridgeCellStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DFE673184315CBDC74549EC /* BridgeCellStream.swift */; };
 		D2A7B3F41E8C5D92A0F1B6E3 /* BridgePTYObserverContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3C8D5E72F9A4B01D7E2C8F4 /* BridgePTYObserverContext.swift */; };
 		E1B1788D2832ADB3C3BA6EF9 /* BridgeEventRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D21AF61142A9ADAFB273DDAA /* BridgeEventRelay.swift */; };
+		B4C9E7A12D3F8B01A5E6D9F2 /* BridgeBrowserHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C9E7A22D3F8B01A5E6D9F3 /* BridgeBrowserHandler.swift */; };
 		F7188F96614616C3AA181C84 /* BridgeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E291031ACAC49FA67CE9914B /* BridgeSettingsView.swift */; };
 		AA000001VOICE000000000001 /* VoiceActivityDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002VOICE000000000001 /* VoiceActivityDetector.swift */; };
 		AA000001VOICE000000000002 /* WhisperBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002VOICE000000000002 /* WhisperBridge.swift */; };
@@ -281,6 +282,7 @@
 		9DFE673184315CBDC74549EC /* BridgeCellStream.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeCellStream.swift; sourceTree = "<group>"; };
 		A3C8D5E72F9A4B01D7E2C8F4 /* BridgePTYObserverContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgePTYObserverContext.swift; sourceTree = "<group>"; };
 		D21AF61142A9ADAFB273DDAA /* BridgeEventRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeEventRelay.swift; sourceTree = "<group>"; };
+		B4C9E7A22D3F8B01A5E6D9F3 /* BridgeBrowserHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeBrowserHandler.swift; sourceTree = "<group>"; };
 		E291031ACAC49FA67CE9914B /* BridgeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeSettingsView.swift; sourceTree = "<group>"; };
 		AA000002VOICE000000000001 /* VoiceActivityDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceActivityDetector.swift; sourceTree = "<group>"; };
 		AA000002VOICE000000000002 /* WhisperBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperBridge.swift; sourceTree = "<group>"; };
@@ -543,6 +545,7 @@
 				9DFE673184315CBDC74549EC /* BridgeCellStream.swift */,
 				A3C8D5E72F9A4B01D7E2C8F4 /* BridgePTYObserverContext.swift */,
 				D21AF61142A9ADAFB273DDAA /* BridgeEventRelay.swift */,
+				B4C9E7A22D3F8B01A5E6D9F3 /* BridgeBrowserHandler.swift */,
 				E291031ACAC49FA67CE9914B /* BridgeSettingsView.swift */,
 			);
 			path = Bridge;
@@ -770,6 +773,7 @@
 				B946EE4A871790D832593600 /* BridgeCellStream.swift in Sources */,
 				D2A7B3F41E8C5D92A0F1B6E3 /* BridgePTYObserverContext.swift in Sources */,
 				E1B1788D2832ADB3C3BA6EF9 /* BridgeEventRelay.swift in Sources */,
+				B4C9E7A12D3F8B01A5E6D9F2 /* BridgeBrowserHandler.swift in Sources */,
 				F7188F96614616C3AA181C84 /* BridgeSettingsView.swift in Sources */,
 			AA000001VOICE000000000001 /* VoiceActivityDetector.swift in Sources */,
 			AA000001VOICE000000000002 /* WhisperBridge.swift in Sources */,

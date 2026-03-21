@@ -19,21 +19,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../app/colors.dart';
+import '../browser/browser_tab_provider.dart';
+import '../browser/url_rewriter.dart';
 import '../shared/pane_type_dropdown.dart';
 import '../state/surface_provider.dart';
-
-/// Static browser tab descriptors for the browser pane.
-class _BrowserTab {
-  final String title;
-  final bool isActive;
-
-  const _BrowserTab({required this.title, required this.isActive});
-}
-
-const _staticBrowserTabs = [
-  _BrowserTab(title: 'localhost', isActive: true),
-  _BrowserTab(title: 'GitHub', isActive: false),
-];
 
 /// Minimum swipe progress magnitude before auto-scrolling the tab strip to
 /// reveal the target tab. Below this threshold the strip stays put to avoid
@@ -46,6 +35,18 @@ class TabBarStrip extends StatefulWidget {
   final ValueChanged<String> onSurfaceSelected;
   final ValueChanged<String>? onSurfaceLongPressed;
   final PaneType? paneType;
+
+  /// Browser surfaces to show when [paneType] is [PaneType.browser].
+  final List<BrowserSurface> browserSurfaces;
+
+  /// Active browser surface ID.
+  final String? activeBrowserSurfaceId;
+
+  /// Called when a browser tab is tapped.
+  final ValueChanged<String>? onBrowserSurfaceSelected;
+
+  /// Called when a browser tab is long-pressed (for close action).
+  final ValueChanged<String>? onBrowserSurfaceLongPressed;
 
   /// Normalised swipe progress in the range [-1.0, 1.0].
   ///
@@ -65,6 +66,10 @@ class TabBarStrip extends StatefulWidget {
     required this.onSurfaceSelected,
     this.onSurfaceLongPressed,
     this.paneType,
+    this.browserSurfaces = const [],
+    this.activeBrowserSurfaceId,
+    this.onBrowserSurfaceSelected,
+    this.onBrowserSurfaceLongPressed,
     this.swipeProgress,
     this.swipeTargetIndex,
   });
@@ -140,23 +145,65 @@ class _TabBarStripState extends State<TabBarStrip> {
   Widget _buildBrowserTabs(BuildContext context) {
     final c = AppColors.of(context);
 
+    if (widget.browserSurfaces.isEmpty) {
+      return Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'No tabs',
+              style: GoogleFonts.ibmPlexMono(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: c.textMuted,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Expanded(
       child: _TabStripWrap(
         child: ListView.builder(
           controller: _scrollController,
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.only(left: 4),
-          itemCount: _staticBrowserTabs.length,
+          itemCount: widget.browserSurfaces.length,
           itemBuilder: (context, index) {
-            final tab = _staticBrowserTabs[index];
-            return _TabChip(
-              title: tab.title,
-              icon: Icons.language,
-              isActive: tab.isActive,
-              accentColor: c.browserColor,
-              showConnectionDot: tab.isActive,
-              // Browser tabs don't participate in swipe-tab switching.
-              underlineOpacity: 1.0,
+            final surface = widget.browserSurfaces[index];
+            final isActive = surface.id == widget.activeBrowserSurfaceId;
+
+            // Derive a display title: page title > hostname > 'New Tab'
+            String title;
+            if (surface.title != null && surface.title!.isNotEmpty) {
+              title = surface.title!;
+            } else if (surface.url != null && surface.url!.isNotEmpty) {
+              title = parseDisplayUrl(surface.url!).host;
+            } else {
+              title = 'New Tab';
+            }
+
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: widget.onBrowserSurfaceSelected != null
+                    ? () => widget.onBrowserSurfaceSelected!(surface.id)
+                    : null,
+                onLongPress: widget.onBrowserSurfaceLongPressed != null
+                    ? () => widget.onBrowserSurfaceLongPressed!(surface.id)
+                    : null,
+                borderRadius: BorderRadius.circular(AppColors.radiusSm),
+                child: _TabChip(
+                  title: title,
+                  icon: Icons.language,
+                  isActive: isActive,
+                  accentColor: c.browserColor,
+                  showConnectionDot: isActive,
+                  underlineOpacity: isActive ? 1.0 : 0.0,
+                ),
+              ),
             );
           },
         ),

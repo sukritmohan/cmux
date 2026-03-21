@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../app/colors.dart';
+import '../browser/browser_tab_provider.dart';
 import '../shared/pane_type_dropdown.dart';
 import '../state/surface_provider.dart';
 import 'tab_bar_strip.dart';
@@ -21,6 +22,12 @@ class TopBar extends StatelessWidget {
   final PaneType activePaneType;
   final ValueChanged<PaneType> onPaneTypeChanged;
   final VoidCallback? onNewTab;
+
+  /// Browser surfaces for the tab strip when pane type is browser.
+  final List<BrowserSurface> browserSurfaces;
+  final String? activeBrowserSurfaceId;
+  final ValueChanged<String>? onBrowserSurfaceSelected;
+  final ValueChanged<String>? onBrowserSurfaceLongPressed;
 
   /// Normalised swipe progress [-1.0, 1.0] passed through to [TabBarStrip].
   /// See [TabBarStrip.swipeProgress] for semantics.
@@ -40,6 +47,10 @@ class TopBar extends StatelessWidget {
     this.activePaneType = PaneType.terminal,
     required this.onPaneTypeChanged,
     this.onNewTab,
+    this.browserSurfaces = const [],
+    this.activeBrowserSurfaceId,
+    this.onBrowserSurfaceSelected,
+    this.onBrowserSurfaceLongPressed,
     this.swipeProgress,
     this.swipeTargetIndex,
   });
@@ -77,6 +88,10 @@ class TopBar extends StatelessWidget {
             onSurfaceSelected: onSurfaceSelected,
             onSurfaceLongPressed: onSurfaceLongPressed,
             paneType: activePaneType,
+            browserSurfaces: browserSurfaces,
+            activeBrowserSurfaceId: activeBrowserSurfaceId,
+            onBrowserSurfaceSelected: onBrowserSurfaceSelected,
+            onBrowserSurfaceLongPressed: onBrowserSurfaceLongPressed,
             swipeProgress: swipeProgress,
             swipeTargetIndex: swipeTargetIndex,
           ),

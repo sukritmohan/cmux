@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
+import '../browser/browser_tab_provider.dart';
 import '../connection/message_protocol.dart';
 import 'pane_provider.dart';
 import 'surface_provider.dart';
@@ -75,6 +76,16 @@ class EventHandler {
       case 'pane.closed':
         _ref.read(paneProvider.notifier).onPaneClosed(data);
         _ref.read(workspaceProvider.notifier).fetchWorkspaces();
+
+      // Browser events
+      case 'browser.navigated':
+        _ref.read(browserTabProvider.notifier).onBrowserNavigated(data);
+
+      case 'browser.created':
+        _ref.read(browserTabProvider.notifier).onBrowserCreated(data);
+
+      case 'browser.closed':
+        _ref.read(browserTabProvider.notifier).onBrowserClosed(data);
 
       // Attention events — show Android system notification
       case 'surface.attention':

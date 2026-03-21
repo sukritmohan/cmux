@@ -23,6 +23,12 @@ extension Notification.Name {
     static let bridgeSurfaceReordered = Notification.Name("bridge.surface.reordered")
     /// Posted when a terminal notification is added (bell, Claude hook, etc.).
     static let bridgeSurfaceAttention = Notification.Name("bridge.surface.attention")
+    /// Posted when a browser panel navigates to a new URL (page load completes or URL changes).
+    static let bridgeBrowserNavigated = Notification.Name("bridge.browser.navigated")
+    /// Posted when a new browser panel is created in a workspace.
+    static let bridgeBrowserCreated = Notification.Name("bridge.browser.created")
+    /// Posted when a browser panel is closed in a workspace.
+    static let bridgeBrowserClosed = Notification.Name("bridge.browser.closed")
 }
 
 // MARK: - Bridge-Specific UserInfo Keys
@@ -39,6 +45,10 @@ enum BridgeNotificationKey {
     static let toIndex = "bridge.toIndex"
     static let reason = "bridge.reason"
     static let notificationTitle = "bridge.notificationTitle"
+    static let url = "bridge.url"
+    static let faviconURL = "bridge.faviconURL"
+    static let canGoBack = "bridge.canGoBack"
+    static let canGoForward = "bridge.canGoForward"
 }
 
 // MARK: - BridgeEventRelay
@@ -94,7 +104,7 @@ final class BridgeEventRelay: @unchecked Sendable {
 
     // MARK: - Observer Registration
 
-    /// Registers observers for all 13 bridge event types.
+    /// Registers observers for all 16 bridge event types.
     private func registerObservers() {
         // 1. workspace.selected — existing notification, fired when the selected workspace changes
         observers.append(NotificationCenter.default.addObserver(
@@ -277,6 +287,50 @@ final class BridgeEventRelay: @unchecked Sendable {
                 "surface_id": surfaceId?.uuidString ?? "",
                 "reason": reason,
                 "title": title,
+            ])
+        })
+
+        // 14. browser.navigated — fired when a browser panel navigates to a new URL
+        observers.append(NotificationCenter.default.addObserver(
+            forName: .bridgeBrowserNavigated, object: nil, queue: nil
+        ) { [weak self] notification in
+            guard let surfaceId = notification.userInfo?[GhosttyNotificationKey.surfaceId] as? UUID else { return }
+            let url = notification.userInfo?[BridgeNotificationKey.url] as? String ?? ""
+            let title = notification.userInfo?[GhosttyNotificationKey.title] as? String ?? ""
+            let faviconURL = notification.userInfo?[BridgeNotificationKey.faviconURL] as? String ?? ""
+            let canGoBack = notification.userInfo?[BridgeNotificationKey.canGoBack] as? Bool ?? false
+            let canGoForward = notification.userInfo?[BridgeNotificationKey.canGoForward] as? Bool ?? false
+            self?.emit(event: "browser.navigated", data: [
+                "surface_id": surfaceId.uuidString,
+                "url": url,
+                "title": title,
+                "favicon_url": faviconURL,
+                "can_go_back": canGoBack,
+                "can_go_forward": canGoForward,
+            ])
+        })
+
+        // 15. browser.created — fired when a new browser panel is created
+        observers.append(NotificationCenter.default.addObserver(
+            forName: .bridgeBrowserCreated, object: nil, queue: nil
+        ) { [weak self] notification in
+            guard let surfaceId = notification.userInfo?[GhosttyNotificationKey.surfaceId] as? UUID else { return }
+            let url = notification.userInfo?[BridgeNotificationKey.url] as? String ?? ""
+            let title = notification.userInfo?[GhosttyNotificationKey.title] as? String ?? ""
+            self?.emit(event: "browser.created", data: [
+                "surface_id": surfaceId.uuidString,
+                "url": url,
+                "title": title,
+            ])
+        })
+
+        // 16. browser.closed — fired when a browser panel is closed
+        observers.append(NotificationCenter.default.addObserver(
+            forName: .bridgeBrowserClosed, object: nil, queue: nil
+        ) { [weak self] notification in
+            guard let surfaceId = notification.userInfo?[GhosttyNotificationKey.surfaceId] as? UUID else { return }
+            self?.emit(event: "browser.closed", data: [
+                "surface_id": surfaceId.uuidString,
             ])
         })
     }

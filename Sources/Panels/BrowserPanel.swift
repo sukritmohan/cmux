@@ -2123,6 +2123,10 @@ final class BrowserPanel: Panel, ObservableObject {
     private var faviconTask: Task<Void, Never>?
     private var faviconRefreshGeneration: Int = 0
     private var lastFaviconURLString: String?
+
+    /// Public read-only accessor for the most recently resolved favicon URL string.
+    /// Used by `BridgeBrowserHandler` to include favicon URLs in bridge push events.
+    var lastFaviconURL: String? { lastFaviconURLString }
     private let minPageZoom: CGFloat = 0.25
     private let maxPageZoom: CGFloat = 5.0
     private let pageZoomStep: CGFloat = 0.1
