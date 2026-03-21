@@ -14644,6 +14644,7 @@ class TerminalController {
             return "ERROR: Missing branch name — usage: report_git_branch <branch> [--status=dirty] [--tab=X]"
         }
         let isDirty = parsed.options["status"]?.lowercased() == "dirty"
+        let gitRoot = parsed.options["root"]
 
         // Shell integration always includes explicit workspace/panel IDs.
         // Keep this telemetry path off-main so wake/main-thread stalls don't
@@ -14658,6 +14659,12 @@ class TerminalController {
                 tab.pruneSurfaceMetadata(validSurfaceIds: validSurfaceIds)
                 guard validSurfaceIds.contains(scope.panelId) else { return }
                 tab.updatePanelGitBranch(panelId: scope.panelId, branch: branch, isDirty: isDirty)
+                if let gitRoot {
+                    tab.panelGitRoots[scope.panelId] = gitRoot
+                    if scope.panelId == tab.focusedPanelId {
+                        tab.gitRoot = gitRoot
+                    }
+                }
             }
             return "OK"
         }
@@ -14669,6 +14676,9 @@ class TerminalController {
                 return
             }
             tab.gitBranch = SidebarGitBranchState(branch: branch, isDirty: isDirty)
+            if let gitRoot {
+                tab.gitRoot = gitRoot
+            }
         }
         return result
     }

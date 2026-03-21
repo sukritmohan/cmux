@@ -485,13 +485,15 @@ _cmux_prompt_command() {
         _CMUX_GIT_LAST_PWD="$pwd"
         _CMUX_GIT_LAST_RUN=$now
         {
-            local branch dirty_opt=""
+            local branch dirty_opt="" git_root root_opt=""
             branch=$(git branch --show-current 2>/dev/null)
             if [[ -n "$branch" ]]; then
                 local first
                 first=$(git status --porcelain -uno 2>/dev/null | head -1)
                 [[ -n "$first" ]] && dirty_opt="--status=dirty"
-                _cmux_send "report_git_branch $branch $dirty_opt --tab=$CMUX_TAB_ID --panel=$CMUX_PANEL_ID"
+                git_root=$(git rev-parse --show-toplevel 2>/dev/null)
+                [[ -n "$git_root" ]] && root_opt="--root=$git_root"
+                _cmux_send "report_git_branch $branch $dirty_opt $root_opt --tab=$CMUX_TAB_ID --panel=$CMUX_PANEL_ID"
             else
                 _cmux_send "clear_git_branch --tab=$CMUX_TAB_ID --panel=$CMUX_PANEL_ID"
             fi

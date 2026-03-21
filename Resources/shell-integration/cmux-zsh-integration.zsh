@@ -237,12 +237,14 @@ _cmux_report_git_branch_for_path() {
     [[ -n "$CMUX_TAB_ID" ]] || return 0
     [[ -n "$CMUX_PANEL_ID" ]] || return 0
 
-    local branch dirty_opt="" first
+    local branch dirty_opt="" first git_root root_opt=""
     branch="$(git -C "$repo_path" branch --show-current 2>/dev/null)"
     if [[ -n "$branch" ]]; then
         first="$(git -C "$repo_path" status --porcelain -uno 2>/dev/null | head -1)"
         [[ -n "$first" ]] && dirty_opt="--status=dirty"
-        _cmux_send "report_git_branch $branch $dirty_opt --tab=$CMUX_TAB_ID --panel=$CMUX_PANEL_ID"
+        git_root="$(git -C "$repo_path" rev-parse --show-toplevel 2>/dev/null)"
+        [[ -n "$git_root" ]] && root_opt="--root=$git_root"
+        _cmux_send "report_git_branch $branch $dirty_opt $root_opt --tab=$CMUX_TAB_ID --panel=$CMUX_PANEL_ID"
     else
         _cmux_send "clear_git_branch --tab=$CMUX_TAB_ID --panel=$CMUX_PANEL_ID"
     fi

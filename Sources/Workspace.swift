@@ -4861,6 +4861,11 @@ final class Workspace: Identifiable, ObservableObject {
     @Published var progress: SidebarProgressState?
     @Published var gitBranch: SidebarGitBranchState?
     @Published var panelGitBranches: [UUID: SidebarGitBranchState] = [:]
+    /// Absolute path to the git repository root for this workspace's primary panel.
+    /// Reported by shell integration via report_git_branch --root=<path>.
+    @Published var gitRoot: String?
+    /// Per-panel git repository roots.
+    @Published var panelGitRoots: [UUID: String] = [:]
     @Published var pullRequest: SidebarPullRequestState?
     @Published var panelPullRequests: [UUID: SidebarPullRequestState] = [:]
     @Published var surfaceListeningPorts: [UUID: [Int]] = [:]
