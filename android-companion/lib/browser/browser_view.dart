@@ -172,8 +172,9 @@ class _BrowserViewState extends ConsumerState<BrowserView> {
     final surfaceId = state.activeSurfaceId;
     if (surfaceId == null) return;
 
-    final controller = _controllers[surfaceId];
-    if (controller == null) return;
+    // Create controller if it doesn't exist yet (new tabs start with no URL
+    // and no controller — the speed dial is shown instead of a WebView).
+    final controller = _getOrCreateController(surfaceId, url);
 
     ref.read(browserTabProvider.notifier).setUrl(surfaceId, url);
     _loadUrl(controller, url);
