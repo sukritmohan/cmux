@@ -2064,8 +2064,11 @@ class GhosttyApp {
                 return tabManager.createSplit(tabId: tabId, surfaceId: surfaceId, direction: direction) != nil
             }
         case GHOSTTY_ACTION_RING_BELL:
-            let bellTabId = surfaceView.tabId
-            let bellSurfaceId = surfaceView.terminalSurface?.id
+            // Use the non-weak IDs captured at callback context creation time.
+            // surfaceView.terminalSurface?.id traverses two weak references that can
+            // be nil if the surface is deallocated before this Ghostty callback fires.
+            let bellTabId = callbackTabId ?? surfaceView.tabId
+            let bellSurfaceId = callbackSurfaceId ?? surfaceView.terminalSurface?.id
             performOnMain {
                 self.ringBell()
                 // Only fire attention notification when the bell surface is NOT focused.
