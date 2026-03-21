@@ -103,6 +103,9 @@ class EventHandler {
     // System notification is shown by ConnectionManager._handleAttentionEvent
     // which fires regardless of whether this screen is active.
     _ref.read(workspaceProvider.notifier).incrementNotificationCount(workspaceId);
+
+    // Set the per-surface notification dot so the tab chip shows a blue indicator.
+    _ref.read(surfaceProvider.notifier).onSurfaceAttention(data);
   }
 
   void dispose() {
