@@ -120,9 +120,23 @@ while True:
                 audio_float32,
                 path_or_hf_repo=model_path,
                 language="en",
+                condition_on_previous_text=False,
+                no_speech_threshold=0.3,
             )
 
             text = result.get("text", "").strip()
+
+            # Strip known Whisper hallucinations on short/quiet segments.
+            # Whisper was trained on YouTube subtitles and hallucinates these
+            # phrases when the audio is mostly silence or very short.
+            _hallucinations = {
+                "thank you", "thanks for watching", "thanks for listening",
+                "subscribe", "like and subscribe", "see you next time",
+                "bye", "goodbye", "you",
+            }
+            if text.rstrip(".!,").lower() in _hallucinations:
+                _log(f"segment {segment_id}: suppressed hallucination: {text!r}")
+                text = ""
             _log(f"segment {segment_id}: transcribed -> {text!r}")
 
             response = json.dumps({"segment_id": segment_id, "text": text})

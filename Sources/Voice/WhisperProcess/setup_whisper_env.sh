@@ -2,7 +2,7 @@
 # setup_whisper_env.sh — Idempotent setup for the MLX Whisper Python environment.
 #
 # Creates a Python virtual environment at ~/.cmux/whisper-env/, installs
-# mlx-whisper and dependencies, and downloads the whisper-small-mlx model.
+# mlx-whisper and dependencies, and downloads the whisper-large-v3-turbo-mlx model.
 #
 # Safe to re-run: skips steps already completed.
 # Writes ~/.cmux/whisper-env/.ready on success.
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 VENV_DIR="$HOME/.cmux/whisper-env"
-MODEL_DIR="$HOME/.cmux/models/whisper-small-mlx"
+MODEL_DIR="$HOME/.cmux/models/whisper-large-v3-turbo-mlx"
 READY_MARKER="$VENV_DIR/.ready"
 
 log() {
@@ -41,10 +41,10 @@ fi
 
 # Step 3: Download model if not present.
 if [ ! -d "$MODEL_DIR" ] || [ -z "$(ls -A "$MODEL_DIR" 2>/dev/null)" ]; then
-    log "Downloading whisper-small-mlx model to $MODEL_DIR..."
+    log "Downloading whisper-large-v3-turbo-mlx model to $MODEL_DIR..."
     "$VENV_DIR/bin/python3" -c "
 from huggingface_hub import snapshot_download
-snapshot_download('mlx-community/whisper-small-mlx', local_dir='$MODEL_DIR')
+snapshot_download('mlx-community/whisper-large-v3-turbo', local_dir='$MODEL_DIR')
 "
     log "Model downloaded."
 else

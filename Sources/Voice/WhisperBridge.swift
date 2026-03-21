@@ -68,7 +68,7 @@ final class WhisperBridge {
     /// Directory where the MLX Whisper model is expected to reside.
     private static var modelDirectoryURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".cmux/models/whisper-small-mlx")
+            .appendingPathComponent(".cmux/models/whisper-large-v3-turbo")
     }
 
     /// Directory where the Whisper Python venv is installed.
