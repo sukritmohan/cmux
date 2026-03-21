@@ -98,6 +98,12 @@ class SurfaceState {
 class SurfaceNotifier extends StateNotifier<SurfaceState> {
   SurfaceNotifier() : super(const SurfaceState());
 
+  /// Whether the Android app is currently backgrounded (paused/hidden).
+  ///
+  /// When true, all incoming attention events generate notification dots
+  /// regardless of which surface is focused — the user cannot see the terminal.
+  bool _isAppBackgrounded = false;
+
   /// Latest known cell state per surface, keyed by surface ID.
   ///
   /// Populated on every incoming cell frame so the adjacent terminal can be
@@ -116,19 +122,92 @@ class SurfaceNotifier extends StateNotifier<SurfaceState> {
   /// if no frame has arrived yet for that surface.
   CellSnapshot? getSnapshot(String surfaceId) => _cellSnapshots[surfaceId];
 
+  /// Mark the app as backgrounded so all attention events produce dots.
+  void setAppBackgrounded() {
+    _isAppBackgrounded = true;
+  }
+
+  /// Mark the app as resumed (foregrounded).
+  void setAppResumed() {
+    _isAppBackgrounded = false;
+  }
+
+  /// Handle a surface.attention event by setting the notification dot.
+  ///
+  /// Suppresses the dot if the surface is already focused and the app is in
+  /// the foreground — the user is already looking at that terminal.
+  void onSurfaceAttention(Map<String, dynamic> data) {
+    final surfaceId = data['surface_id'] as String?;
+    if (surfaceId == null) return;
+
+    // Don't show a dot for the surface the user is already viewing.
+    if (surfaceId == state.focusedSurfaceId && !_isAppBackgrounded) return;
+
+    final updated = state.surfaces.map((s) {
+      if (s.id == surfaceId) return s.copyWith(hasUnreadNotification: true);
+      return s;
+    }).toList();
+
+    state = state.copyWith(surfaces: updated);
+  }
+
+  /// Clear the notification dot on the currently focused surface.
+  ///
+  /// Called when the app resumes from background so the user does not see a
+  /// stale dot on the tab they are already viewing.
+  void clearNotificationForFocusedSurface() {
+    final focusedId = state.focusedSurfaceId;
+    if (focusedId == null) return;
+
+    final updated = state.surfaces.map((s) {
+      if (s.id == focusedId) return s.copyWith(hasUnreadNotification: false);
+      return s;
+    }).toList();
+
+    state = state.copyWith(surfaces: updated);
+  }
+
   /// Replace all surfaces (e.g. after fetching workspace panels).
+  ///
+  /// Preserves [hasUnreadNotification] from the previous state by matching
+  /// on surface ID so notification dots survive a workspace refresh.
   void setSurfaces(List<Surface> surfaces, {String? focusedId}) {
+    // Build a lookup of previous notification state.
+    final previousNotifications = <String, bool>{
+      for (final s in state.surfaces)
+        if (s.hasUnreadNotification) s.id: true,
+    };
+
+    final merged = surfaces.map((s) {
+      if (previousNotifications.containsKey(s.id)) {
+        return s.copyWith(hasUnreadNotification: true);
+      }
+      return s;
+    }).toList();
+
     state = SurfaceState(
-      surfaces: surfaces,
+      surfaces: merged,
       focusedSurfaceId: focusedId ?? surfaces.firstOrNull?.id,
     );
   }
 
   /// Handle surface.focused event.
+  ///
+  /// Also clears any notification dot on the newly focused surface since the
+  /// user is now viewing it.
   void onSurfaceFocused(Map<String, dynamic> data) {
     final surfaceId = data['surface_id'] as String?;
     if (surfaceId == null) return;
-    state = state.copyWith(focusedSurfaceId: surfaceId);
+
+    final updated = state.surfaces.map((s) {
+      if (s.id == surfaceId) return s.copyWith(hasUnreadNotification: false);
+      return s;
+    }).toList();
+
+    state = SurfaceState(
+      surfaces: updated,
+      focusedSurfaceId: surfaceId,
+    );
   }
 
   /// Handle surface.closed event.
@@ -179,8 +258,19 @@ class SurfaceNotifier extends StateNotifier<SurfaceState> {
   }
 
   /// Focus a specific surface by ID.
+  ///
+  /// Also clears any notification dot on the focused surface since the user
+  /// is now viewing it.
   void focusSurface(String surfaceId) {
-    state = state.copyWith(focusedSurfaceId: surfaceId);
+    final updated = state.surfaces.map((s) {
+      if (s.id == surfaceId) return s.copyWith(hasUnreadNotification: false);
+      return s;
+    }).toList();
+
+    state = SurfaceState(
+      surfaces: updated,
+      focusedSurfaceId: surfaceId,
+    );
   }
 
   /// Returns the surface ID immediately after the focused surface in the list,
