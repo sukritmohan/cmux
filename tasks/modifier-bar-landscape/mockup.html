@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modifier Bar — Landscape Tablet Redesign</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a1a;
+    color: #e0e0e0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 60px;
+    padding: 40px 20px;
+  }
+
+  h1 {
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #888;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 12px;
+  }
+
+  .bad-label { color: #e05555; }
+  .good-label { color: #55b86a; }
+
+  /* ── Modifier bar shell ── */
+  .modifier-bar {
+    width: 800px;
+    height: 88px;
+    background: rgba(40, 40, 44, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 18px;
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* ── Divider ── */
+  .divider {
+    width: 1px;
+    height: 56px;
+    background: rgba(255,255,255,0.12);
+    margin: 0 10px;
+    flex-shrink: 0;
+  }
+
+  /* ── Left section ── */
+  .left-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    justify-content: center;
+  }
+  .left-section.expanded { flex: 1; }
+  .left-section.compact { width: 180px; flex-shrink: 0; }
+
+  .key-row {
+    display: flex;
+    gap: 0;
+    height: 36px;
+  }
+
+  .key-group {
+    display: flex;
+    flex: 1;
+    background: rgba(255,255,255,0.07);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .key {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: #ccc;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+    min-width: 0;
+  }
+  .key:hover { background: rgba(255,255,255,0.08); }
+  .key:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 1px;
+    background: rgba(255,255,255,0.1);
+  }
+  .key.esc { font-size: 12px; letter-spacing: 0.5px; }
+
+  /* ── Center section ── */
+  .center-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    justify-content: center;
+  }
+  .center-section.fixed { width: 76px; flex-shrink: 0; }
+  .center-section.expanded { flex: 1; }
+
+  /* Fixed 2x2 grid (current/portrait) */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: 36px 36px;
+    grid-template-rows: 36px 36px;
+    gap: 4px;
+  }
+
+  .tool-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #ccc;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .tool-btn:hover { background: rgba(255,255,255,0.14); }
+  .tool-btn.accent { background: rgba(218, 165, 32, 0.2); color: #daa520; }
+
+  /* Expanded horizontal row (landscape) */
+  .tools-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 76px;
+    gap: 24px;
+    padding: 0 20px;
+  }
+
+  .tool-btn-lg {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #ccc;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  .tool-btn-lg:hover { background: rgba(255,255,255,0.14); transform: scale(1.05); }
+  .tool-btn-lg.accent { background: rgba(218, 165, 32, 0.15); color: #daa520; }
+
+  /* ── Voice button ── */
+  .voice-btn {
+    width: 44px;
+    height: 76px;
+    border-radius: 22px;
+    background: rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #ccc;
+    cursor: pointer;
+    margin-left: 10px;
+    margin-right: 4px;
+    flex-shrink: 0;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .voice-btn:hover { background: rgba(255,255,255,0.12); }
+  .voice-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #daa520;
+  }
+
+  /* ── Right section ── */
+  .right-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .joystick-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background: rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #ccc;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .joystick-btn:hover { background: rgba(255,255,255,0.14); }
+
+  .return-btn {
+    height: 76px;
+    min-width: 72px;
+    border-radius: 14px;
+    background: rgba(218, 165, 32, 0.25);
+    color: #daa520;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0 16px;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .return-btn:hover { background: rgba(218, 165, 32, 0.35); }
+
+  /* ── Annotations ── */
+  .annotation-row {
+    display: flex;
+    width: 800px;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .annotation {
+    font-size: 10px;
+    color: #666;
+    text-align: center;
+    letter-spacing: 0.5px;
+    padding: 4px 0;
+    border-top: 1px dashed rgba(255,255,255,0.08);
+  }
+  .annotation.left-ann { flex: 1; }
+  .annotation.left-ann-compact { width: 180px; flex-shrink: 0; }
+  .annotation.center-ann { width: 76px; }
+  .annotation.center-ann-expanded { flex: 1; }
+  .annotation.right-ann { width: 140px; flex-shrink: 0; }
+  .annotation.voice-ann { width: 60px; flex-shrink: 0; }
+  .annotation.divider-ann { width: 21px; flex-shrink: 0; }
+
+  .highlight-bad { color: #e05555; }
+  .highlight-good { color: #55b86a; }
+
+  /* ── Comparison wrapper ── */
+  .comparison {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .arrow-down {
+    font-size: 24px;
+    color: #555;
+    margin: 10px 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>Modifier Bar &mdash; Landscape Tablet Redesign</h1>
+
+<!-- ════ CURRENT (BROKEN) ════ -->
+<div class="comparison">
+  <div class="section-label bad-label">Current: Left keys expand too wide</div>
+  <div class="modifier-bar">
+    <!-- LEFT: flex:1 (too wide in landscape) -->
+    <div class="left-section expanded">
+      <div class="key-row">
+        <div class="key-group">
+          <div class="key esc">esc</div>
+          <div class="key">&#x21E5;</div>
+          <div class="key">&#x21E7;</div>
+          <div class="key">&#x2303;</div>
+        </div>
+      </div>
+      <div class="key-row">
+        <div class="key-group">
+          <div class="key">~</div>
+          <div class="key">|</div>
+          <div class="key">/</div>
+          <div class="key">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- CENTER: fixed 76px (cramped) -->
+    <div class="center-section fixed">
+      <div class="tools-grid">
+        <div class="tool-btn">+</div>
+        <div class="tool-btn">&#x1F4CB;</div>
+        <div class="tool-btn">&#x232B;</div>
+        <div class="tool-btn accent">&#x2328;</div>
+      </div>
+    </div>
+
+    <!-- VOICE -->
+    <div class="voice-btn">
+      &#x1F3A4;
+      <div class="voice-dot"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- RIGHT -->
+    <div class="right-section">
+      <div class="joystick-btn">&#x2295;</div>
+      <div class="return-btn">RETURN</div>
+    </div>
+  </div>
+
+  <div class="annotation-row">
+    <div class="annotation left-ann"><span class="highlight-bad">flex:1 &rarr; ~490px (way too wide!)</span></div>
+    <div class="annotation divider-ann"></div>
+    <div class="annotation center-ann"><span class="highlight-bad">76px</span></div>
+    <div class="annotation voice-ann">44px</div>
+    <div class="annotation divider-ann"></div>
+    <div class="annotation right-ann">~124px</div>
+  </div>
+</div>
+
+<div class="arrow-down">&#x2B07;</div>
+
+<!-- ════ PROPOSED (FIXED) ════ -->
+<div class="comparison">
+  <div class="section-label good-label">Proposed: Center section expands, left is compact</div>
+  <div class="modifier-bar">
+    <!-- LEFT: fixed 180px (compact) -->
+    <div class="left-section compact">
+      <div class="key-row">
+        <div class="key-group">
+          <div class="key esc">esc</div>
+          <div class="key">&#x21E5;</div>
+          <div class="key">&#x21E7;</div>
+          <div class="key">&#x2303;</div>
+        </div>
+      </div>
+      <div class="key-row">
+        <div class="key-group">
+          <div class="key">~</div>
+          <div class="key">|</div>
+          <div class="key">/</div>
+          <div class="key">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- CENTER: flex:1 (expanded, horizontal row) -->
+    <div class="center-section expanded">
+      <div class="tools-row">
+        <div class="tool-btn-lg">+</div>
+        <div class="tool-btn-lg">&#x1F4CB;</div>
+        <div class="tool-btn-lg">&#x232B;</div>
+        <div class="tool-btn-lg accent">&#x2328;</div>
+      </div>
+    </div>
+
+    <!-- VOICE -->
+    <div class="voice-btn">
+      &#x1F3A4;
+      <div class="voice-dot"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- RIGHT -->
+    <div class="right-section">
+      <div class="joystick-btn">&#x2295;</div>
+      <div class="return-btn">RETURN</div>
+    </div>
+  </div>
+
+  <div class="annotation-row">
+    <div class="annotation left-ann-compact"><span class="highlight-good">180px fixed</span></div>
+    <div class="annotation divider-ann"></div>
+    <div class="annotation center-ann-expanded"><span class="highlight-good">flex:1 &rarr; ~400px (tools breathe)</span></div>
+    <div class="annotation voice-ann">44px</div>
+    <div class="annotation divider-ann"></div>
+    <div class="annotation right-ann">~124px</div>
+  </div>
+</div>
+
+</body>
+</html>

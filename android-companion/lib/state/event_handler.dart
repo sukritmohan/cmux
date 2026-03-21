@@ -12,7 +12,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
 import '../connection/message_protocol.dart';
-import '../notifications/attention_notification_handler.dart';
 import 'pane_provider.dart';
 import 'surface_provider.dart';
 import 'workspace_provider.dart';
@@ -87,22 +86,12 @@ class EventHandler {
   }
 
   void _handleSurfaceAttention(Map<String, dynamic> data) {
-    debugPrint('[EventHandler] surface.attention received: $data');
     final workspaceId = data['workspace_id'] as String? ?? '';
-    final surfaceId = data['surface_id'] as String? ?? '';
-    final reason = data['reason'] as String? ?? 'notification';
-    final title = data['title'] as String? ?? '';
 
     // Increment the workspace's notification badge.
+    // System notification is shown by ConnectionManager._handleAttentionEvent
+    // which fires regardless of whether this screen is active.
     _ref.read(workspaceProvider.notifier).incrementNotificationCount(workspaceId);
-
-    // Show Android system notification.
-    AttentionNotificationHandler.instance.showAttention(
-      workspaceId: workspaceId,
-      surfaceId: surfaceId,
-      reason: reason,
-      title: title,
-    );
   }
 
   void dispose() {

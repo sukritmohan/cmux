@@ -22,6 +22,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 
+import '../notifications/attention_notification_handler.dart';
 import '../notifications/fcm_token_manager.dart';
 import '../notifications/firebase_config_store.dart';
 
@@ -261,9 +262,28 @@ class ConnectionManager with WidgetsBindingObserver {
     if (event != null) {
       _eventController.add(event);
 
-      // surface.attention is handled by EventHandler via eventStream —
-      // no need to handle it directly here.
+      // Handle surface.attention directly so notifications work
+      // even when the terminal screen isn't active. EventHandler also
+      // receives this event but only increments the badge counter —
+      // the system notification is shown here.
+      if (event.event == 'surface.attention') {
+        _handleAttentionEvent(event.data);
+      }
     }
+  }
+
+  void _handleAttentionEvent(Map<String, dynamic> data) {
+    final workspaceId = data['workspace_id'] as String? ?? '';
+    final surfaceId = data['surface_id'] as String? ?? '';
+    final reason = data['reason'] as String? ?? 'notification';
+    final title = data['title'] as String? ?? '';
+
+    AttentionNotificationHandler.instance.showAttention(
+      workspaceId: workspaceId,
+      surfaceId: surfaceId,
+      reason: reason,
+      title: title,
+    );
   }
 
   void _handleBinaryFrame(Uint8List data) {

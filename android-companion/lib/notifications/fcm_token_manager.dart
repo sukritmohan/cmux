@@ -86,6 +86,29 @@ class FCMTokenManager {
 
     // Background messages.
     FirebaseMessaging.onBackgroundMessage(_firebaseBackgroundMessageHandler);
+
+    // User tapped a background FCM notification to open the app.
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      debugPrint('[FCMTokenManager] onMessageOpenedApp: ${message.messageId}');
+      _navigateFromMessage(message);
+    });
+
+    // Cold-start: app was killed, user tapped a notification to launch it.
+    final initialMessage = await messaging.getInitialMessage();
+    if (initialMessage != null) {
+      debugPrint('[FCMTokenManager] getInitialMessage: ${initialMessage.messageId}');
+      _navigateFromMessage(initialMessage);
+    }
+  }
+
+  /// Extracts workspace/surface IDs from an FCM message and triggers navigation.
+  void _navigateFromMessage(RemoteMessage message) {
+    final data = message.data;
+    final workspaceId = data['workspace_id'] ?? '';
+    final surfaceId = data['surface_id'] ?? '';
+    if (workspaceId.isEmpty) return;
+
+    AttentionNotificationHandler.onNotificationTapped?.call(workspaceId, surfaceId);
   }
 
   /// Reset state (e.g., on unpair).

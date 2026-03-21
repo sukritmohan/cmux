@@ -102,6 +102,16 @@ class AppColorScheme {
   final Color voiceTimerText;
   final Color voiceSetupAmber;
 
+  // -- Mic icon (idle state) --
+  final Color micGradientWarm;
+  final Color micGradientCool;
+  final Color micHaloColor;
+  final Color micStrokeColor;
+  final Color micPillHighlight;
+  final Color micPillShadow;
+  final Color micPillGradientTop;
+  final Color micPillGradientBot;
+
   // -- Terminal default colors (for cells with isDefault flag) --
   final Color terminalDefaultBg;
   final Color terminalDefaultFg;
@@ -177,6 +187,14 @@ class AppColorScheme {
     required this.voiceStripBg,
     required this.voiceTimerText,
     required this.voiceSetupAmber,
+    required this.micGradientWarm,
+    required this.micGradientCool,
+    required this.micHaloColor,
+    required this.micStrokeColor,
+    required this.micPillHighlight,
+    required this.micPillShadow,
+    required this.micPillGradientTop,
+    required this.micPillGradientBot,
     required this.terminalDefaultBg,
     required this.terminalDefaultFg,
     required this.terminalCursor,
@@ -254,6 +272,14 @@ abstract final class AppColors {
     voiceStripBg: Color(0xE6101018),
     voiceTimerText: Color(0xFFFF4444),
     voiceSetupAmber: Color(0xFFE0A030),
+    micGradientWarm: Color(0xFFE0A030),
+    micGradientCool: Color(0xFF6088B0),
+    micHaloColor: Color(0x59E0A030),        // amber ~35%
+    micStrokeColor: Color(0x73FFFFFF),      // white 45%
+    micPillHighlight: Color(0x14FFFFFF),    // white 8%
+    micPillShadow: Color(0x26000000),      // black 15%
+    micPillGradientTop: Color(0x12FFFFFF),  // white 7%
+    micPillGradientBot: Color(0x0A000000),  // black 4%
     terminalDefaultBg: Color(0xFF0A0A0F),
     terminalDefaultFg: Color(0xFFE8E8EE),
     terminalCursor: Color(0xCCE0A030),    // amber at ~80%
@@ -328,6 +354,14 @@ abstract final class AppColors {
     voiceStripBg: Color(0xE6F7F7F5),
     voiceTimerText: Color(0xFFD32F2F),
     voiceSetupAmber: Color(0xFFB07810),
+    micGradientWarm: Color(0xFFE0A030),
+    micGradientCool: Color(0xFF6088B0),
+    micHaloColor: Color(0x40E0A030),        // amber ~25%
+    micStrokeColor: Color(0x52000000),      // black 32%
+    micPillHighlight: Color(0x99FFFFFF),    // white 60%
+    micPillShadow: Color(0x0F000000),      // black 6%
+    micPillGradientTop: Color(0x80FFFFFF),  // white 50%
+    micPillGradientBot: Color(0x08000000),  // black 3%
     terminalDefaultBg: Color(0xFFFFFFFF),
     terminalDefaultFg: Color(0xFF2C2C30),
     terminalCursor: Color(0xCCC09020),    // warm amber at ~80%

@@ -5,6 +5,8 @@
 /// (bell, Claude Code idle, etc.).
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -20,6 +22,10 @@ class AttentionNotificationHandler {
 
   bool _initialized = false;
 
+  /// Callback invoked when the user taps a notification.
+  /// Set by the app to navigate to the specific workspace/pane.
+  static void Function(String workspaceId, String surfaceId)? onNotificationTapped;
+
   /// Channel ID for terminal attention notifications.
   static const _channelId = 'cmux_attention';
   static const _channelName = 'Terminal Attention';
@@ -34,7 +40,10 @@ class AttentionNotificationHandler {
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = InitializationSettings(android: androidSettings);
 
-    await _plugin.initialize(initSettings);
+    await _plugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: _onNotificationResponse,
+    );
 
     // Request notification permission on Android 13+ (API 33+).
     final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
@@ -81,6 +90,30 @@ class AttentionNotificationHandler {
     );
     const details = NotificationDetails(android: androidDetails);
 
-    await _plugin.show(notificationId, displayTitle, displayBody, details);
+    final payload = jsonEncode({
+      'workspace_id': workspaceId,
+      'surface_id': surfaceId,
+    });
+
+    await _plugin.show(notificationId, displayTitle, displayBody, details,
+        payload: payload);
+  }
+
+  /// Handles notification tap responses from flutter_local_notifications.
+  static void _onNotificationResponse(NotificationResponse response) {
+    final payload = response.payload;
+    if (payload == null || payload.isEmpty) return;
+
+    try {
+      final json = jsonDecode(payload) as Map<String, dynamic>;
+      final workspaceId = json['workspace_id'] as String? ?? '';
+      final surfaceId = json['surface_id'] as String? ?? '';
+      if (workspaceId.isEmpty) return;
+
+      debugPrint('[AttentionNotificationHandler] notification tapped: ws=$workspaceId surface=$surfaceId');
+      onNotificationTapped?.call(workspaceId, surfaceId);
+    } catch (e) {
+      debugPrint('[AttentionNotificationHandler] failed to parse notification payload: $e');
+    }
   }
 }

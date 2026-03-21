@@ -5,7 +5,7 @@
 /// tap-to-toggle and hold-to-record with haptic feedback.
 ///
 /// Visual states:
-///   - idle: outline mic icon, neutral background
+///   - idle: custom gradient mic (amber→blue) with halo, convex pill
 ///   - recording: filled mic icon, pulsing red ring
 ///   - processing: spinning progress indicator, amber background
 ///   - setupRequired: outline mic icon with amber dot badge
@@ -228,6 +228,10 @@ class _VoiceButtonState extends ConsumerState<VoiceButton>
 /// Renders different icon/background/decoration combinations based on the
 /// current [VoiceStatus], with a pulsing red ring during recording.
 /// Supports dynamic sizing for both circle (36x36) and pill (e.g., 44x76) shapes.
+///
+/// Idle state uses a custom-painted mic icon with warm-to-cool gradient capsule
+/// fill and amber halo glow, inside a 3D convex raised pill with subtle
+/// top highlight and drop shadow (3B-1 design).
 class _ButtonVisual extends StatelessWidget {
   final VoiceStatus status;
   final AnimationController pulseController;
@@ -248,27 +252,50 @@ class _ButtonVisual extends StatelessWidget {
     return AnimatedBuilder(
       animation: pulseController,
       builder: (context, _) {
-        final bgColor = switch (status) {
-          VoiceStatus.idle => c.keyGroupResting,
-          VoiceStatus.recording => c.voiceRecordingBg,
-          VoiceStatus.processing => c.voiceSetupAmber.withAlpha(40),
-          VoiceStatus.setupRequired => c.keyGroupResting,
-        };
-
-        // Pulsing red ring shadow during recording.
-        final boxShadows = status == VoiceStatus.recording
-            ? [
-                BoxShadow(
-                  color: c.voiceRecordingRed
-                      .withAlpha((80 + (pulseController.value * 80)).round()),
-                  blurRadius: 8 + (pulseController.value * 6),
-                  spreadRadius: pulseController.value * 2,
-                ),
-              ]
-            : <BoxShadow>[];
-
         // Use half the smaller dimension for pill/circle shape.
-        final borderRadius = BorderRadius.circular(width < height ? width / 2 : height / 2);
+        final borderRadius = BorderRadius.circular(
+          width < height ? width / 2 : height / 2,
+        );
+
+        // Idle state: 3B-1 convex raised pill with gradient + shadow.
+        final isIdle = status == VoiceStatus.idle ||
+            status == VoiceStatus.setupRequired;
+
+        final decoration = isIdle
+            ? BoxDecoration(
+                borderRadius: borderRadius,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [c.micPillGradientTop, c.micPillGradientBot],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: c.micPillShadow,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              )
+            : BoxDecoration(
+                borderRadius: borderRadius,
+                color: switch (status) {
+                  VoiceStatus.recording => c.voiceRecordingBg,
+                  VoiceStatus.processing => c.voiceSetupAmber.withAlpha(40),
+                  _ => c.keyGroupResting,
+                },
+                boxShadow: status == VoiceStatus.recording
+                    ? [
+                        BoxShadow(
+                          color: c.voiceRecordingRed.withAlpha(
+                            (80 + (pulseController.value * 80)).round(),
+                          ),
+                          blurRadius: 8 + (pulseController.value * 6),
+                          spreadRadius: pulseController.value * 2,
+                        ),
+                      ]
+                    : null,
+              );
 
         return SizedBox(
           width: width,
@@ -281,11 +308,7 @@ class _ButtonVisual extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 width: width,
                 height: height,
-                decoration: BoxDecoration(
-                  borderRadius: borderRadius,
-                  color: bgColor,
-                  boxShadow: boxShadows,
-                ),
+                decoration: decoration,
               ),
 
               // Icon or spinner.
@@ -312,7 +335,7 @@ class _ButtonVisual extends StatelessWidget {
     );
   }
 
-  /// Builds the center content: mic icon or circular progress indicator.
+  /// Builds the center content: custom gradient mic, recording icon, or spinner.
   /// Icon scales with button size: 20px for large buttons, 16px for default.
   Widget _buildContent(AppColorScheme c) {
     final isLarge = width > 36 || height > 36;
@@ -330,14 +353,113 @@ class _ButtonVisual extends StatelessWidget {
       );
     }
 
-    final iconData = status == VoiceStatus.recording
-        ? Icons.mic_rounded
-        : Icons.mic_none_rounded;
+    // Recording: keep the standard filled red mic icon.
+    if (status == VoiceStatus.recording) {
+      return Icon(Icons.mic_rounded, size: iconSize, color: c.voiceRecordingRed);
+    }
 
-    final iconColor = status == VoiceStatus.recording
-        ? c.voiceRecordingRed
-        : c.keyGroupText;
-
-    return Icon(iconData, size: iconSize, color: iconColor);
+    // Idle / setupRequired: custom painted mic with gradient + halo.
+    return CustomPaint(
+      size: Size(iconSize, iconSize),
+      painter: _MicIconPainter(
+        gradientWarm: c.micGradientWarm,
+        gradientCool: c.micGradientCool,
+        haloColor: c.micHaloColor,
+        strokeColor: c.micStrokeColor,
+      ),
+    );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Custom Mic Icon Painter
+// ---------------------------------------------------------------------------
+
+/// Paints a mic icon with warm-to-cool gradient capsule fill and amber halo.
+///
+/// The icon is drawn in a 24×24 coordinate space and scaled to [size].
+/// Elements:
+///   1. Amber halo glow behind the capsule (blurred paint)
+///   2. Capsule with linear gradient fill (amber bottom → slate-blue top)
+///   3. Cradle arc below the capsule
+///   4. Vertical stem
+///   5. Horizontal base line
+class _MicIconPainter extends CustomPainter {
+  final Color gradientWarm;
+  final Color gradientCool;
+  final Color haloColor;
+  final Color strokeColor;
+
+  _MicIconPainter({
+    required this.gradientWarm,
+    required this.gradientCool,
+    required this.haloColor,
+    required this.strokeColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Scale from 24×24 coordinate space to actual size.
+    final sx = size.width / 24;
+    final sy = size.height / 24;
+    canvas.save();
+    canvas.scale(sx, sy);
+
+    final strokeW = 1.5 / sx; // Keep stroke visually consistent.
+
+    // 1. Amber halo glow behind the capsule.
+    final haloRect = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(9, 2, 6, 12),
+      const Radius.circular(3),
+    );
+    final haloPaint = Paint()
+      ..color = haloColor
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    canvas.drawRRect(haloRect, haloPaint);
+
+    // 2. Capsule with gradient fill.
+    final capsuleRect = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(9, 2, 6, 12),
+      const Radius.circular(3),
+    );
+    final gradientPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+        colors: [gradientWarm, gradientCool],
+      ).createShader(const Rect.fromLTWH(9, 2, 6, 12));
+    canvas.drawRRect(capsuleRect, gradientPaint);
+
+    // Shared stroke paint for cradle, stem, and base.
+    final sPaint = Paint()
+      ..color = strokeColor
+      ..strokeWidth = strokeW
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    // 3. Cradle arc: from (5, 10) curving down to (19, 10).
+    final cradlePath = Path()
+      ..moveTo(5, 10)
+      ..arcToPoint(
+        const Offset(19, 10),
+        radius: const Radius.circular(7),
+        clockwise: false,
+      );
+    canvas.drawPath(cradlePath, sPaint);
+
+    // 4. Stem line.
+    canvas.drawLine(const Offset(12, 17), const Offset(12, 21), sPaint);
+
+    // 5. Base line.
+    canvas.drawLine(const Offset(9, 21), const Offset(15, 21), sPaint);
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_MicIconPainter oldDelegate) =>
+      gradientWarm != oldDelegate.gradientWarm ||
+      gradientCool != oldDelegate.gradientCool ||
+      haloColor != oldDelegate.haloColor ||
+      strokeColor != oldDelegate.strokeColor;
 }

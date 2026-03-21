@@ -18,6 +18,8 @@ import 'app/theme.dart';
 import 'notifications/attention_notification_handler.dart';
 import 'notifications/fcm_token_manager.dart';
 import 'notifications/firebase_config_store.dart';
+import 'state/surface_provider.dart';
+import 'state/workspace_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +60,15 @@ class CmuxCompanionApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+
+    // Wire notification taps to workspace/surface navigation.
+    AttentionNotificationHandler.onNotificationTapped = (workspaceId, surfaceId) {
+      debugPrint('[main] notification tapped: ws=$workspaceId surface=$surfaceId');
+      ref.read(workspaceProvider.notifier).selectWorkspace(workspaceId);
+      if (surfaceId.isNotEmpty) {
+        ref.read(surfaceProvider.notifier).focusSurface(surfaceId);
+      }
+    };
 
     return MaterialApp.router(
       title: 'cmux Companion',
