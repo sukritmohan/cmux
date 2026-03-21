@@ -60,7 +60,7 @@ class TerminalScreen extends ConsumerStatefulWidget {
 }
 
 class _TerminalScreenState extends ConsumerState<TerminalScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   StreamSubscription? _statusSub;
   bool _showMinimap = false;
@@ -124,6 +124,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _swipeAnimController = AnimationController(
       vsync: this,
       // Duration is driven by SpringSimulation, but a ceiling prevents runaway.
@@ -134,6 +135,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _statusSub?.cancel();
     _swipeAnimController.dispose();
     _swipeOffset.dispose();
@@ -141,6 +143,21 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     _shiftActiveNotifier.dispose();
     _keyboardFocusNode.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final notifier = ref.read(surfaceProvider.notifier);
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        notifier.setAppBackgrounded();
+      case AppLifecycleState.resumed:
+        notifier.setAppResumed();
+        notifier.clearNotificationForFocusedSurface();
+      default:
+        break;
+    }
   }
 
   Future<void> _initConnection() async {
