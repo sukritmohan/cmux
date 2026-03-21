@@ -285,6 +285,7 @@ class _TabBarStripState extends State<TabBarStrip> {
                   isActive: isActive,
                   accentColor: c.accent,
                   showConnectionDot: isActive && surface.hasRunningProcess,
+                  showNotificationDot: surface.hasUnreadNotification,
                   underlineOpacity: underlineOpacity,
                 ),
               ),
@@ -347,6 +348,10 @@ class _TabChip extends StatelessWidget {
   final Color accentColor;
   final bool showConnectionDot;
 
+  /// When true, a 6px blue dot is shown instead of the green connection dot.
+  /// Blue dot takes priority — the two dots never show simultaneously.
+  final bool showNotificationDot;
+
   /// Opacity of the amber underline indicator (0.0–1.0). Interpolated during
   /// swipe gestures to create a crossfade between the current and target tabs.
   final double underlineOpacity;
@@ -357,6 +362,7 @@ class _TabChip extends StatelessWidget {
     required this.isActive,
     required this.accentColor,
     this.showConnectionDot = false,
+    this.showNotificationDot = false,
     this.underlineOpacity = 0.0,
   });
 
@@ -378,8 +384,19 @@ class _TabChip extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Connection dot (5px green circle before active tab title)
-              if (showConnectionDot)
+              // Notification dot (6px blue) takes priority over connection dot (5px green).
+              // They never show simultaneously.
+              if (showNotificationDot)
+                Container(
+                  width: 6,
+                  height: 6,
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF3B82F6),
+                    shape: BoxShape.circle,
+                  ),
+                )
+              else if (showConnectionDot)
                 Container(
                   width: 5,
                   height: 5,
