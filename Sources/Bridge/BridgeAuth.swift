@@ -27,6 +27,8 @@ final class BridgeAuth: @unchecked Sendable {
         let token: String
         let createdAt: Date
         var lastSeenAt: Date
+        /// FCM device token for push notifications. Set after the Android app registers with Firebase.
+        var fcmToken: String?
     }
 
     // MARK: - Constants
@@ -107,6 +109,36 @@ final class BridgeAuth: @unchecked Sendable {
             return
         }
         devices[index].lastSeenAt = Date()
+        saveDevicesLocked(devices)
+    }
+
+    /// Updates the FCM device token for a paired device.
+    ///
+    /// Called when the Android companion registers or refreshes its Firebase Cloud Messaging token.
+    ///
+    /// - Parameters:
+    ///   - deviceId: The UUID of the paired device.
+    ///   - token: The FCM registration token, or `nil` to clear it.
+    func updateFCMToken(deviceId: UUID, token: String?) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        var devices = loadDevicesLocked()
+        guard let index = devices.firstIndex(where: { $0.id == deviceId }) else {
+            return
+        }
+
+        // Clear this FCM token from all other devices to prevent duplicate pushes.
+        // The same physical phone always gets the same FCM token, but re-pairing
+        // creates a new device entry. Without this, old entries with stale FCM tokens
+        // would receive pushes because they aren't in connectedDeviceIds.
+        if let token {
+            for i in devices.indices where i != index && devices[i].fcmToken == token {
+                devices[i].fcmToken = nil
+            }
+        }
+
+        devices[index].fcmToken = token
         saveDevicesLocked(devices)
     }
 

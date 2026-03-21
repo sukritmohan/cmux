@@ -1751,7 +1751,6 @@ class GhosttyApp {
     }
 
     private func ringBell() {
-        NSLog("[attention] ringBell() called")
         let features = bellFeatures()
 
         if (features & (1 << 0)) != 0 {

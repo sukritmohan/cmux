@@ -108,7 +108,10 @@ class AttachmentButton extends ConsumerStatefulWidget {
   /// When true, the button renders at reduced opacity and ignores all taps.
   final bool isDisabled;
 
-  const AttachmentButton({super.key, this.isDisabled = false});
+  /// Button diameter in logical pixels. Defaults to 36.
+  final double size;
+
+  const AttachmentButton({super.key, this.isDisabled = false, this.size = 36});
 
   @override
   ConsumerState<AttachmentButton> createState() => _AttachmentButtonState();
@@ -400,8 +403,8 @@ class _AttachmentButtonState extends ConsumerState<AttachmentButton>
             child: Opacity(
               opacity: disabled ? 0.35 : 1.0,
               child: Container(
-                width: 36,
-                height: 36,
+                width: widget.size,
+                height: widget.size,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: c.keyGroupResting,
@@ -409,7 +412,7 @@ class _AttachmentButtonState extends ConsumerState<AttachmentButton>
                 child: Center(
                   child: Icon(
                     Icons.add_rounded,
-                    size: 18,
+                    size: widget.size * 0.5,
                     color: c.keyGroupText,
                   ),
                 ),

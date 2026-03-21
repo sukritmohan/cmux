@@ -37,10 +37,14 @@ class KeyboardButton extends StatefulWidget {
   final FocusNode keyboardFocusNode;
   final ValueNotifier<bool> autocompleteActiveNotifier;
 
+  /// Button diameter in logical pixels. Defaults to 36.
+  final double size;
+
   const KeyboardButton({
     super.key,
     required this.keyboardFocusNode,
     required this.autocompleteActiveNotifier,
+    this.size = 36,
   });
 
   @override
@@ -109,8 +113,8 @@ class _KeyboardButtonState extends State<KeyboardButton> {
 
       return _buildGesture(
         child: Container(
-          width: 36,
-          height: 36,
+          width: widget.size,
+          height: widget.size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
@@ -129,7 +133,7 @@ class _KeyboardButtonState extends State<KeyboardButton> {
           alignment: Alignment.center,
           child: Icon(
             Icons.keyboard_outlined,
-            size: 16,
+            size: widget.size * 0.44,
             color: c.keyboardBtnIcon,
           ),
         ),
@@ -139,8 +143,8 @@ class _KeyboardButtonState extends State<KeyboardButton> {
     // Autocomplete OFF: dim style.
     return _buildGesture(
       child: Container(
-        width: 36,
-        height: 36,
+        width: widget.size,
+        height: widget.size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: const Color(0x0FFFFFFF), // rgba(255,255,255,0.06)
@@ -148,7 +152,7 @@ class _KeyboardButtonState extends State<KeyboardButton> {
         alignment: Alignment.center,
         child: Icon(
           Icons.keyboard_outlined,
-          size: 16,
+          size: widget.size * 0.44,
           color: c.keyGroupText.withAlpha(100),
         ),
       ),

@@ -266,15 +266,12 @@ final class BridgeEventRelay: @unchecked Sendable {
         observers.append(NotificationCenter.default.addObserver(
             forName: .bridgeSurfaceAttention, object: nil, queue: nil
         ) { [weak self] notification in
-            NSLog("[attention] BridgeEventRelay received .bridgeSurfaceAttention")
             guard let tabId = notification.userInfo?[GhosttyNotificationKey.tabId] as? UUID else {
-                NSLog("[attention] BridgeEventRelay: missing tabId in userInfo")
                 return
             }
             let surfaceId = notification.userInfo?[GhosttyNotificationKey.surfaceId] as? UUID
             let reason = notification.userInfo?[BridgeNotificationKey.reason] as? String ?? "notification"
             let title = notification.userInfo?[BridgeNotificationKey.notificationTitle] as? String ?? ""
-            NSLog("[attention] BridgeEventRelay emitting surface.attention ws=%@ reason=%@", tabId.uuidString, reason)
             self?.emit(event: "surface.attention", data: [
                 "workspace_id": tabId.uuidString,
                 "surface_id": surfaceId?.uuidString ?? "",

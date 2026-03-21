@@ -16,8 +16,14 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+
+import 'package:firebase_core/firebase_core.dart';
+
+import '../notifications/fcm_token_manager.dart';
+import '../notifications/firebase_config_store.dart';
 
 import 'connection_state.dart';
 import 'message_protocol.dart';
@@ -161,6 +167,10 @@ class ConnectionManager with WidgetsBindingObserver {
       _reconnectAttempt = 0;
       _startPingTimer();
       _setStatus(ConnectionStatus.connected);
+
+      // Step 3: Initialize FCM after connection is fully established.
+      // Must run after connected status so debug reports can be sent back.
+      await _handleFCMConfig(authResponse.result);
     } catch (e) {
       _handleDisconnect(e);
     }
@@ -250,6 +260,9 @@ class ConnectionManager with WidgetsBindingObserver {
     final event = BridgeEvent.fromJson(json);
     if (event != null) {
       _eventController.add(event);
+
+      // surface.attention is handled by EventHandler via eventStream —
+      // no need to handle it directly here.
     }
   }
 
@@ -358,6 +371,89 @@ class ConnectionManager with WidgetsBindingObserver {
     _cleanup();
     _reconnectAttempt = 0;
     _doConnect();
+  }
+
+  /// Stores Firebase config from auth response and initializes FCM.
+  ///
+  /// If the Mac has FCM configured, the auth.pair response includes
+  /// `fcm_config` with the Firebase project details. We store them,
+  /// initialize Firebase, and send our FCM token back.
+  Future<void> _handleFCMConfig(Map<String, dynamic>? result) async {
+    if (result == null) {
+      debugPrint('[ConnectionManager] _handleFCMConfig: result is null');
+      _reportFCMStatus('result_null');
+      return;
+    }
+    final fcmConfigJson = result['fcm_config'] as Map<String, dynamic>?;
+    if (fcmConfigJson == null) {
+      debugPrint('[ConnectionManager] _handleFCMConfig: no fcm_config in result. keys=${result.keys.toList()}');
+      _reportFCMStatus('no_fcm_config_in_result:keys=${result.keys.toList()}');
+      return;
+    }
+
+    try {
+      debugPrint('[ConnectionManager] _handleFCMConfig: received fcm_config=$fcmConfigJson');
+      final config = FirebaseConfig.fromJson(fcmConfigJson);
+      await FirebaseConfigStore.save(config);
+      debugPrint('[ConnectionManager] stored Firebase config from auth response');
+
+      // Initialize Firebase if not already done (e.g., config arrived after app start).
+      debugPrint('[ConnectionManager] initializing Firebase...');
+      final firebase = await _ensureFirebaseInitialized(config);
+      debugPrint('[ConnectionManager] Firebase initialized=$firebase');
+      if (firebase) {
+        _reportFCMStatus('firebase_init_ok');
+        // Wire up token sending and initialize FCM.
+        FCMTokenManager.instance.onTokenAvailable = _sendFCMToken;
+        debugPrint('[ConnectionManager] initializing FCMTokenManager...');
+        await FCMTokenManager.instance.initialize();
+        debugPrint('[ConnectionManager] FCMTokenManager initialized');
+      } else {
+        _reportFCMStatus('firebase_init_failed');
+      }
+    } catch (e, st) {
+      debugPrint('[ConnectionManager] failed to handle FCM config: $e\n$st');
+      _reportFCMStatus('error:$e');
+    }
+  }
+
+  /// Reports FCM initialization status to the Mac for debugging.
+  /// The Mac logs all incoming messages, so we can see this in system logs.
+  void _reportFCMStatus(String status) {
+    if (_status != ConnectionStatus.connected) return;
+    sendRequest('system.fcm_debug', params: {'status': status});
+  }
+
+  /// Initializes Firebase if not already initialized.
+  Future<bool> _ensureFirebaseInitialized(FirebaseConfig config) async {
+    try {
+      // Check if already initialized (e.g., from main.dart startup).
+      await Firebase.app();
+      return true;
+    } catch (_) {
+      // Not initialized yet — do it now.
+      try {
+        await Firebase.initializeApp(
+          options: FirebaseOptions(
+            apiKey: config.apiKey,
+            appId: config.appId,
+            messagingSenderId: config.senderId,
+            projectId: config.projectId,
+          ),
+        );
+        return true;
+      } catch (e) {
+        debugPrint('[ConnectionManager] Firebase init failed: $e');
+        return false;
+      }
+    }
+  }
+
+  /// Sends the FCM device token to the Mac for push notification delivery.
+  void _sendFCMToken(String token) {
+    if (_status != ConnectionStatus.connected) return;
+    debugPrint('[ConnectionManager] sending FCM token to Mac');
+    sendRequest('system.update_fcm_token', params: {'fcm_token': token});
   }
 
   void _setStatus(ConnectionStatus newStatus) {

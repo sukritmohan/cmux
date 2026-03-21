@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.manaflow.cmux_companion"
+    namespace = "sm.beethoven"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.manaflow.cmux_companion"
+        applicationId = "sm.beethoven"
         minSdk = 24
         targetSdk = 35
         versionCode = flutter.versionCode

@@ -1,4 +1,4 @@
-package com.manaflow.cmux_companion
+package sm.beethoven
 
 import io.flutter.embedding.android.FlutterActivity
 

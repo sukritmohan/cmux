@@ -104,6 +104,8 @@
 		DA7A10CA710E000000000004 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = DA7A10CA710E000000000002 /* InfoPlist.xcstrings */; };
 		A5001623 /* cmux.sdef in Resources */ = {isa = PBXBuildFile; fileRef = A5001622 /* cmux.sdef */; };
 		4AAF736E15356947D36442A3 /* BridgeAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ED2848AF6431B2558733CC5 /* BridgeAuth.swift */; };
+		FCM0001AA00000000000001 /* FCMCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCM0001BB00000000000001 /* FCMCredentialStore.swift */; };
+		FCM0001AA00000000000002 /* FCMDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCM0001BB00000000000002 /* FCMDispatcher.swift */; };
 		724640505C9E50380FABA4F5 /* BridgeSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6569211F03DCF550BE6E92C7 /* BridgeSettings.swift */; };
 		7D39AB7D060661A97542EE14 /* BridgeServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B40931E651DF666BFEC8322 /* BridgeServer.swift */; };
 		966DAA605C4987BC04FD08DF /* BridgeConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EEDEC8E9F5F313E53454FD /* BridgeConnection.swift */; };
@@ -269,6 +271,8 @@
 		DA7A10CA710E000000000002 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		A5001622 /* cmux.sdef */ = {isa = PBXFileReference; lastKnownFileType = text.sdef; path = cmux.sdef; sourceTree = "<group>"; };
 		1ED2848AF6431B2558733CC5 /* BridgeAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeAuth.swift; sourceTree = "<group>"; };
+		FCM0001BB00000000000001 /* FCMCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FCMCredentialStore.swift; sourceTree = "<group>"; };
+		FCM0001BB00000000000002 /* FCMDispatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FCMDispatcher.swift; sourceTree = "<group>"; };
 		6569211F03DCF550BE6E92C7 /* BridgeSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeSettings.swift; sourceTree = "<group>"; };
 		7B40931E651DF666BFEC8322 /* BridgeServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeServer.swift; sourceTree = "<group>"; };
 		94EEDEC8E9F5F313E53454FD /* BridgeConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeConnection.swift; sourceTree = "<group>"; };
@@ -529,6 +533,8 @@
 			isa = PBXGroup;
 			children = (
 				1ED2848AF6431B2558733CC5 /* BridgeAuth.swift */,
+				FCM0001BB00000000000001 /* FCMCredentialStore.swift */,
+				FCM0001BB00000000000002 /* FCMDispatcher.swift */,
 				6569211F03DCF550BE6E92C7 /* BridgeSettings.swift */,
 				7B40931E651DF666BFEC8322 /* BridgeServer.swift */,
 				94EEDEC8E9F5F313E53454FD /* BridgeConnection.swift */,
@@ -754,6 +760,8 @@
 				A500120C /* WindowAccessor.swift in Sources */,
 				A5001610 /* SessionPersistence.swift in Sources */,
 				4AAF736E15356947D36442A3 /* BridgeAuth.swift in Sources */,
+				FCM0001AA00000000000001 /* FCMCredentialStore.swift in Sources */,
+				FCM0001AA00000000000002 /* FCMDispatcher.swift in Sources */,
 				724640505C9E50380FABA4F5 /* BridgeSettings.swift in Sources */,
 				7D39AB7D060661A97542EE14 /* BridgeServer.swift in Sources */,
 				966DAA605C4987BC04FD08DF /* BridgeConnection.swift in Sources */,

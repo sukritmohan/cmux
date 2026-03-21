@@ -40,10 +40,14 @@ class ClipboardButton extends StatelessWidget {
   final ClipboardHistoryState historyState;
   final VoidCallback onTap;
 
+  /// Button diameter in logical pixels. Defaults to 36.
+  final double size;
+
   const ClipboardButton({
     super.key,
     required this.historyState,
     required this.onTap,
+    this.size = 36,
   });
 
   @override
@@ -60,15 +64,15 @@ class ClipboardButton extends StatelessWidget {
           onTap();
         },
         child: SizedBox(
-          width: 36,
-          height: 36,
+          width: size,
+          height: size,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               // Circular background with icon.
               Container(
-                width: 36,
-                height: 36,
+                width: size,
+                height: size,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: c.keyGroupResting,
@@ -76,7 +80,7 @@ class ClipboardButton extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Icon(
                   Icons.content_paste_rounded,
-                  size: 16,
+                  size: size * 0.44,
                   color: c.keyGroupText,
                 ),
               ),

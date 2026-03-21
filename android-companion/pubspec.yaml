@@ -37,6 +37,10 @@ dependencies:
   # System notifications for terminal attention events
   flutter_local_notifications: ^18.0.1
 
+  # Firebase Cloud Messaging (runtime initialization — no google-services plugin)
+  firebase_core: ^3.13.0
+  firebase_messaging: ^15.2.5
+
   # Routing
   go_router: ^14.8.1
 

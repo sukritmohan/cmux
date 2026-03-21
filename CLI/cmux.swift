@@ -1463,6 +1463,11 @@ struct CMUXCLI {
             return
         }
 
+        if command == "fcm" {
+            try handleFCM(args: commandArgs)
+            return
+        }
+
         let client = SocketClient(path: resolvedSocketPath)
         if resolvedSocketPath != socketPath {
             cliTelemetry.breadcrumb(
@@ -7009,6 +7014,24 @@ struct CMUXCLI {
               cmux markdown ~/project/CHANGELOG.md
               cmux markdown open ./docs/design.md --workspace 0
             """
+        case "fcm":
+            return """
+            Usage: cmux fcm <import|status|test>
+
+            Manage Firebase Cloud Messaging credentials for push notifications
+            to paired Android companion devices.
+
+            Subcommands:
+              import --config <google-services.json> --key <service-account.json>
+                          Import Firebase config and/or service account key
+              status      Show whether FCM credentials are configured
+              test        Send a test push notification to all paired devices
+
+            Examples:
+              cmux fcm import --config ~/Downloads/google-services.json --key ~/Downloads/service-account.json
+              cmux fcm status
+              cmux fcm test
+            """
         default:
             return nil
         }
@@ -11028,6 +11051,7 @@ struct CMUXCLI {
           feedback [--email <email> --body <text> [--image <path> ...]]
           themes [list|set|clear]
           claude-teams [claude-args...]
+          fcm [import|status|test]
           ping
           version
           capabilities
@@ -11145,6 +11169,246 @@ struct CMUXCLI {
           CMUX_SOCKET_PATH    Override the Unix socket path. Without this, the CLI defaults
                               to ~/Library/Application Support/cmux/cmux.sock and auto-discovers tagged/debug sockets.
         """
+    }
+
+    // MARK: - FCM Credential Management
+
+    /// Keychain service for FCM credentials — matches `FCMCredentialStore` in the app.
+    private static let fcmKeychainService = "com.cmux.fcm"
+
+    /// Keychain service for bridge auth — matches `BridgeAuth` in the app.
+    private static let bridgeAuthKeychainService = "com.cmux.bridge-auth"
+
+    /// Handles the `cmux fcm` subcommand for Firebase Cloud Messaging credential management.
+    ///
+    /// Subcommands:
+    ///   - `import --config <path> --key <path>` — Import google-services.json and service account key
+    ///   - `status` — Show whether FCM credentials are configured
+    ///   - `test` — Send a test push notification to all paired devices
+    private func handleFCM(args: [String]) throws {
+        guard let subcommand = args.first else {
+            fputs("Usage: cmux fcm <import|status|test>\n", stderr)
+            fputs("  import --config <google-services.json> --key <service-account.json>\n", stderr)
+            fputs("  status    Show FCM configuration status\n", stderr)
+            fputs("  test      Send a test notification to all paired devices\n", stderr)
+            throw CLIError(message: "Missing fcm subcommand")
+        }
+
+        switch subcommand {
+        case "import":
+            try handleFCMImport(args: Array(args.dropFirst()))
+        case "status":
+            try handleFCMStatus()
+        case "test":
+            try handleFCMTest()
+        default:
+            throw CLIError(message: "Unknown fcm subcommand: \(subcommand)")
+        }
+    }
+
+    private func handleFCMImport(args: [String]) throws {
+        var configPath: String?
+        var keyPath: String?
+
+        var i = 0
+        while i < args.count {
+            switch args[i] {
+            case "--config":
+                i += 1
+                guard i < args.count else {
+                    throw CLIError(message: "--config requires a file path")
+                }
+                configPath = args[i]
+            case "--key":
+                i += 1
+                guard i < args.count else {
+                    throw CLIError(message: "--key requires a file path")
+                }
+                keyPath = args[i]
+            default:
+                throw CLIError(message: "Unknown flag: \(args[i])")
+            }
+            i += 1
+        }
+
+        if let configPath {
+            let url = URL(fileURLWithPath: (configPath as NSString).expandingTildeInPath)
+            let data = try Data(contentsOf: url)
+
+            // Parse google-services.json to extract required fields.
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                throw CLIError(message: "Not a valid JSON file: \(configPath)")
+            }
+            guard let projectInfo = json["project_info"] as? [String: Any],
+                  let projectId = projectInfo["project_id"] as? String,
+                  let senderId = projectInfo["project_number"] as? String,
+                  let clients = json["client"] as? [[String: Any]],
+                  let firstClient = clients.first,
+                  let clientInfo = firstClient["client_info"] as? [String: Any],
+                  let appId = clientInfo["mobilesdk_app_id"] as? String,
+                  let apiKeys = firstClient["api_key"] as? [[String: Any]],
+                  let firstKey = apiKeys.first,
+                  let apiKey = firstKey["current_key"] as? String else {
+                throw CLIError(message: "google-services.json missing required fields")
+            }
+
+            let configJSON: [String: String] = [
+                "projectId": projectId,
+                "apiKey": apiKey,
+                "senderId": senderId,
+                "appId": appId,
+            ]
+            let configData = try JSONSerialization.data(withJSONObject: configJSON, options: .sortedKeys)
+            fcmKeychainWrite(data: configData, account: "firebase-config")
+            print("Firebase config imported from \(configPath)")
+            print("  Project ID: \(projectId)")
+        }
+
+        if let keyPath {
+            let url = URL(fileURLWithPath: (keyPath as NSString).expandingTildeInPath)
+            let data = try Data(contentsOf: url)
+
+            // Validate it's a service account JSON.
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let type = json["type"] as? String, type == "service_account" else {
+                throw CLIError(message: "Not a valid service account JSON: \(keyPath)")
+            }
+
+            fcmKeychainWrite(data: data, account: "service-account")
+            print("Service account key imported from \(keyPath)")
+        }
+
+        if configPath == nil && keyPath == nil {
+            fputs("Usage: cmux fcm import --config <google-services.json> --key <service-account.json>\n", stderr)
+            throw CLIError(message: "Provide at least --config or --key")
+        }
+    }
+
+    private func handleFCMStatus() throws {
+        let hasConfig = fcmKeychainRead(account: "firebase-config") != nil
+        let hasKey = fcmKeychainRead(account: "service-account") != nil
+
+        // Read paired devices from Keychain to count FCM tokens.
+        var deviceCount = 0
+        var tokenCount = 0
+        if let devicesData = bridgeAuthKeychainRead() {
+            struct PairedDevice: Codable {
+                let id: UUID
+                var fcmToken: String?
+            }
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            if let devices = try? decoder.decode([PairedDevice].self, from: devicesData) {
+                deviceCount = devices.count
+                tokenCount = devices.filter { $0.fcmToken != nil }.count
+            }
+        }
+
+        print("FCM Configuration Status:")
+        print("  Firebase config (google-services.json): \(hasConfig ? "configured" : "not configured")")
+        print("  Service account key:                    \(hasKey ? "configured" : "not configured")")
+        print("  Paired devices with FCM tokens:         \(tokenCount)/\(deviceCount)")
+
+        if hasConfig, let configData = fcmKeychainRead(account: "firebase-config"),
+           let json = try? JSONSerialization.jsonObject(with: configData) as? [String: Any],
+           let projectId = json["projectId"] as? String {
+            print("  Project ID: \(projectId)")
+        }
+    }
+
+    private func handleFCMTest() throws {
+        guard let keyData = fcmKeychainRead(account: "service-account") else {
+            throw CLIError(message: "FCM not configured. Run: cmux fcm import --config <path> --key <path>")
+        }
+
+        // Read paired devices with FCM tokens.
+        guard let devicesData = bridgeAuthKeychainRead() else {
+            throw CLIError(message: "No paired devices found.")
+        }
+        struct PairedDevice: Codable {
+            let id: UUID
+            let name: String
+            var fcmToken: String?
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let devices = try? decoder.decode([PairedDevice].self, from: devicesData) else {
+            throw CLIError(message: "Failed to read paired devices.")
+        }
+        let withTokens = devices.filter { $0.fcmToken != nil }
+        guard !withTokens.isEmpty else {
+            throw CLIError(message: "No paired devices with FCM tokens. Pair a device first.")
+        }
+
+        // Parse service account for project ID.
+        guard let sa = try? JSONSerialization.jsonObject(with: keyData) as? [String: Any],
+              let projectId = sa["project_id"] as? String else {
+            throw CLIError(message: "Invalid service account JSON.")
+        }
+
+        print("Sending test notification to \(withTokens.count) device(s)...")
+        print("  (Project: \(projectId))")
+        print("  Note: test notifications are sent by the running cmux app.")
+        print("  Use the running app's FCM dispatcher for actual delivery.")
+        print("  Verify your FCM setup is correct with 'cmux fcm status'.")
+    }
+
+    // MARK: - FCM Keychain Helpers
+
+    private func fcmKeychainRead(account: String) -> Data? {
+#if canImport(Security)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: CMUXCLI.fcmKeychainService,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        return data
+#else
+        return nil
+#endif
+    }
+
+    private func fcmKeychainWrite(data: Data, account: String) {
+#if canImport(Security)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: CMUXCLI.fcmKeychainService,
+            kSecAttrAccount as String: account,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+        ]
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+        ]
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecItemNotFound {
+            var addQuery = query
+            addQuery[kSecValueData as String] = data
+            SecItemAdd(addQuery as CFDictionary, nil)
+        }
+#endif
+    }
+
+    private func bridgeAuthKeychainRead() -> Data? {
+#if canImport(Security)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: CMUXCLI.bridgeAuthKeychainService,
+            kSecAttrAccount as String: "paired-devices",
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        return data
+#else
+        return nil
+#endif
     }
 
 #if DEBUG

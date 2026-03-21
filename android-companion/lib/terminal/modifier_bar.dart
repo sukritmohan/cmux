@@ -1,16 +1,19 @@
 /// Floating capsule modifier toolbar — four-section layout.
 ///
-/// Layout (flex row):
-///   [Left: Keys flex:1] | [Middle: Tools 2×2] [Voice pill] | [Right: Nav+Submit flex:1]
+/// Portrait layout (width < 600):
+///   [Left: Keys flex:1] | [Middle: Tools 2×2 76px] [Voice pill] | [Right: Nav+Submit]
 ///
-///   Left:                   Middle:           Voice:    Right:
-///     Row 1: esc|⇥|⇧|⌃     [+attach] [clip]  [MIC]    [joystick] [RETURN]
-///     Row 2: ~ | / | -      [⌫bksp]  [kbd]   [pill]
-///                                              [76px]
+/// Landscape/tablet layout (width >= 600):
+///   [Left: Keys 180px fixed] | [Middle: Tools row flex:1, 44px btns] [Voice] | [Right: Nav+Submit]
+///
+///   Left:                   Middle (portrait):  Voice:    Right:
+///     Row 1: esc|⇥|⇧|⌃     [+attach] [clip]    [MIC]    [joystick] [RETURN]
+///     Row 2: ~ | / | -      [⌫bksp]  [kbd]     [pill]
+///                           Middle (landscape):  [76px]
+///                            [+] [clip] [⌫] [kbd]  ← horizontal row, 44px
 ///
 /// Three sections separated by two 56px-tall vertical dividers.
 /// Voice mic is a 44×76px full-height pill between the tools grid and right divider.
-/// Left and right both flex:1. Middle is a fixed-width 2×2 grid (76px).
 library;
 
 import 'dart:ui';
@@ -213,6 +216,99 @@ class _ModifierBarState extends State<ModifierBar> {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final isLandscape = MediaQuery.of(context).size.width >= 600;
+
+    // Left column: modifier keys + symbol keys (shared between layouts).
+    final leftColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Row 1: esc|⇥|⇧|⌃ pill (36px tall, flex:1 per key)
+        _KeyGroupCapsule(
+          ctrlState: _ctrlState,
+          shiftState: _shiftState,
+          onEsc: _onEsc,
+          onTab: _onTab,
+          onShift: _onShiftTap,
+          onCtrl: _onCtrlTap,
+        ),
+        const SizedBox(height: 4),
+        // Row 2: ~|/|- pill (36px tall, flex:1 per key)
+        // Symbols bypass Ctrl — use widget.onInput directly
+        SymbolCapsule(onInput: widget.onInput),
+      ],
+    );
+
+    // Center section: 2×2 grid (portrait) or horizontal row (landscape).
+    final centerSection = isLandscape
+        ? Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AttachmentButton(
+                    isDisabled: widget.isUploading ||
+                        widget.attachmentState.isAtLimit,
+                    size: 44,
+                  ),
+                  const SizedBox(width: 24),
+                  ClipboardButton(
+                    historyState: widget.clipboardHistoryState,
+                    onTap: _onShowClipboard,
+                    size: 44,
+                  ),
+                  const SizedBox(width: 24),
+                  _BackspaceButton(
+                    onBackspace: _onBackspace,
+                    size: 44,
+                  ),
+                  const SizedBox(width: 24),
+                  KeyboardButton(
+                    keyboardFocusNode: widget.keyboardFocusNode,
+                    autocompleteActiveNotifier:
+                        widget.autocompleteActiveNotifier,
+                    size: 44,
+                  ),
+                ],
+              ),
+            ),
+          )
+        : SizedBox(
+            width: 76, // 36 + 4 + 36
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    AttachmentButton(
+                      isDisabled: widget.isUploading ||
+                          widget.attachmentState.isAtLimit,
+                    ), // top-left
+                    const SizedBox(width: 4),
+                    ClipboardButton(
+                      historyState: widget.clipboardHistoryState,
+                      onTap: _onShowClipboard,
+                    ), // top-right
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    _BackspaceButton(
+                      onBackspace: _onBackspace,
+                    ), // bottom-left
+                    const SizedBox(width: 4),
+                    KeyboardButton(
+                      keyboardFocusNode: widget.keyboardFocusNode,
+                      autocompleteActiveNotifier:
+                          widget.autocompleteActiveNotifier,
+                    ), // bottom-right
+                  ],
+                ),
+              ],
+            ),
+          );
 
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 0, 8, 2),
@@ -228,71 +324,22 @@ class _ModifierBarState extends State<ModifierBar> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: Row(
             children: [
-              // LEFT: Terminal key pills (flex: 1)
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Row 1: esc|⇥|⇧|⌃ pill (36px tall, flex:1 per key)
-                    _KeyGroupCapsule(
-                      ctrlState: _ctrlState,
-                      shiftState: _shiftState,
-                      onEsc: _onEsc,
-                      onTab: _onTab,
-                      onShift: _onShiftTap,
-                      onCtrl: _onCtrlTap,
-                    ),
-                    const SizedBox(height: 4),
-                    // Row 2: ~|/|- pill (36px tall, flex:1 per key)
-                    // Symbols bypass Ctrl — use widget.onInput directly
-                    SymbolCapsule(onInput: widget.onInput),
-                  ],
-                ),
-              ),
+              // LEFT: Terminal key pills
+              // Portrait: flex:1. Landscape: fixed 180px.
+              if (isLandscape)
+                SizedBox(width: 180, child: leftColumn)
+              else
+                Expanded(child: leftColumn),
 
               // DIVIDER 1 (1px × 56px, margin 0 10px)
               _SectionDivider(),
 
-              // MIDDLE: Tools 2×2 grid (fixed 76px wide)
-              SizedBox(
-                width: 76, // 36 + 4 + 36
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Row(
-                      children: [
-                        AttachmentButton(
-                          isDisabled: widget.isUploading || widget.attachmentState.isAtLimit,
-                        ), // top-left
-                        const SizedBox(width: 4),
-                        ClipboardButton(          // top-right
-                          historyState: widget.clipboardHistoryState,
-                          onTap: _onShowClipboard,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        _BackspaceButton(         // bottom-left
-                          onBackspace: _onBackspace,
-                        ),
-                        const SizedBox(width: 4),
-                        KeyboardButton(           // bottom-right
-                          keyboardFocusNode: widget.keyboardFocusNode,
-                          autocompleteActiveNotifier:
-                              widget.autocompleteActiveNotifier,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              // MIDDLE: Tools
+              centerSection,
 
               // VOICE: Full-height pill between grid and right section
               Padding(
-                padding: const EdgeInsets.only(left: 6),
+                padding: EdgeInsets.only(left: isLandscape ? 10 : 6),
                 child: VoiceButton(
                   width: 44,
                   height: 76,
@@ -514,7 +561,10 @@ class _SectionDivider extends StatelessWidget {
 class _BackspaceButton extends StatefulWidget {
   final VoidCallback onBackspace;
 
-  const _BackspaceButton({required this.onBackspace});
+  /// Button size in logical pixels. Defaults to 36.
+  final double size;
+
+  const _BackspaceButton({required this.onBackspace, this.size = 36});
 
   @override
   State<_BackspaceButton> createState() => _BackspaceButtonState();
@@ -566,16 +616,16 @@ class _BackspaceButtonState extends State<_BackspaceButton> {
           scale: _pressed ? 0.93 : 1.0,
           duration: const Duration(milliseconds: 80),
           child: Container(
-            width: 36,
-            height: 36,
+            width: widget.size,
+            height: widget.size,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(widget.size * 0.28),
               color: c.keyGroupResting,
             ),
             alignment: Alignment.center,
             child: Icon(
               Icons.backspace_outlined,
-              size: 16,
+              size: widget.size * 0.44,
               color: c.keyGroupText,
             ),
           ),

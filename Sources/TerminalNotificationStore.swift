@@ -895,6 +895,18 @@ final class TerminalNotificationStore: ObservableObject {
                 object: nil,
                 userInfo: bridgeInfo
             )
+
+            // Send FCM push to devices not connected via WebSocket.
+            // FCMDispatcher handles rate limiting and skips connected devices.
+            FCMDispatcher.shared.notifyAllDevices(
+                title: title.isEmpty ? "Terminal attention" : title,
+                body: subtitle.isEmpty ? body : subtitle,
+                data: [
+                    "workspace_id": tabId.uuidString,
+                    "surface_id": surfaceId?.uuidString ?? "",
+                    "reason": "notification",
+                ]
+            )
         }
     }
 

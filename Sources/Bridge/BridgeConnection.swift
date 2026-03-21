@@ -394,6 +394,8 @@ final class BridgeConnection {
             handleVoiceStart(id: id)
         case "voice.stop":
             handleVoiceStop(id: id)
+        case "system.update_fcm_token":
+            handleUpdateFCMToken(id: id, params: params)
         default:
             dispatchToTerminalController(method: method, id: id, params: params)
         }
@@ -436,10 +438,47 @@ final class BridgeConnection {
             userInfo: ["deviceId": device.id, "deviceName": device.name]
         )
 
-        sendText(encodeOk(id: id, result: [
+        var result: [String: Any] = [
             "authenticated": true,
             "device_id": device.id.uuidString,
-        ]))
+        ]
+
+        // Include Firebase config so Android can initialize FCM at runtime.
+        if let fcmConfig = FCMCredentialStore.shared.getFirebaseConfig() {
+            result["fcm_config"] = [
+                "project_id": fcmConfig.projectId,
+                "api_key": fcmConfig.apiKey,
+                "sender_id": fcmConfig.senderId,
+                "app_id": fcmConfig.appId,
+            ]
+        }
+
+        sendText(encodeOk(id: id, result: result))
+    }
+
+    // MARK: - FCM Token Registration
+
+    /// Handles the `system.update_fcm_token` request from Android.
+    ///
+    /// Stores the FCM device token so `FCMDispatcher` can send push notifications
+    /// to this device when it's not connected via WebSocket.
+    ///
+    /// - Parameters:
+    ///   - id: The JSON-RPC request ID.
+    ///   - params: Must contain `"fcm_token"` as a string.
+    private func handleUpdateFCMToken(id: Any?, params: [String: Any]) {
+        guard let fcmToken = params["fcm_token"] as? String, !fcmToken.isEmpty else {
+            sendText(encodeError(id: id, code: "invalid_params", message: "Missing fcm_token"))
+            return
+        }
+
+        guard let deviceId else {
+            sendText(encodeError(id: id, code: "auth_required", message: "Not authenticated"))
+            return
+        }
+
+        BridgeAuth.shared.updateFCMToken(deviceId: deviceId, token: fcmToken)
+        sendText(encodeOk(id: id, result: ["stored": true]))
     }
 
     // MARK: - PTY Subscription Handlers

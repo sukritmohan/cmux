@@ -7,6 +7,8 @@
 /// Supports dark/light themes via [themeModeProvider].
 library;
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,11 +16,39 @@ import 'app/providers.dart';
 import 'app/router.dart';
 import 'app/theme.dart';
 import 'notifications/attention_notification_handler.dart';
+import 'notifications/fcm_token_manager.dart';
+import 'notifications/firebase_config_store.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AttentionNotificationHandler.instance.initialize();
+  await _initializeFirebaseIfConfigured();
   runApp(const ProviderScope(child: CmuxCompanionApp()));
+}
+
+/// Initializes Firebase with stored config if available.
+///
+/// Config is received from the Mac during pairing and stored in secure storage.
+/// If no config is stored (user hasn't set up FCM), this is a no-op —
+/// WebSocket-based notifications continue to work.
+Future<void> _initializeFirebaseIfConfigured() async {
+  final config = await FirebaseConfigStore.load();
+  if (config == null) return;
+
+  try {
+    await Firebase.initializeApp(
+      options: FirebaseOptions(
+        apiKey: config.apiKey,
+        appId: config.appId,
+        messagingSenderId: config.senderId,
+        projectId: config.projectId,
+      ),
+    );
+    await FCMTokenManager.instance.initialize();
+  } catch (e) {
+    // Firebase init failure is non-fatal — WebSocket notifications still work.
+    debugPrint('[main] Firebase initialization failed: $e');
+  }
 }
 
 class CmuxCompanionApp extends ConsumerWidget {
