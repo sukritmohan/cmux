@@ -30,12 +30,14 @@ class Surface {
   final String title;
   final String workspaceId;
   final bool hasRunningProcess;
+  final bool hasUnreadNotification;
 
   const Surface({
     required this.id,
     required this.title,
     required this.workspaceId,
     this.hasRunningProcess = false,
+    this.hasUnreadNotification = false,
   });
 
   Surface copyWith({
@@ -43,12 +45,14 @@ class Surface {
     String? title,
     String? workspaceId,
     bool? hasRunningProcess,
+    bool? hasUnreadNotification,
   }) {
     return Surface(
       id: id ?? this.id,
       title: title ?? this.title,
       workspaceId: workspaceId ?? this.workspaceId,
       hasRunningProcess: hasRunningProcess ?? this.hasRunningProcess,
+      hasUnreadNotification: hasUnreadNotification ?? this.hasUnreadNotification,
     );
   }
 }
