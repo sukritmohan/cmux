@@ -31,6 +31,7 @@ import '../browser/browser_view.dart';
 import '../connection/connection_state.dart';
 import '../files/file_explorer_view.dart';
 import '../minimap/minimap_view.dart';
+import '../notifications/attention_notification_handler.dart';
 import '../shared/connection_overlay.dart';
 import '../shared/gesture_layer.dart';
 import '../shared/pane_type_dropdown.dart';
@@ -160,6 +161,8 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     // Initialize event handler to start routing bridge events.
     ref.read(eventHandlerProvider);
 
+
+
     // Listen for connected status to fetch initial workspace data.
     // Resync state on every (re)connect — fetchWorkspaces replaces state
     // atomically so this is idempotent.
@@ -181,6 +184,18 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     final wsNotifier = ref.read(workspaceProvider.notifier);
     await wsNotifier.fetchWorkspaces();
     _syncSurfacesFromWorkspace();
+
+    // If the app was launched by tapping a notification, navigate to that
+    // workspace/pane now that initial data is loaded.
+    final pending = AttentionNotificationHandler.pendingNavigation;
+    if (pending != null) {
+      AttentionNotificationHandler.pendingNavigation = null;
+      debugPrint('[TerminalScreen] consuming pending navigation: ws=${pending.workspaceId} surface=${pending.surfaceId}');
+      ref.read(workspaceProvider.notifier).selectWorkspace(pending.workspaceId);
+      if (pending.surfaceId.isNotEmpty) {
+        ref.read(surfaceProvider.notifier).focusSurface(pending.surfaceId);
+      }
+    }
   }
 
   /// Syncs the surface list from the active workspace's panels.

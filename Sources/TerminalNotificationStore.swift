@@ -856,6 +856,7 @@ final class TerminalNotificationStore: ObservableObject {
         let isFocusedPanel = isActiveTab && isFocusedSurface
         let isAppFocused = AppFocusState.isAppFocused()
         let shouldSuppressExternalDelivery = isAppFocused && isFocusedPanel
+        NSLog("addNotification title=\(title) appFocused=\(isAppFocused) focusedPanel=\(isFocusedPanel) suppress=\(shouldSuppressExternalDelivery)")
 
         if WorkspaceAutoReorderSettings.isEnabled() {
             AppDelegate.shared?.tabManager?.moveTabToTopForNotification(tabId)
@@ -1034,7 +1035,9 @@ final class TerminalNotificationStore: ObservableObject {
     }
 
     private func scheduleUserNotification(_ notification: TerminalNotification) {
+        NSLog("scheduleUserNotification called title=\(notification.title)")
         ensureAuthorization(origin: .notificationDelivery) { [weak self] authorized in
+            NSLog("scheduleUserNotification authorized=\(authorized)")
             guard let self, authorized else { return }
 
             let content = UNMutableNotificationContent()
@@ -1060,10 +1063,12 @@ final class TerminalNotificationStore: ObservableObject {
                 trigger: nil
             )
 
+            NSLog("scheduleUserNotification submitting request id=\(request.identifier) title=\(content.title)")
             self.center.add(request) { error in
                 if let error {
                     NSLog("Failed to schedule notification: \(error)")
                 } else {
+                    NSLog("scheduleUserNotification SUCCESS id=\(request.identifier)")
                     NotificationSoundSettings.runCustomCommand(
                         title: content.title,
                         subtitle: content.subtitle,

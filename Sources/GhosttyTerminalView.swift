@@ -2074,7 +2074,10 @@ class GhosttyApp {
                    let tabManager = AppDelegate.shared?.tabManager {
                     let isActiveTab = tabManager.selectedTabId == tabId
                     let isFocusedSurface = tabManager.focusedSurfaceId(for: tabId) == surfaceId
-                    if !(isActiveTab && isFocusedSurface) {
+                    let isAppFocused = AppFocusState.isAppFocused()
+                    let shouldSuppress = isAppFocused && isActiveTab && isFocusedSurface
+                    NSLog("bell.notify appFocused=\(isAppFocused) activeTab=\(isActiveTab) focusedSurface=\(isFocusedSurface) suppress=\(shouldSuppress)")
+                    if !shouldSuppress {
                         TerminalNotificationStore.shared.addNotification(
                             tabId: tabId,
                             surfaceId: surfaceId,

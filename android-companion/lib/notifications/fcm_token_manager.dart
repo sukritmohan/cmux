@@ -108,7 +108,13 @@ class FCMTokenManager {
     final surfaceId = data['surface_id'] ?? '';
     if (workspaceId.isEmpty) return;
 
-    AttentionNotificationHandler.onNotificationTapped?.call(workspaceId, surfaceId);
+    if (AttentionNotificationHandler.onNotificationTapped != null) {
+      AttentionNotificationHandler.onNotificationTapped!.call(workspaceId, surfaceId);
+    } else {
+      // App not fully initialized yet — store for later consumption.
+      AttentionNotificationHandler.pendingNavigation =
+          (workspaceId: workspaceId, surfaceId: surfaceId);
+    }
   }
 
   /// Reset state (e.g., on unpair).

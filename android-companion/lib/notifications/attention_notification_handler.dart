@@ -26,6 +26,10 @@ class AttentionNotificationHandler {
   /// Set by the app to navigate to the specific workspace/pane.
   static void Function(String workspaceId, String surfaceId)? onNotificationTapped;
 
+  /// Pending navigation from a notification tap during cold start.
+  /// Consumed by the terminal screen after initial data fetch completes.
+  static ({String workspaceId, String surfaceId})? pendingNavigation;
+
   /// Channel ID for terminal attention notifications.
   static const _channelId = 'cmux_attention';
   static const _channelName = 'Terminal Attention';
@@ -111,7 +115,12 @@ class AttentionNotificationHandler {
       if (workspaceId.isEmpty) return;
 
       debugPrint('[AttentionNotificationHandler] notification tapped: ws=$workspaceId surface=$surfaceId');
-      onNotificationTapped?.call(workspaceId, surfaceId);
+      if (onNotificationTapped != null) {
+        onNotificationTapped!.call(workspaceId, surfaceId);
+      } else {
+        // App not fully initialized yet — store for later consumption.
+        pendingNavigation = (workspaceId: workspaceId, surfaceId: surfaceId);
+      }
     } catch (e) {
       debugPrint('[AttentionNotificationHandler] failed to parse notification payload: $e');
     }
