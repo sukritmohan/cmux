@@ -102,6 +102,11 @@ class AppColorScheme {
   final Color voiceTimerText;
   final Color voiceSetupAmber;
 
+  // -- Terminal default colors (for cells with isDefault flag) --
+  final Color terminalDefaultBg;
+  final Color terminalDefaultFg;
+  final Color terminalCursor;
+
   // -- Connection indicator --
   final Color connectedColor;
 
@@ -172,6 +177,9 @@ class AppColorScheme {
     required this.voiceStripBg,
     required this.voiceTimerText,
     required this.voiceSetupAmber,
+    required this.terminalDefaultBg,
+    required this.terminalDefaultFg,
+    required this.terminalCursor,
     required this.connectedColor,
   });
 }
@@ -246,22 +254,25 @@ abstract final class AppColors {
     voiceStripBg: Color(0xE6101018),
     voiceTimerText: Color(0xFFFF4444),
     voiceSetupAmber: Color(0xFFE0A030),
+    terminalDefaultBg: Color(0xFF0A0A0F),
+    terminalDefaultFg: Color(0xFFE8E8EE),
+    terminalCursor: Color(0xCCE0A030),    // amber at ~80%
     connectedColor: Color(0xFF50C878),
   );
 
-  /// Light color scheme — warm off-whites, clean surfaces.
+  /// Light color scheme — clean whites with subtle warm hints.
   static const light = AppColorScheme(
-    bgDeep: Color(0xFFF5F5F0),
-    bgPrimary: Color(0xFFFAFAF7),
+    bgDeep: Color(0xFFF7F7F5),
+    bgPrimary: Color(0xFFFCFCFA),
     bgElevated: Color(0xFFFFFFFF),
-    bgSurface: Color(0xFFF0F0EB),
-    bgHover: Color(0xFFEAEAE5),
-    bgActive: Color(0xFFE2E2DC),
+    bgSurface: Color(0xFFF2F2EF),
+    bgHover: Color(0xFFECECEA),
+    bgActive: Color(0xFFE5E5E2),
     textPrimary: Color(0xFF1A1A1F),
     textSecondary: Color(0x8C1A1A1F), // 55% alpha
     textMuted: Color(0x4D1A1A1F), // 30% alpha
-    border: Color(0x12000000), // 7% black
-    borderStrong: Color(0x1F000000), // 12% black
+    border: Color(0x0D000000), // 5% black
+    borderStrong: Color(0x17000000), // 9% black
     accent: Color(0xFFE0A030),
     accentGlow: Color(0x1AE0A030), // 10%
     accentGlowStrong: Color(0x2EE0A030), // 18%
@@ -274,18 +285,18 @@ abstract final class AppColors {
     filesBg: Color(0x1AE0A030),
     overviewColor: Color(0xFF7A5AAE),
     overviewBg: Color(0x1AB08CDC),
-    drawerBg: Color(0xEBFAFAF7), // 92% alpha
-    drawerScrim: Color(0x14000000), // 8%
-    modifierBarBg: Color(0xBFFFFFFF), // 75%
-    keyGroupResting: Color(0x0A000000),       // rgba(0,0,0,0.04)
-    keyGroupText: Color(0x61000000),          // rgba(0,0,0,0.38)
+    drawerBg: Color(0xEBFCFCFA), // 92% alpha
+    drawerScrim: Color(0x12000000), // 7%
+    modifierBarBg: Color(0xD9FCFCFA), // 85%
+    keyGroupResting: Color(0x08000000),       // rgba(0,0,0,0.03)
+    keyGroupText: Color(0x52000000),          // rgba(0,0,0,0.32)
     keyGroupActive: Color(0x1FE0A030),        // rgba(224,160,48,0.12)
-    fanBtnResting: Color(0x0A000000),         // rgba(0,0,0,0.04)
+    fanBtnResting: Color(0x08000000),         // rgba(0,0,0,0.03)
     fanBtnActive: Color(0x1AE0A030),          // rgba(224,160,48,0.10)
     fanPopoverBg: Color(0xEBFFFFFF),          // rgba(255,255,255,0.92)
-    symKeyResting: Color(0x0A000000),         // rgba(0,0,0,0.04)
-    joystickFill: Color(0x0A000000),          // rgba(0,0,0,0.04)
-    joystickBorder: Color(0x0F000000),        // rgba(0,0,0,0.06)
+    symKeyResting: Color(0x08000000),         // rgba(0,0,0,0.03)
+    joystickFill: Color(0x08000000),          // rgba(0,0,0,0.03)
+    joystickBorder: Color(0x0A000000),        // rgba(0,0,0,0.04)
     joystickPressed: Color(0x1AE0A030),       // rgba(224,160,48,0.10)
     joystickPressedBorder: Color(0x33E0A030), // rgba(224,160,48,0.20)
     returnGradientStart: Color(0xFFD4A030),   // opaque warm amber top
@@ -314,9 +325,12 @@ abstract final class AppColors {
     voiceCommitBorder: Color(0x4D2D8A4E),
     voiceChipBg: Color(0x0A000000),
     voiceChipBorder: Color(0x14000000),
-    voiceStripBg: Color(0xE6F5F5F0),
+    voiceStripBg: Color(0xE6F7F7F5),
     voiceTimerText: Color(0xFFD32F2F),
     voiceSetupAmber: Color(0xFFB07810),
+    terminalDefaultBg: Color(0xFFFFFFFF),
+    terminalDefaultFg: Color(0xFF2C2C30),
+    terminalCursor: Color(0xCCC09020),    // warm amber at ~80%
     connectedColor: Color(0xFF2D8A4E),
   );
 

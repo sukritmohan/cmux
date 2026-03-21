@@ -104,6 +104,16 @@ All tokens in `lib/app/colors.dart`. Access via `AppColors.of(context)` which re
 | Files | `#E0A030` | `#B07810` |
 | Overview | `#B08CDC` | `#7A5AAE` |
 
+**Terminal default colors (for cells with `isDefault` flag):**
+
+| Token | Dark | Light | Usage |
+|-------|------|-------|-------|
+| terminalDefaultBg | `#0A0A0F` | `#FAFAF7` | Terminal canvas fill, default cell background |
+| terminalDefaultFg | `#E8E8EE` | `#1A1A1F` | Default text color for cells without explicit color |
+| terminalCursor | `#E0A030` 80% | `#B07810` 80% | Block cursor color |
+
+The terminal adapts to light/dark mode via these tokens. Cells with explicit Mac-side colors (syntax highlighting, colored prompts) keep their original RGB values regardless of theme. Only cells with `fgIsDefault`/`bgIsDefault` flags use the theme-aware defaults.
+
 Radii: xs=4, sm=6, md=10, lg=14, xl=20
 
 ### Font Families
@@ -157,17 +167,22 @@ Radii: xs=4, sm=6, md=10, lg=14, xl=20
 
 ### Modifier Bar Behavior (Floating Capsule)
 
-- **Shape**: Floating capsule, rounded 18px, backdrop blur(24px)
+- **Shape**: Floating capsule, rounded 18px, backdrop blur(24px), height 88px
 - **Position**: Margin 0 8px 2px, floats above home indicator
 - **Background**: Semi-transparent (dark: rgba(16,16,24,0.82), light: rgba(255,255,255,0.75))
-- **Three zones** separated by 1px dividers:
-  1. **(+) amber accent button** + clipboard paste button (38x32, rounded 10px)
-  2. **Inverted-T arrow grid** (3x2, 26px cells, rounded 6px, borderless)
-  3. **"RETURN" key** (JetBrains Mono 9px, 700 weight, uppercase, 1.2px spacing)
-- All keys: 32px height, rounded 10px, borderless
+- **Four zones** separated by 1px dividers (left | tools+voice | right):
+  1. **Left (flex:1)**: Two stacked capsules:
+     - Row 1: `esc` `⇥` `⇧` `⌃` (modifier capsule, 4 keys)
+     - Row 2: `~` `|` `/` `-` (symbol capsule, 4 keys)
+  2. **Middle**: 2×2 tools grid (76px wide): [+attach][clipboard] / [⌫ backspace][⌨ keyboard]
+  3. **Voice pill**: Full-height 44×76px mic pill between tools and right divider
+  4. **Right (flex:1)**: Joystick (44px circle) + RETURN key
+- **Modifier key labels**: Use symbols (⇥ tab, ⇧ shift, ⌃ ctrl), except `esc` which stays as text
+- **Shift behavior**: Same sticky/locked pattern as Ctrl — single tap = sticky (auto-releases after one key), double tap = locked (amber underline indicator)
+- **Backspace**: Sends DEL (\x7f) on tap. Hold to repeat (300ms initial delay, 80ms interval). Ctrl+Backspace sends Ctrl+W (delete word backward)
+- **Voice button**: 44×76px pill shape, unique form factor distinguishes it from circular tool buttons. Same tap-to-toggle and hold-to-record interaction modes
 - Press animation: AnimatedScale 0.93 on tap
-- Haptic: selectionClick on arrows, lightImpact on RETURN, mediumImpact on (+)
-- The (+) fan-out button will expand to show Esc/Ctrl/Alt/Tab (future)
+- Haptic: selectionClick on modifier/symbol keys, lightImpact on tab, mediumImpact on esc/RETURN
 
 ### Terminal Rendering
 

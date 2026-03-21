@@ -21,6 +21,8 @@ extension Notification.Name {
     static let bridgeSurfaceMoved = Notification.Name("bridge.surface.moved")
     /// Posted when a surface is reordered within the same pane.
     static let bridgeSurfaceReordered = Notification.Name("bridge.surface.reordered")
+    /// Posted when a terminal notification is added (bell, Claude hook, etc.).
+    static let bridgeSurfaceAttention = Notification.Name("bridge.surface.attention")
 }
 
 // MARK: - Bridge-Specific UserInfo Keys
@@ -35,6 +37,8 @@ enum BridgeNotificationKey {
     static let toPane = "bridge.toPane"
     static let fromIndex = "bridge.fromIndex"
     static let toIndex = "bridge.toIndex"
+    static let reason = "bridge.reason"
+    static let notificationTitle = "bridge.notificationTitle"
 }
 
 // MARK: - BridgeEventRelay
@@ -90,7 +94,7 @@ final class BridgeEventRelay: @unchecked Sendable {
 
     // MARK: - Observer Registration
 
-    /// Registers observers for all 12 bridge event types.
+    /// Registers observers for all 13 bridge event types.
     private func registerObservers() {
         // 1. workspace.selected — existing notification, fired when the selected workspace changes
         observers.append(NotificationCenter.default.addObserver(
@@ -255,6 +259,27 @@ final class BridgeEventRelay: @unchecked Sendable {
                 "pane_id": paneId,
                 "from_index": fromIndex,
                 "to_index": toIndex,
+            ])
+        })
+
+        // 13. surface.attention — fired when a terminal notification is added (bell, Claude hook, etc.)
+        observers.append(NotificationCenter.default.addObserver(
+            forName: .bridgeSurfaceAttention, object: nil, queue: nil
+        ) { [weak self] notification in
+            NSLog("[attention] BridgeEventRelay received .bridgeSurfaceAttention")
+            guard let tabId = notification.userInfo?[GhosttyNotificationKey.tabId] as? UUID else {
+                NSLog("[attention] BridgeEventRelay: missing tabId in userInfo")
+                return
+            }
+            let surfaceId = notification.userInfo?[GhosttyNotificationKey.surfaceId] as? UUID
+            let reason = notification.userInfo?[BridgeNotificationKey.reason] as? String ?? "notification"
+            let title = notification.userInfo?[BridgeNotificationKey.notificationTitle] as? String ?? ""
+            NSLog("[attention] BridgeEventRelay emitting surface.attention ws=%@ reason=%@", tabId.uuidString, reason)
+            self?.emit(event: "surface.attention", data: [
+                "workspace_id": tabId.uuidString,
+                "surface_id": surfaceId?.uuidString ?? "",
+                "reason": reason,
+                "title": title,
             ])
         })
     }

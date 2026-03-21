@@ -96,6 +96,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
   /// so soft keyboard input can be intercepted (e.g., Ctrl+C → \x03).
   final _ctrlActiveNotifier = ValueNotifier<bool>(false);
 
+  /// Shift modifier state from the modifier bar, shared with terminal view
+  /// so soft keyboard input can be uppercased when Shift is active.
+  final _shiftActiveNotifier = ValueNotifier<bool>(false);
+
   /// Autocomplete/suggestion toggle state. Default ON so swipe typing works
   /// out of the box. Resets to ON each app launch (no persistence).
   final _autocompleteActiveNotifier = ValueNotifier<bool>(true);
@@ -132,6 +136,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     _swipeAnimController.dispose();
     _swipeOffset.dispose();
     _scrollNotifier.dispose();
+    _shiftActiveNotifier.dispose();
     _keyboardFocusNode.dispose();
     super.dispose();
   }
@@ -763,6 +768,8 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
                                   fontSize: _snapshotFontSize,
                                   paddingH: _snapshotPaddingH,
                                   paddingV: _snapshotPaddingV,
+                                  defaultBg: c.terminalDefaultBg,
+                                  defaultFg: c.terminalDefaultFg,
                                 ),
                               ),
                             ),
@@ -780,6 +787,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
                     workspaceId: activeWorkspaceId,
                     scrollNotifier: _scrollNotifier,
                     ctrlActiveNotifier: _ctrlActiveNotifier,
+                    shiftActiveNotifier: _shiftActiveNotifier,
                     externalFocusNode: _keyboardFocusNode,
                     autocompleteActiveNotifier: _autocompleteActiveNotifier,
                     onCopy: (text) =>
@@ -859,7 +867,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: c.bgDeep,
+      backgroundColor: c.terminalDefaultBg,
       drawer: WorkspaceDrawer(
         workspaces: wsState.workspaces,
         activeWorkspaceId: wsState.activeWorkspaceId,
@@ -935,7 +943,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
 
                 // Voice transcription strip (slides in during recording
                 // or when transcription chips are active)
-                if (_showModifierBar)
+                if (_showModifierBar && voiceState.isStripVisible)
                   VoiceStrip(
                     state: voiceState,
                     onDismiss: (segmentId) =>
@@ -949,6 +957,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
                   isUploading: attachState.isUploading,
                   attachmentState: attachState,
                   ctrlActiveNotifier: _ctrlActiveNotifier,
+                  shiftActiveNotifier: _shiftActiveNotifier,
                   clipboardHistoryState: ref.watch(clipboardHistoryProvider),
                   clipboardHistoryNotifier:
                       ref.read(clipboardHistoryProvider.notifier),

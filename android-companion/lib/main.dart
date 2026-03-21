@@ -13,9 +13,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/providers.dart';
 import 'app/router.dart';
 import 'app/theme.dart';
+import 'notifications/attention_notification_handler.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AttentionNotificationHandler.instance.initialize();
   runApp(const ProviderScope(child: CmuxCompanionApp()));
 }
 

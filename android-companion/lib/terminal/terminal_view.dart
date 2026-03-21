@@ -66,6 +66,10 @@ class TerminalView extends ConsumerStatefulWidget {
   /// letters are converted to control codes (e.g., 'c' → \x03 for Ctrl+C).
   final ValueNotifier<bool>? ctrlActiveNotifier;
 
+  /// Shift modifier state from the modifier bar. When true, soft keyboard
+  /// characters are uppercased before sending to the terminal.
+  final ValueNotifier<bool>? shiftActiveNotifier;
+
   /// External focus node for keyboard toggle. If provided, the terminal uses
   /// this instead of creating its own, allowing the keyboard button to
   /// toggle the soft keyboard by calling requestFocus/unfocus on this node.
@@ -89,6 +93,7 @@ class TerminalView extends ConsumerStatefulWidget {
     this.workspaceId,
     this.scrollNotifier,
     this.ctrlActiveNotifier,
+    this.shiftActiveNotifier,
     this.externalFocusNode,
     this.autocompleteActiveNotifier,
     this.onCopy,
@@ -372,14 +377,17 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
       final added = newText.substring(_lastText.length);
 
       // If Ctrl is active, convert letters to control codes (Ctrl+C → \x03).
+      // When Ctrl+Shift are both active, the Shift modifier is applied first
+      // (uppercasing), then Ctrl converts to the control code.
       if (widget.ctrlActiveNotifier?.value == true && added.length == 1) {
         final char = added.toLowerCase();
         if (char.codeUnitAt(0) >= 0x61 && char.codeUnitAt(0) <= 0x7a) {
           // a-z → control codes \x01-\x1a
           final controlCode = String.fromCharCode(char.codeUnitAt(0) - 0x60);
           _sendInput(controlCode);
-          // Auto-release sticky ctrl
+          // Auto-release sticky ctrl and shift
           widget.ctrlActiveNotifier?.value = false;
+          widget.shiftActiveNotifier?.value = false;
           _lastText = newText;
           if (_textController.text.length > 100) {
             _resettingBuffer = true;
@@ -389,6 +397,20 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
           }
           return;
         }
+      }
+
+      // If Shift is active (without Ctrl), uppercase the character.
+      if (widget.shiftActiveNotifier?.value == true && added.length == 1) {
+        _sendInput(added.toUpperCase());
+        widget.shiftActiveNotifier?.value = false;
+        _lastText = newText;
+        if (_textController.text.length > 100) {
+          _resettingBuffer = true;
+          _textController.text = '';
+          _lastText = '';
+          _resettingBuffer = false;
+        }
+        return;
       }
 
       // If attachments are staged and the user typed a newline, invoke the
@@ -981,6 +1003,9 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                       cursorCol: _cursorCol,
                       cursorRow: _cursorRow,
                       cursorVisible: _cursorVisible && _cursorBlinkOn,
+                      defaultBg: c.terminalDefaultBg,
+                      defaultFg: c.terminalDefaultFg,
+                      cursorColor: c.terminalCursor,
                       selStartCol: _selStartCol,
                       selStartRow: _selStartRow,
                       selEndCol: _selEndCol,
@@ -1015,6 +1040,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                 // Magnifier loupe — shown during handle drag.
                 if (_hasSelection && (_isDraggingStartHandle || _isDraggingEndHandle))
                   _buildMagnifier(
+                    c: c,
                     cellWidth: cellWidth,
                     cellHeight: cellHeight,
                     viewportWidth: constraints.maxWidth,
@@ -1128,6 +1154,7 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   /// Builds the magnifier loupe widget, positioned above (or below) the
   /// active handle during drag.
   Widget _buildMagnifier({
+    required AppColorScheme c,
     required double cellWidth,
     required double cellHeight,
     required double viewportWidth,
@@ -1198,6 +1225,8 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                 fontSize: _targetFontSize,
                 selLo: selLo,
                 selHi: selHi,
+                defaultBg: c.terminalDefaultBg,
+                defaultFg: c.terminalDefaultFg,
               ),
             ),
           ),
@@ -1258,8 +1287,8 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
 /// CustomPainter that renders the terminal cell grid.
 ///
-/// Uses dark theme colors always since terminal content is Mac-rendered
-/// and should maintain dark terminal aesthetics regardless of app theme.
+/// Default bg/fg/cursor colors are theme-aware so the terminal adapts to
+/// light and dark mode. Per-cell colors from the Mac are used when available.
 class TerminalPainter extends CustomPainter {
   final List<CellData> cells;
   final int cols;
@@ -1280,10 +1309,10 @@ class TerminalPainter extends CustomPainter {
   final int? selEndCol;
   final int? selEndRow;
 
-  // Terminal always uses dark palette for cell rendering.
-  static const _bg = Color(0xFF0A0A0F);
-  static const _fg = Color(0xFFE8E8EE);
-  static const _cursorColor = Color(0xCCE0A030); // amber cursor at ~80%
+  // Theme-aware default colors for cells with isDefault flag.
+  final Color _bg;
+  final Color _fg;
+  final Color _cursorColor;
   static const _selectionColor = Color(0x404A9EFF); // translucent blue
 
   TerminalPainter({
@@ -1299,11 +1328,16 @@ class TerminalPainter extends CustomPainter {
     required this.cursorCol,
     required this.cursorRow,
     required this.cursorVisible,
+    required Color defaultBg,
+    required Color defaultFg,
+    required Color cursorColor,
     this.selStartCol,
     this.selStartRow,
     this.selEndCol,
     this.selEndRow,
-  });
+  })  : _bg = defaultBg,
+        _fg = defaultFg,
+        _cursorColor = cursorColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1569,8 +1603,8 @@ class _MagnifierPainter extends CustomPainter {
   final int selLo;
   final int selHi;
 
-  static const _bg = Color(0xFF0A0A0F);
-  static const _fg = Color(0xFFE8E8EE);
+  final Color _bg;
+  final Color _fg;
   static const _selColor = Color(0x404A9EFF); // 25% blue
   static const _zoom = 2.0;
 
@@ -1584,7 +1618,10 @@ class _MagnifierPainter extends CustomPainter {
     required this.fontSize,
     required this.selLo,
     required this.selHi,
-  });
+    required Color defaultBg,
+    required Color defaultFg,
+  })  : _bg = defaultBg,
+        _fg = defaultFg;
 
   @override
   void paint(Canvas canvas, Size size) {

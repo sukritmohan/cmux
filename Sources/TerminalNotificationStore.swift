@@ -879,6 +879,22 @@ final class TerminalNotificationStore: ObservableObject {
         }
         if !shouldSuppressExternalDelivery {
             notificationDeliveryHandler(self, notification)
+
+            // Post bridge event so BridgeEventRelay forwards to Android.
+            // Only when the desktop notification also fires (pane is unfocused).
+            var bridgeInfo: [String: Any] = [
+                GhosttyNotificationKey.tabId: tabId,
+                BridgeNotificationKey.reason: "notification",
+                BridgeNotificationKey.notificationTitle: title,
+            ]
+            if let surfaceId {
+                bridgeInfo[GhosttyNotificationKey.surfaceId] = surfaceId
+            }
+            NotificationCenter.default.post(
+                name: .bridgeSurfaceAttention,
+                object: nil,
+                userInfo: bridgeInfo
+            )
         }
     }
 

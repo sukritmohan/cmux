@@ -17,22 +17,21 @@ import 'package:flutter/rendering.dart' show CustomPainter;
 
 import '../native/ghostty_vt.dart';
 
-/// Terminal background color (matches TerminalPainter._bg).
-const _minimapBg = Color(0xFF0A0A0F);
-
-/// Default foreground color (matches TerminalPainter._fg).
-const _minimapFg = Color(0xFFE8E8EE);
-
 class MinimapTerminalPainter extends CustomPainter {
   final List<CellData> cells;
   final int cols;
   final int rows;
+  final Color _bg;
+  final Color _fg;
 
   MinimapTerminalPainter({
     required this.cells,
     required this.cols,
     required this.rows,
-  });
+    required Color defaultBg,
+    required Color defaultFg,
+  })  : _bg = defaultBg,
+        _fg = defaultFg;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -41,7 +40,7 @@ class MinimapTerminalPainter extends CustomPainter {
     // Fill background.
     canvas.drawRect(
       Offset.zero & size,
-      Paint()..color = _minimapBg,
+      Paint()..color = _bg,
     );
 
     // Cell dimensions at minimap scale.
@@ -66,7 +65,7 @@ class MinimapTerminalPainter extends CustomPainter {
         // Resolve foreground color.
         Color fg;
         if (cell.fgIsDefault) {
-          fg = _minimapFg;
+          fg = _fg;
         } else {
           fg = Color.fromARGB(255, cell.fgR, cell.fgG, cell.fgB);
         }
@@ -75,13 +74,13 @@ class MinimapTerminalPainter extends CustomPainter {
         if (cell.isInverse) {
           Color bg;
           if (cell.bgIsDefault) {
-            bg = _minimapBg;
+            bg = _bg;
           } else {
             bg = Color.fromARGB(255, cell.bgR, cell.bgG, cell.bgB);
           }
           fg = bg;
           // Skip if inverse makes it invisible against background.
-          if (fg == _minimapBg) continue;
+          if (fg == _bg) continue;
         }
 
         if (cell.isFaint) {

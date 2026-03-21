@@ -210,6 +210,17 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
     state = state.copyWith(activeWorkspaceId: wsId);
   }
 
+  /// Increment the notification count for a workspace (surface.attention event).
+  void incrementNotificationCount(String workspaceId) {
+    final updated = state.workspaces.map((w) {
+      if (w.id == workspaceId) {
+        return w.copyWith(notificationCount: w.notificationCount + 1);
+      }
+      return w;
+    }).toList();
+    state = state.copyWith(workspaces: updated);
+  }
+
   String? _resolveActiveId(List<Workspace> workspaces) {
     if (state.activeWorkspaceId != null &&
         workspaces.any((w) => w.id == state.activeWorkspaceId)) {

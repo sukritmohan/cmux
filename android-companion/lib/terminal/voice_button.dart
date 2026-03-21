@@ -1,8 +1,8 @@
-/// Voice recorder button for the modifier bar tools grid.
+/// Voice recorder button for the modifier bar.
 ///
-/// Renders as a 36px circular mic button with visual states driven by the
-/// voice subsystem's [VoiceStatus]. Supports tap-to-toggle and hold-to-record
-/// interaction modes, with haptic feedback on start/stop transitions.
+/// Default: 36px circle. Pass [width]/[height] for a pill shape (e.g., 44x76px
+/// full-height pill). Visual states driven by [VoiceStatus]. Supports
+/// tap-to-toggle and hold-to-record with haptic feedback.
 ///
 /// Visual states:
 ///   - idle: outline mic icon, neutral background
@@ -24,7 +24,10 @@ import '../app/providers.dart';
 import 'voice_protocol.dart';
 import 'voice_service.dart';
 
-/// A 36px circular mic button that controls voice recording.
+/// Mic button that controls voice recording.
+///
+/// Default size is 36x36px (circle). Pass [width] and [height] to render as a
+/// pill shape (e.g., 44x76px full-height pill in the modifier bar).
 ///
 /// Inputs:
 ///   Reads [voiceProvider] for current status and [connectionManagerProvider]
@@ -34,7 +37,10 @@ import 'voice_service.dart';
 ///   - Tap (< 250ms press): toggles recording in tap-to-toggle mode.
 ///   - Long press (>= 250ms): starts hold-to-record; release stops recording.
 class VoiceButton extends ConsumerStatefulWidget {
-  const VoiceButton({super.key});
+  final double width;
+  final double height;
+
+  const VoiceButton({super.key, this.width = 36, this.height = 36});
 
   @override
   ConsumerState<VoiceButton> createState() => _VoiceButtonState();
@@ -168,7 +174,6 @@ class _VoiceButtonState extends ConsumerState<VoiceButton>
 
   @override
   Widget build(BuildContext context) {
-    final c = AppColors.of(context);
     final voiceState = ref.watch(voiceProvider);
     final status = voiceState.status;
 
@@ -195,6 +200,8 @@ class _VoiceButtonState extends ConsumerState<VoiceButton>
           child: _ButtonVisual(
             status: status,
             pulseController: _pulseController,
+            width: widget.width,
+            height: widget.height,
           ),
         ),
       ),
@@ -216,17 +223,22 @@ class _VoiceButtonState extends ConsumerState<VoiceButton>
 // Button Visual
 // ---------------------------------------------------------------------------
 
-/// The 36x36px visual representation of the voice button.
+/// Visual representation of the voice button.
 ///
 /// Renders different icon/background/decoration combinations based on the
 /// current [VoiceStatus], with a pulsing red ring during recording.
+/// Supports dynamic sizing for both circle (36x36) and pill (e.g., 44x76) shapes.
 class _ButtonVisual extends StatelessWidget {
   final VoiceStatus status;
   final AnimationController pulseController;
+  final double width;
+  final double height;
 
   const _ButtonVisual({
     required this.status,
     required this.pulseController,
+    required this.width,
+    required this.height,
   });
 
   @override
@@ -255,19 +267,22 @@ class _ButtonVisual extends StatelessWidget {
               ]
             : <BoxShadow>[];
 
+        // Use half the smaller dimension for pill/circle shape.
+        final borderRadius = BorderRadius.circular(width < height ? width / 2 : height / 2);
+
         return SizedBox(
-          width: 36,
-          height: 36,
+          width: width,
+          height: height,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Button background circle.
+              // Button background (circle or pill).
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                width: 36,
-                height: 36,
+                width: width,
+                height: height,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: borderRadius,
                   color: bgColor,
                   boxShadow: boxShadows,
                 ),
@@ -298,11 +313,16 @@ class _ButtonVisual extends StatelessWidget {
   }
 
   /// Builds the center content: mic icon or circular progress indicator.
+  /// Icon scales with button size: 20px for large buttons, 16px for default.
   Widget _buildContent(AppColorScheme c) {
+    final isLarge = width > 36 || height > 36;
+    final iconSize = isLarge ? 20.0 : 16.0;
+    final spinnerSize = isLarge ? 20.0 : 16.0;
+
     if (status == VoiceStatus.processing) {
       return SizedBox(
-        width: 16,
-        height: 16,
+        width: spinnerSize,
+        height: spinnerSize,
         child: CircularProgressIndicator(
           strokeWidth: 2,
           color: c.voiceSetupAmber,
@@ -318,6 +338,6 @@ class _ButtonVisual extends StatelessWidget {
         ? c.voiceRecordingRed
         : c.keyGroupText;
 
-    return Icon(iconData, size: 16, color: iconColor);
+    return Icon(iconData, size: iconSize, color: iconColor);
   }
 }

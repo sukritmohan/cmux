@@ -5,9 +5,9 @@
 /// neighboring tab during a swipe-to-switch gesture so the user sees real
 /// terminal content rather than a blank placeholder.
 ///
-/// Cell rendering logic mirrors [TerminalPainter] exactly — same color
-/// resolution, same wrapping calculation, same glyph rendering — but omits
-/// all cursor and selection drawing paths.
+/// Cell rendering logic mirrors [TerminalPainter] exactly — same theme-aware
+/// color resolution, same wrapping calculation, same glyph rendering — but
+/// omits all cursor and selection drawing paths.
 library;
 
 import 'dart:ui' as ui;
@@ -48,9 +48,9 @@ class TerminalSnapshotPainter extends CustomPainter {
   final double paddingH;
   final double paddingV;
 
-  // Terminal always uses the dark palette — same constants as TerminalPainter.
-  static const _bg = Color(0xFF0A0A0F);
-  static const _fg = Color(0xFFE8E8EE);
+  // Theme-aware default colors — same as TerminalPainter.
+  final Color _bg;
+  final Color _fg;
 
   const TerminalSnapshotPainter({
     required this.cells,
@@ -61,7 +61,10 @@ class TerminalSnapshotPainter extends CustomPainter {
     required this.fontSize,
     required this.paddingH,
     required this.paddingV,
-  });
+    required Color defaultBg,
+    required Color defaultFg,
+  })  : _bg = defaultBg,
+        _fg = defaultFg;
 
   @override
   void paint(Canvas canvas, Size size) {

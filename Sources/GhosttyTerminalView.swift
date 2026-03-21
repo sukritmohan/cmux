@@ -1751,6 +1751,7 @@ class GhosttyApp {
     }
 
     private func ringBell() {
+        NSLog("[attention] ringBell() called")
         let features = bellFeatures()
 
         if (features & (1 << 0)) != 0 {
@@ -2064,8 +2065,26 @@ class GhosttyApp {
                 return tabManager.createSplit(tabId: tabId, surfaceId: surfaceId, direction: direction) != nil
             }
         case GHOSTTY_ACTION_RING_BELL:
+            let bellTabId = surfaceView.tabId
+            let bellSurfaceId = surfaceView.terminalSurface?.id
             performOnMain {
                 self.ringBell()
+                // Only fire attention notification when the bell surface is NOT focused.
+                // Shells send bells on tab completion failures, etc. — don't spam for those.
+                if let tabId = bellTabId, let surfaceId = bellSurfaceId,
+                   let tabManager = AppDelegate.shared?.tabManager {
+                    let isActiveTab = tabManager.selectedTabId == tabId
+                    let isFocusedSurface = tabManager.focusedSurfaceId(for: tabId) == surfaceId
+                    if !(isActiveTab && isFocusedSurface) {
+                        TerminalNotificationStore.shared.addNotification(
+                            tabId: tabId,
+                            surfaceId: surfaceId,
+                            title: String(localized: "notification.bell.title", defaultValue: "Terminal bell"),
+                            subtitle: "",
+                            body: ""
+                        )
+                    }
+                }
             }
             return true
         case GHOSTTY_ACTION_GOTO_SPLIT:

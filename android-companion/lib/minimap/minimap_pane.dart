@@ -252,6 +252,8 @@ class _MinimapPaneState extends ConsumerState<MinimapPane> {
           cells: consumer.cells,
           cols: consumer.cols,
           rows: consumer.rows,
+          defaultBg: c.terminalDefaultBg,
+          defaultFg: c.terminalDefaultFg,
         ),
         child: const SizedBox.expand(),
       );

@@ -34,6 +34,9 @@ dependencies:
   # Audio recording for voice-to-terminal
   record: ^5.2.0
 
+  # System notifications for terminal attention events
+  flutter_local_notifications: ^18.0.1
+
   # Routing
   go_router: ^14.8.1
 
