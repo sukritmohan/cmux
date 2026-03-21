@@ -172,26 +172,26 @@ This makes it visible in the GitHub PR UI (Commits tab, check statuses) that the
 
 ## Ghostty submodule workflow
 
-Ghostty changes must be committed in the `ghostty` submodule and pushed to the `manaflow-ai/ghostty` fork.
+Ghostty changes must be committed in the `ghostty` submodule and pushed to `git@github.com:sukritmohan/ghostty.git`.
 Keep `docs/ghostty-fork.md` up to date with any fork changes and conflict notes.
 
 ```bash
 cd ghostty
-git remote -v  # origin = upstream, manaflow = fork
+git remote set-url origin git@github.com:sukritmohan/ghostty.git  # ensure SSH remote
 git checkout -b <branch>
 git add <files>
 git commit -m "..."
-git push manaflow <branch>
+git push origin <branch>
 ```
 
 To keep the fork up to date with upstream:
 
 ```bash
 cd ghostty
-git fetch origin
+git fetch upstream  # upstream = ghostty-org/ghostty
 git checkout main
-git merge origin/main
-git push manaflow main
+git merge upstream/main
+git push origin main
 ```
 
 Then update the parent repo with the new submodule SHA:
@@ -227,7 +227,7 @@ Manual release steps (if not using the command):
 ```bash
 git tag vX.Y.Z
 git push origin vX.Y.Z
-gh run watch --repo manaflow-ai/cmux
+gh run watch --repo sukritmohan/cmux
 ```
 
 Notes:
