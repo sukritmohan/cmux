@@ -3212,26 +3212,25 @@ final class TerminalSurface: Identifiable, ObservableObject {
 
                 setManagedEnvironmentValue("ZDOTDIR", integrationDir)
             } else if shellName == "bash" {
-                if GhosttyApp.shared.shellIntegrationMode() != "none" {
-                    setManagedEnvironmentValue("CMUX_LOAD_GHOSTTY_BASH_INTEGRATION", "1")
+                // Ghostty's bash integration (ghostty.bash) sources cmux's
+                // integration at the end of its startup sequence — after all
+                // user rc files (.profile, .bashrc) have loaded. This avoids
+                // the problem where .profile overwrites PROMPT_COMMAND and
+                // prevents a PROMPT_COMMAND-based bootstrap from ever running.
+                //
+                // When Ghostty integration is disabled (e.g. macOS bash 3.2
+                // or shell-integration=none), fall back to PROMPT_COMMAND.
+                if GhosttyApp.shared.shellIntegrationMode() == "none" {
+                    setManagedEnvironmentValue("PROMPT_COMMAND", """
+                    unset PROMPT_COMMAND; \
+                    if [[ "${CMUX_SHELL_INTEGRATION:-1}" != "0" && -n "${CMUX_SHELL_INTEGRATION_DIR:-}" ]]; then \
+                    _cmux_bash_integration="$CMUX_SHELL_INTEGRATION_DIR/cmux-bash-integration.bash"; \
+                    [[ -r "$_cmux_bash_integration" ]] && source "$_cmux_bash_integration"; \
+                    fi; \
+                    unset _cmux_bash_integration; \
+                    if declare -F _cmux_prompt_command >/dev/null 2>&1; then _cmux_prompt_command; fi
+                    """)
                 }
-                // macOS ships /bin/bash 3.2, where Ghostty's automatic bash
-                // integration is unsupported and HOME-based wrapper startup is
-                // not reliable. Bootstrap cmux bash integration on the first
-                // interactive prompt instead.
-                setManagedEnvironmentValue("PROMPT_COMMAND", """
-                unset PROMPT_COMMAND; \
-                if [[ "${CMUX_LOAD_GHOSTTY_BASH_INTEGRATION:-0}" == "1" && -n "${GHOSTTY_RESOURCES_DIR:-}" ]]; then \
-                _cmux_ghostty_bash="$GHOSTTY_RESOURCES_DIR/shell-integration/bash/ghostty.bash"; \
-                [[ -r "$_cmux_ghostty_bash" ]] && source "$_cmux_ghostty_bash"; \
-                fi; \
-                if [[ "${CMUX_SHELL_INTEGRATION:-1}" != "0" && -n "${CMUX_SHELL_INTEGRATION_DIR:-}" ]]; then \
-                _cmux_bash_integration="$CMUX_SHELL_INTEGRATION_DIR/cmux-bash-integration.bash"; \
-                [[ -r "$_cmux_bash_integration" ]] && source "$_cmux_bash_integration"; \
-                fi; \
-                unset _cmux_ghostty_bash _cmux_bash_integration; \
-                if declare -F _cmux_prompt_command >/dev/null 2>&1; then _cmux_prompt_command; fi
-                """)
             }
         }
         env = Self.mergedStartupEnvironment(
