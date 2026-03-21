@@ -526,6 +526,7 @@ class _ActionSheetItem extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   color: c.textSecondary,
+                  decoration: TextDecoration.none,
                 ),
               ),
             ],
