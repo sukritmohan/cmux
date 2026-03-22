@@ -381,8 +381,24 @@ final class SidebarProjectManager: ObservableObject {
                 && project.branches.allSatisfy { $0.linkedTerminals.isEmpty && $0.workspaceIds.isEmpty }
         }
 
-        // Sort by persisted order.
-        newProjects.sort { $0.order < $1.order }
+        // Sort by persisted order, with repoPath as stable tiebreaker.
+        newProjects.sort { ($0.order, $0.repoPath) < ($1.order, $1.repoPath) }
+        // Re-number to prevent tied order values from causing instability.
+        for (index, project) in newProjects.enumerated() {
+            project.order = index
+        }
+
+        #if DEBUG
+        let oldOrder = projects.map { "\($0.name)(\($0.order))" }.joined(separator: ", ")
+        let newOrder = newProjects.map { "\($0.name)(\($0.order)\($0.isAutoCreated ? ",auto" : ""))" }.joined(separator: ", ")
+        if oldOrder != newOrder {
+            dlog("rebuild.orderChange old=[\(oldOrder)] new=[\(newOrder)]")
+            for p in newProjects {
+                let branches = p.branches.map { "\($0.name)[\($0.workspaceIds.count)ws,\($0.linkedTerminals.count)lt]" }.joined(separator: ", ")
+                dlog("rebuild.orderChange.detail \(p.name) order=\(p.order) auto=\(p.isAutoCreated) branches=[\(branches)]")
+            }
+        }
+        #endif
 
         // Build "Other" section for non-git workspaces.
         if otherWorkspaceIds.isEmpty {
