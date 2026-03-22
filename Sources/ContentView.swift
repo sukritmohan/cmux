@@ -10707,6 +10707,12 @@ private struct SidebarBranchRow: View {
                 .foregroundColor(.primary)
                 .lineLimit(1)
                 .truncationMode(.middle)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.white.opacity(0.15))
+                )
 
             // Yellow dot for uncommitted changes on this branch.
             if branch.isDirty {
@@ -11262,6 +11268,12 @@ private struct TabItemView: View, Equatable {
                                                 .foregroundColor(activeSecondaryColor(0.75))
                                                 .lineLimit(1)
                                                 .truncationMode(.tail)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 2)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 4)
+                                                        .fill(Color.primary.opacity(0.08))
+                                                )
                                         }
                                         if line.branch != nil, line.directory != nil {
                                             Image(systemName: "circle.fill")
