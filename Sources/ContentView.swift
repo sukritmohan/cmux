@@ -7971,69 +7971,44 @@ struct VerticalTabsSidebar: View {
                         LazyVStack(spacing: tabRowSpacing) {
                             // Project tree: iterate over git-rooted projects.
                             ForEach(sidebarProjectManager.projects) { project in
-                                SidebarProjectRow(
+                                SidebarProjectSection(
                                     project: project,
-                                    hasUnreadChildren: projectHasUnread(project)
-                                )
-                                if project.isExpanded {
-                                    ForEach(project.branches, id: \.id) { branch in
-                                        SidebarBranchRow(
-                                            branch: branch,
-                                            project: project,
-                                            hasUnreadChildren: branchHasUnread(branch),
-                                            onAddWorkspace: {
-                                                // Create a workspace in the project's repo directory.
-                                                let workDir = project.repoPath.isEmpty ? nil : project.repoPath
-                                                tabManager.addWorkspace(
-                                                    workingDirectory: workDir,
-                                                    select: true
-                                                )
-                                            }
-                                        )
-                                        if branch.isExpanded {
-                                            ForEach(branch.workspaceIds, id: \.self) { workspaceId in
-                                                if let tab = tabManager.tab(for: workspaceId) {
-                                                    let flatIndex = flatIndexMap[workspaceId] ?? 0
-                                                    sidebarTabItemView(
-                                                        tab: tab,
-                                                        flatIndex: flatIndex,
-                                                        workspaceCount: workspaceCount,
-                                                        canCloseWorkspace: canCloseWorkspace,
-                                                        treeIndentLevel: 2
-                                                    )
-                                                }
-                                            }
-                                            ForEach(branch.linkedTerminals) { entry in
-                                                SidebarLinkedTerminalRow(entry: entry) {
-                                                    tabManager.selectedTabId = entry.owningWorkspaceId
-                                                }
-                                                .padding(.leading, 40)
-                                            }
-                                        }
+                                    tabManager: tabManager,
+                                    notificationStore: notificationStore,
+                                    flatIndexMap: flatIndexMap,
+                                    workspaceCount: workspaceCount,
+                                    canCloseWorkspace: canCloseWorkspace,
+                                    sidebarTabItemView: { tab, flatIndex, indentLevel in
+                                        AnyView(sidebarTabItemView(
+                                            tab: tab,
+                                            flatIndex: flatIndex,
+                                            workspaceCount: workspaceCount,
+                                            canCloseWorkspace: canCloseWorkspace,
+                                            treeIndentLevel: indentLevel
+                                        ))
                                     }
-                                }
+                                )
                             }
 
                             // "Other" section for workspaces without git info.
                             if let otherProject = sidebarProjectManager.otherProject {
-                                SidebarProjectRow(
+                                SidebarProjectSection(
                                     project: otherProject,
-                                    hasUnreadChildren: projectHasUnread(otherProject)
-                                )
-                                if otherProject.isExpanded {
-                                    ForEach(otherProject.branches.first?.workspaceIds ?? [], id: \.self) { workspaceId in
-                                        if let tab = tabManager.tab(for: workspaceId) {
-                                            let flatIndex = flatIndexMap[workspaceId] ?? 0
-                                            sidebarTabItemView(
-                                                tab: tab,
-                                                flatIndex: flatIndex,
-                                                workspaceCount: workspaceCount,
-                                                canCloseWorkspace: canCloseWorkspace,
-                                                treeIndentLevel: 1
-                                            )
-                                        }
+                                    tabManager: tabManager,
+                                    notificationStore: notificationStore,
+                                    flatIndexMap: flatIndexMap,
+                                    workspaceCount: workspaceCount,
+                                    canCloseWorkspace: canCloseWorkspace,
+                                    sidebarTabItemView: { tab, flatIndex, indentLevel in
+                                        AnyView(sidebarTabItemView(
+                                            tab: tab,
+                                            flatIndex: flatIndex,
+                                            workspaceCount: workspaceCount,
+                                            canCloseWorkspace: canCloseWorkspace,
+                                            treeIndentLevel: indentLevel
+                                        ))
                                     }
-                                }
+                                )
                             }
 
                             // Fallback: show flat list when project manager has
@@ -10592,6 +10567,61 @@ enum SidebarWorkspaceShortcutHintMetrics {
 // Renders the Project → Branch hierarchy in the sidebar.
 // These are lightweight view structs that wrap the expand/collapse
 // toggles and header labels. Workspace rows still use TabItemView.
+
+/// Container view that owns @ObservedObject for a project, so that
+/// toggling isExpanded triggers re-evaluation of the children conditional.
+/// Without this, the parent ForEach doesn't observe individual project changes.
+private struct SidebarProjectSection: View {
+    @ObservedObject var project: SidebarProject
+    let tabManager: TabManager
+    let notificationStore: TerminalNotificationStore
+    let flatIndexMap: [UUID: Int]
+    let workspaceCount: Int
+    let canCloseWorkspace: Bool
+    let sidebarTabItemView: (Workspace, Int, Int) -> AnyView
+
+    private func projectHasUnread() -> Bool {
+        project.branches.flatMap(\.workspaceIds).contains { notificationStore.unreadCount(forTabId: $0) > 0 }
+    }
+
+    private func branchHasUnread(_ branch: SidebarBranch) -> Bool {
+        branch.workspaceIds.contains { notificationStore.unreadCount(forTabId: $0) > 0 }
+    }
+
+    var body: some View {
+        SidebarProjectRow(
+            project: project,
+            hasUnreadChildren: projectHasUnread()
+        )
+        if project.isExpanded {
+            ForEach(project.branches, id: \.id) { branch in
+                SidebarBranchRow(
+                    branch: branch,
+                    project: project,
+                    hasUnreadChildren: branchHasUnread(branch),
+                    onAddWorkspace: {
+                        let workDir = project.repoPath.isEmpty ? nil : project.repoPath
+                        tabManager.addWorkspace(workingDirectory: workDir, select: true)
+                    }
+                )
+                if branch.isExpanded {
+                    ForEach(branch.workspaceIds, id: \.self) { workspaceId in
+                        if let tab = tabManager.tab(for: workspaceId) {
+                            let flatIndex = flatIndexMap[workspaceId] ?? 0
+                            sidebarTabItemView(tab, flatIndex, 2)
+                        }
+                    }
+                    ForEach(branch.linkedTerminals) { entry in
+                        SidebarLinkedTerminalRow(entry: entry) {
+                            tabManager.selectedTabId = entry.owningWorkspaceId
+                        }
+                        .padding(.leading, 40)
+                    }
+                }
+            }
+        }
+    }
+}
 
 /// Renders a project header row with a disclosure chevron.
 /// Clicking the row toggles `project.isExpanded`.
