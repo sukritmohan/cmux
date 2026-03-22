@@ -434,6 +434,11 @@ final class SidebarProjectManager: ObservableObject {
             workspaceSubscriptions.removeValue(forKey: id)
             stickyAssignments.removeValue(forKey: id)
         }
+
+        // Notify bridge clients that the project hierarchy has changed.
+        // Posted after the coalesced rebuild completes so mobile clients
+        // can call `project.list` to fetch the fresh tree.
+        NotificationCenter.default.post(name: .bridgeProjectUpdated, object: nil)
     }
 
     // MARK: - Workspace Observation

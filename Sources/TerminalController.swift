@@ -2087,6 +2087,10 @@ class TerminalController {
         case "workspace.layout":
             return v2Result(id: id, self.v2WorkspaceLayout(params: params))
 
+        // Projects
+        case "project.list":
+            return v2Result(id: id, self.v2ProjectList(params: params))
+
         // Ports
         case "ports.list":
             return v2Result(id: id, self.v2PortsList(params: params))
@@ -2458,6 +2462,7 @@ class TerminalController {
             "workspace.remote.status",
             "workspace.remote.terminal_session_end",
             "workspace.layout",
+            "project.list",
             "ports.list",
             "settings.open",
             "feedback.open",
@@ -3327,6 +3332,104 @@ class TerminalController {
             "workspaces": workspaces
         ])
     }
+
+    /// Returns the full sidebar project hierarchy (Project > Branch > Workspace)
+    /// from SidebarProjectManager, with workspace details and notification counts
+    /// embedded inline. Used by the mobile companion to render the project drawer.
+    private func v2ProjectList(params: [String: Any]) -> V2CallResult {
+        guard let tabManager = v2ResolveTabManager(params: params) else {
+            return .err(code: "unavailable", message: "TabManager not available", data: nil)
+        }
+
+        guard let sidebarProjectManager = v2MainSync({
+            AppDelegate.shared?.sidebarProjectManagerFor(tabManager: tabManager)
+        }) else {
+            return .err(code: "unavailable", message: "SidebarProjectManager not available", data: nil)
+        }
+
+        var projectsPayload: [[String: Any]] = []
+        var otherProjectPayload: Any = NSNull()
+        var activeWorkspaceId: Any = NSNull()
+
+        v2MainSync {
+            activeWorkspaceId = v2OrNull(tabManager.selectedTabId?.uuidString)
+
+            // Serialize regular projects.
+            projectsPayload = sidebarProjectManager.projects.map { project in
+                self.serializeProject(project, tabManager: tabManager)
+            }
+
+            // Serialize "Other" section if present.
+            if let otherProject = sidebarProjectManager.otherProject {
+                var serialized = self.serializeProject(otherProject, tabManager: tabManager)
+                serialized["is_other_section"] = true
+                otherProjectPayload = serialized
+            }
+        }
+
+        return .ok([
+            "projects": projectsPayload,
+            "other_project": otherProjectPayload,
+            "active_workspace_id": activeWorkspaceId
+        ])
+    }
+
+    /// Serializes a SidebarProject into a dictionary for the `project.list` response.
+    /// Must be called on the main thread.
+    private func serializeProject(_ project: SidebarProject, tabManager: TabManager) -> [String: Any] {
+        let branches: [[String: Any]] = project.branches.map { branch in
+            // Serialize workspaces within this branch.
+            let workspaces: [[String: Any]] = branch.workspaceIds.compactMap { wsId in
+                guard let ws = tabManager.tabs.first(where: { $0.id == wsId }) else { return nil }
+                let notificationCount = TerminalNotificationStore.shared.unreadCount(forTabId: wsId)
+                let panels: [[String: Any]] = self.orderedPanels(in: ws).map { panel in
+                    [
+                        "id": panel.id.uuidString,
+                        "type": panel.panelType.rawValue,
+                        "title": ws.panelCustomTitles[panel.id]
+                            ?? ws.panelTitles[panel.id]
+                            ?? panel.displayTitle
+                    ]
+                }
+                return [
+                    "id": wsId.uuidString,
+                    "title": ws.title,
+                    "notification_count": notificationCount,
+                    "panels": panels
+                ]
+            }
+
+            // Serialize linked terminals within this branch.
+            let linkedTerminals: [[String: Any]] = branch.linkedTerminals.map { linked in
+                [
+                    "id": linked.id.uuidString,
+                    "owning_workspace_id": linked.owningWorkspaceId.uuidString,
+                    "owning_project_name": linked.owningProjectName,
+                    "owning_workspace_name": linked.owningWorkspaceName,
+                    "panel_id": linked.panelId.uuidString
+                ]
+            }
+
+            return [
+                "name": branch.name,
+                "is_dirty": branch.isDirty,
+                "is_expanded": branch.isExpanded,
+                "workspaces": workspaces,
+                "linked_terminals": linkedTerminals
+            ]
+        }
+
+        return [
+            "id": project.id.uuidString,
+            "name": project.name,
+            "repo_path": project.repoPath,
+            "is_expanded": project.isExpanded,
+            "is_auto_created": project.isAutoCreated,
+            "order": project.order,
+            "branches": branches
+        ]
+    }
+
     private func v2WorkspaceCreate(params: [String: Any]) -> V2CallResult {
         guard let tabManager = v2ResolveTabManager(params: params) else {
             return .err(code: "unavailable", message: "TabManager not available", data: nil)

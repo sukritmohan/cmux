@@ -38,6 +38,7 @@ import '../shared/gesture_layer.dart';
 import '../shared/pane_type_dropdown.dart';
 import '../state/event_handler.dart';
 import '../state/pane_provider.dart';
+import '../state/project_hierarchy_provider.dart';
 import '../state/surface_provider.dart';
 import '../state/workspace_provider.dart';
 import '../workspace/workspace_drawer.dart';
@@ -202,6 +203,11 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     final wsNotifier = ref.read(workspaceProvider.notifier);
     await wsNotifier.fetchWorkspaces();
     _syncSurfacesFromWorkspace();
+
+    // Fetch the project hierarchy tree for the drawer sidebar.
+    // Runs after workspace fetch so the drawer can fall back to the flat
+    // workspace list if the desktop does not support project.list.
+    ref.read(projectHierarchyProvider.notifier).fetchProjectHierarchy();
 
     // If the app was launched by tapping a notification, navigate to that
     // workspace/pane now that initial data is loaded.
@@ -971,8 +977,6 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
       key: _scaffoldKey,
       backgroundColor: c.terminalDefaultBg,
       drawer: WorkspaceDrawer(
-        workspaces: wsState.workspaces,
-        activeWorkspaceId: wsState.activeWorkspaceId,
         onWorkspaceSelected: _onWorkspaceSelected,
         onSettings: () {
           _scaffoldKey.currentState?.closeDrawer();

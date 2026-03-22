@@ -14,6 +14,7 @@ import '../app/providers.dart';
 import '../browser/browser_tab_provider.dart';
 import '../connection/message_protocol.dart';
 import 'pane_provider.dart';
+import 'project_hierarchy_provider.dart';
 import 'surface_provider.dart';
 import 'workspace_provider.dart';
 
@@ -86,6 +87,10 @@ class EventHandler {
 
       case 'browser.closed':
         _ref.read(browserTabProvider.notifier).onBrowserClosed(data);
+
+      // Project hierarchy events
+      case 'project.updated':
+        _ref.read(projectHierarchyProvider.notifier).onProjectUpdated(data);
 
       // Attention events — show Android system notification
       case 'surface.attention':

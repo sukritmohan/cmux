@@ -4,6 +4,7 @@
 /// (active) workspace, and reacts to bridge events for create/close/rename.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
@@ -141,15 +142,18 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
     try {
       final manager = _ref.read(connectionManagerProvider);
       final response = await manager.sendRequest('workspace.list');
+      debugPrint('[WorkspaceNotifier] workspace.list response ok=${response.ok} result=${response.result?.keys}');
 
       if (response.ok && response.result != null) {
         final list = response.result!['workspaces'];
+        debugPrint('[WorkspaceNotifier] workspaces list type=${list.runtimeType} length=${list is List ? list.length : "N/A"}');
         if (list is List) {
           final workspaces = list
               .cast<Map<String, dynamic>>()
               .map(Workspace.fromJson)
               .toList();
 
+          debugPrint('[WorkspaceNotifier] parsed ${workspaces.length} workspaces');
           state = state.copyWith(
             workspaces: workspaces,
             loading: false,
@@ -159,8 +163,8 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
           return;
         }
       }
-    } catch (_) {
-      // Connection not ready or request failed.
+    } catch (e) {
+      debugPrint('[WorkspaceNotifier] fetchWorkspaces error: $e');
     }
 
     state = state.copyWith(loading: false);

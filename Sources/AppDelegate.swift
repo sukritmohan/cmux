@@ -3929,6 +3929,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         mainWindowContexts.values.first(where: { $0.tabManager === tabManager })?.windowId
     }
 
+    /// Returns the SidebarProjectManager associated with the given TabManager, if any.
+    func sidebarProjectManagerFor(tabManager: TabManager) -> SidebarProjectManager? {
+        mainWindowContexts.values.first(where: { $0.tabManager === tabManager })?.sidebarProjectManager
+    }
+
     func mainWindow(for windowId: UUID) -> NSWindow? {
         windowForMainWindowId(windowId)
     }

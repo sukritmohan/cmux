@@ -202,19 +202,52 @@ Radii: xs=4, sm=6, md=10, lg=14, xl=20
 - **Inner shadow**: 3px gradient at terminal top edge (black at 15% → transparent) — terminal feels recessed below chrome
 - **Subtle vignette**: Radial gradient on terminal content (center = transparent, edges = #080B10 at ~16% alpha) — adds richness
 
-### Workspace Drawer
+### Project Hierarchy Drawer
 
-- 280px width, left edge, frosted glass (BackdropFilter blur 40px)
-- Background: semi-transparent (dark: rgba(14,14,20,0.92), light: rgba(250,250,247,0.92))
-- Header: "WORKSPACES" (JetBrains Mono, 10px, 600 weight, 2.5px spacing, textMuted)
-- Search bar: 34px, magnifier icon, "Search workspaces..." placeholder, filters list
-- Workspace items: name + panel count metadata row + optional branch badge
-- Active workspace: bgSurface bg + 3px amber left bar (c.accent, not blue right border)
-- Branch badge: IBM Plex Mono 10.5px, rounded 4px, accentGlow bg, accentText text
-- Notification badge: 18px amber circle with white count text (if notificationCount > 0)
+- 280px width, left edge, frosted glass (BackdropFilter blur 40px, saturation 1.3)
+- Background: semi-transparent (dark: rgba(14,14,20,0.92), light: rgba(252,252,250,0.94))
+- Header: "PROJECTS" (JetBrains Mono, 11px, 700 weight, 2px spacing, textMuted)
+- Search: toggle icon in header, expands 32px search field below (AnimatedCrossFade)
+  - Case-insensitive substring matching across project names, branch names, workspace titles
+  - 150ms debounce, match text highlighted in accent color
+  - Subtree filtering: workspace match shows parent branch+project, branch match shows all its workspaces
+
+#### Three-level hierarchy: Project > Branch > Workspace
+
+- **Project row** (level 1): JetBrains Mono 13px/600, full textPrimary
+  - 22x22px monogram icon (rounded square, first uppercase letter)
+  - Animated disclosure chevron (16px, 200ms rotation)
+  - 1px separator above non-first projects
+  - "Other" variant: weight 500, 35% opacity
+  - Indent: 8px
+
+- **Branch row** (level 2): IBM Plex Mono 11.5px/500, 48% opacity
+  - Fork icon + animated chevron (14px)
+  - Yellow dirty dot (5x5, amber with glow) for uncommitted changes
+  - Persistent (+) button (18x18) to create workspace in that project/branch
+  - Indent: 24px
+
+- **Workspace row** (level 3): IBM Plex Sans 13px, 400 inactive / 600 active
+  - 4x4 dot indicator (amber with glow when active)
+  - Active: 3px amber left border + rgba(224,160,48,0.06) bg
+  - Notification badge: 18px amber pill with white count
+  - Indent: 42px
+
+- **Linked terminal row** (level 3b): IBM Plex Sans 11px italic, 22% opacity
+  - Link icon + "shared from [project] / [workspace]"
+  - Tap navigates to owning workspace
+
+#### Notification badge bubbling
+- Collapsed project/branch shows aggregate badge summing descendant workspace counts
+
+#### Data source
+- New `project.list` bridge API returns pre-grouped tree
+- `project.updated` event triggers full tree refresh
+- Falls back to flat workspace.list if project.list unavailable (older desktop)
+
 - Bottom pinned section:
   - Appearance toggle: segmented "Dark"/"Light" control dispatching to themeModeProvider
-  - "+ New Workspace" button: bordered, textMuted placeholder
+  - Settings button
 
 ### Minimap Overlay
 

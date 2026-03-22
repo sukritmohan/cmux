@@ -29,6 +29,8 @@ extension Notification.Name {
     static let bridgeBrowserCreated = Notification.Name("bridge.browser.created")
     /// Posted when a browser panel is closed in a workspace.
     static let bridgeBrowserClosed = Notification.Name("bridge.browser.closed")
+    /// Posted when the sidebar project hierarchy changes (rebuild completes).
+    static let bridgeProjectUpdated = Notification.Name("bridge.project.updated")
 }
 
 // MARK: - Bridge-Specific UserInfo Keys
@@ -332,6 +334,15 @@ final class BridgeEventRelay: @unchecked Sendable {
             self?.emit(event: "browser.closed", data: [
                 "surface_id": surfaceId.uuidString,
             ])
+        })
+
+        // 17. project.updated — fired when the sidebar project hierarchy rebuilds.
+        // Emits an empty payload; the mobile app should call `project.list` to
+        // fetch the fresh tree.
+        observers.append(NotificationCenter.default.addObserver(
+            forName: .bridgeProjectUpdated, object: nil, queue: nil
+        ) { [weak self] _ in
+            self?.emit(event: "project.updated", data: [:])
         })
     }
 
