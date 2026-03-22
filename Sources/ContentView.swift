@@ -10606,46 +10606,39 @@ private struct SidebarProjectRow: View {
     }
 
     var body: some View {
-        Button {
+        HStack(spacing: 6) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 9, weight: .bold))
+                .rotationEffect(chevronRotation)
+                .animation(.easeInOut(duration: 0.15), value: project.isExpanded)
+                .foregroundColor(.secondary)
+                .frame(width: 12)
+
+            Text(project.name)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            Spacer()
+
+            // Notification dot when collapsed and children have unread activity.
+            if !project.isExpanded && hasUnreadChildren {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 6, height: 6)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture {
             withAnimation(.easeInOut(duration: 0.15)) {
                 project.isExpanded.toggle()
             }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .bold))
-                    .rotationEffect(chevronRotation)
-                    .animation(.easeInOut(duration: 0.15), value: project.isExpanded)
-                    .foregroundColor(.secondary)
-                    .frame(width: 12)
-
-                Text(project.name)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-
-                Spacer()
-
-                // Notification dot when collapsed and children have unread activity.
-                if !project.isExpanded && hasUnreadChildren {
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 6, height: 6)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         .accessibilityLabel(Text(project.name))
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint(Text(
-            project.isExpanded
-                ? String(localized: "sidebar.project.collapse.hint", defaultValue: "Double-tap to collapse")
-                : String(localized: "sidebar.project.expand.hint", defaultValue: "Double-tap to expand")
-        ))
     }
 }
 
@@ -10666,73 +10659,70 @@ private struct SidebarBranchRow: View {
     }
 
     var body: some View {
-        Button {
+        HStack(spacing: 4) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 8, weight: .semibold))
+                .rotationEffect(chevronRotation)
+                .animation(.easeInOut(duration: 0.15), value: branch.isExpanded)
+                .foregroundColor(.secondary)
+                .frame(width: 10)
+
+            Image(systemName: "arrow.triangle.branch")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+
+            Text(branch.name)
+                .font(.system(size: 11))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+
+            // Yellow dot for uncommitted changes on this branch.
+            if branch.isDirty {
+                Circle()
+                    .fill(Color.yellow)
+                    .frame(width: 5, height: 5)
+            }
+
+            Spacer()
+
+            // Hover (+) button to create a workspace under this project.
+            if isHovering {
+                Button {
+                    onAddWorkspace()
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(width: 16, height: 16)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(String(
+                    localized: "sidebar.branch.addWorkspace.accessibility",
+                    defaultValue: "Add workspace for \(branch.name)"
+                ))
+                .transition(.opacity)
+            }
+
+            // Notification dot when collapsed and children have unread activity.
+            if !branch.isExpanded && hasUnreadChildren {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 5, height: 5)
+            }
+        }
+        .padding(.leading, 24)
+        .padding(.trailing, 12)
+        .padding(.vertical, 3)
+        .contentShape(Rectangle())
+        .onTapGesture {
             withAnimation(.easeInOut(duration: 0.15)) {
-                // Branch is a value type — mutate via the parent project.
                 if let idx = project.branches.firstIndex(where: { $0.id == branch.id }) {
                     project.branches[idx].isExpanded.toggle()
                 }
             }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 8, weight: .semibold))
-                    .rotationEffect(chevronRotation)
-                    .animation(.easeInOut(duration: 0.15), value: branch.isExpanded)
-                    .foregroundColor(.secondary)
-                    .frame(width: 10)
-
-                Image(systemName: "arrow.triangle.branch")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
-
-                Text(branch.name)
-                    .font(.system(size: 11))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-
-                // Yellow dot for uncommitted changes on this branch.
-                if branch.isDirty {
-                    Circle()
-                        .fill(Color.yellow)
-                        .frame(width: 5, height: 5)
-                }
-
-                Spacer()
-
-                // Hover (+) button to create a workspace under this project.
-                if isHovering {
-                    Button {
-                        onAddWorkspace()
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(.secondary)
-                            .frame(width: 16, height: 16)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(String(
-                        localized: "sidebar.branch.addWorkspace.accessibility",
-                        defaultValue: "Add workspace for \(branch.name)"
-                    ))
-                    .transition(.opacity)
-                }
-
-                // Notification dot when collapsed and children have unread activity.
-                if !branch.isExpanded && hasUnreadChildren {
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 5, height: 5)
-                }
-            }
-            .padding(.leading, 24)
-            .padding(.trailing, 12)
-            .padding(.vertical, 3)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         .onHover { hovering in
             isHovering = hovering
         }
