@@ -29,6 +29,7 @@ import '../app/colors.dart';
 import '../app/providers.dart';
 import '../app/theme.dart';
 import '../state/project_hierarchy_provider.dart';
+import '../state/surface_provider.dart';
 import '../state/workspace_provider.dart';
 import 'branch_row.dart';
 import 'linked_terminal_row.dart';
@@ -466,7 +467,14 @@ class _WorkspaceDrawerState extends ConsumerState<WorkspaceDrawer> {
           widgets.add(
             LinkedTerminalRow(
               entry: lt,
-              onTap: () => widget.onWorkspaceSelected(lt.owningWorkspaceId),
+              onTap: () {
+                widget.onWorkspaceSelected(lt.owningWorkspaceId);
+                // Focus the specific panel/surface referenced by the linked entry
+                // so the correct tab is selected after switching workspaces.
+                if (lt.panelId.isNotEmpty) {
+                  ref.read(surfaceProvider.notifier).focusSurface(lt.panelId);
+                }
+              },
             ),
           );
         }
