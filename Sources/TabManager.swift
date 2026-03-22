@@ -772,6 +772,7 @@ class TabManager: ObservableObject {
         }
     }
     private var agentPIDSweepTimer: DispatchSourceTimer?
+    private var cwdPollTimer: DispatchSourceTimer?
 #if DEBUG
     private var debugWorkspaceSwitchCounter: UInt64 = 0
     private var debugWorkspaceSwitchId: UInt64 = 0
@@ -818,6 +819,7 @@ class TabManager: ObservableObject {
         })
 
         startAgentPIDSweepTimer()
+        startCWDPollTimer()
 
 #if DEBUG
         setupUITestFocusShortcutsIfNeeded()
@@ -830,6 +832,7 @@ class TabManager: ObservableObject {
     deinit {
         workspaceCycleCooldownTask?.cancel()
         agentPIDSweepTimer?.cancel()
+        cwdPollTimer?.cancel()
     }
 
     // MARK: - Agent PID Sweep
@@ -877,6 +880,319 @@ class TabManager: ObservableObject {
                 AppDelegate.shared?.notificationStore?.clearNotifications(forTabId: tab.id)
             }
         }
+    }
+
+    // MARK: - Foreground Process CWD Poll
+
+    /// Periodically checks the foreground process's working directory for each
+    /// terminal panel via its TTY device. Detects CWD changes that shell
+    /// integration misses (e.g., Claude Code's Bash tool changes directory
+    /// in a subprocess without triggering prompt hooks).
+    private func startCWDPollTimer() {
+        let timer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
+        timer.schedule(deadline: .now() + 3, repeating: 3)
+        timer.setEventHandler { [weak self] in
+            guard let self else { return }
+            // Snapshot panel state on main thread.
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.pollForegroundProcessCWDs()
+            }
+        }
+        timer.resume()
+        cwdPollTimer = timer
+    }
+
+    private func pollForegroundProcessCWDs() {
+        struct PanelSnapshot {
+            let workspaceId: UUID
+            let panelId: UUID
+            let ttyPath: String?
+            let currentDir: String?
+            let currentBranch: String?
+            let currentGitRoot: String?
+            let hasAgent: Bool
+            let isSinglePanel: Bool
+        }
+        var snapshots: [PanelSnapshot] = []
+        for tab in tabs {
+            let hasAgent = !tab.agentPIDs.isEmpty
+            let isSinglePanel = tab.panels.count == 1
+            for panelId in tab.panels.keys {
+                let dir = tab.panelDirectories[panelId] ?? tab.currentDirectory
+                guard !dir.isEmpty else { continue }
+                snapshots.append(PanelSnapshot(
+                    workspaceId: tab.id,
+                    panelId: panelId,
+                    ttyPath: tab.surfaceTTYNames[panelId],
+                    currentDir: dir,
+                    currentBranch: tab.panelGitBranches[panelId]?.branch,
+                    currentGitRoot: tab.panelGitRoots[panelId],
+                    hasAgent: hasAgent,
+                    isSinglePanel: isSinglePanel
+                ))
+            }
+        }
+        guard !snapshots.isEmpty else { return }
+
+        // Check CWDs and git state off-main to avoid blocking.
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            struct PanelUpdate {
+                let workspaceId: UUID
+                let panelId: UUID
+                let newDir: String?
+                let newBranch: String?
+                let isDirty: Bool
+                let newGitRoot: String?
+                let isWorktreeOnly: Bool
+            }
+
+            // Collect CWDs of all descendant processes of this app.
+            // Only used for worktree detection on agent panels.
+            let needsDescendantScan = snapshots.contains { $0.hasAgent && $0.isSinglePanel }
+            let descendantCWDs = needsDescendantScan ? Self.allDescendantCWDs() : []
+
+            var updates: [PanelUpdate] = []
+            for snap in snapshots {
+                // Try to detect CWD from deepest child process if TTY is available.
+                let ttyCwd: String? = snap.ttyPath.flatMap { Self.foregroundProcessCWD(ttyPath: $0) }
+
+                // Only use worktree detection for single-panel workspaces with
+                // an active agent (e.g., Claude Code). This avoids incorrectly
+                // applying a worktree CWD to the wrong panel when multiple
+                // workspaces share the same repo.
+                // IMPORTANT: always use the ORIGINAL panel directory and git root
+                // for worktree lookup — never use a previously-detected worktree
+                // root, which would cause flip-flop (the main repo would be found
+                // as a "worktree" of itself).
+                let worktreeCwd: String?
+                if snap.hasAgent, snap.isSinglePanel, ttyCwd == nil {
+                    worktreeCwd = Self.findWorktreeCWD(
+                        forRepoAt: snap.currentDir,
+                        gitRoot: snap.currentGitRoot,
+                        candidateCWDs: descendantCWDs
+                    )
+                } else {
+                    worktreeCwd = nil
+                }
+
+                let isWorktreeDetection = worktreeCwd != nil && ttyCwd == nil
+                let cwd = ttyCwd ?? worktreeCwd
+                let dirToCheck = cwd ?? snap.currentDir
+                let dirChanged = ttyCwd != nil && ttyCwd != snap.currentDir
+
+                guard let dirToCheck else { continue }
+
+                // Run git branch/root check in the detected or known directory.
+                let gitSnapshot = Self.initialWorkspaceGitMetadataSnapshot(for: dirToCheck)
+                let branchChanged = gitSnapshot.branch != snap.currentBranch
+
+                #if DEBUG
+                if branchChanged || dirChanged {
+                    DispatchQueue.main.async {
+                        dlog("cwdPoll.change panel=\(snap.panelId.uuidString.prefix(8)) knownDir=\(snap.currentDir ?? "nil") worktreeCwd=\(worktreeCwd ?? "nil") dirToCheck=\(dirToCheck) branch=\(gitSnapshot.branch ?? "nil")←\(snap.currentBranch ?? "nil") worktreeOnly=\(isWorktreeDetection)")
+                    }
+                }
+                #endif
+
+                if dirChanged || branchChanged {
+                    updates.append(PanelUpdate(
+                        workspaceId: snap.workspaceId,
+                        panelId: snap.panelId,
+                        newDir: dirChanged ? ttyCwd : nil,
+                        newBranch: gitSnapshot.branch,
+                        isDirty: gitSnapshot.isDirty,
+                        newGitRoot: isWorktreeDetection ? nil : gitSnapshot.gitRoot,
+                        isWorktreeOnly: isWorktreeDetection
+                    ))
+                }
+            }
+            guard !updates.isEmpty else { return }
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                for update in updates {
+                    if let newDir = update.newDir {
+                        self.updateSurfaceDirectory(
+                            tabId: update.workspaceId,
+                            surfaceId: update.panelId,
+                            directory: newDir
+                        )
+                    }
+                    if let branch = update.newBranch {
+                        guard let tab = self.tabs.first(where: { $0.id == update.workspaceId }) else { continue }
+                        // Cancel any pending git probes that would overwrite this
+                        // branch with the original directory's branch.
+                        if update.isWorktreeOnly {
+                            self.clearInitialWorkspaceGitProbe(workspaceId: update.workspaceId)
+                        }
+                        tab.updatePanelGitBranch(panelId: update.panelId, branch: branch, isDirty: update.isDirty)
+                        if let gitRoot = update.newGitRoot {
+                            tab.panelGitRoots[update.panelId] = gitRoot
+                            if update.panelId == tab.focusedPanelId {
+                                tab.gitRoot = gitRoot
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Get the working directory of the deepest child process on a TTY device.
+    /// Walks the process tree from the session leader to find the most deeply
+    /// nested child, then reads its CWD via proc_pidinfo. This catches CWD
+    /// changes made by subprocesses (e.g., Claude Code's Bash tool) that the
+    /// shell itself doesn't know about.
+    private nonisolated static func foregroundProcessCWD(ttyPath: String) -> String? {
+        let fd = open(ttyPath, O_RDONLY | O_NOCTTY)
+        guard fd >= 0 else { return nil }
+        defer { close(fd) }
+
+        // Get the session leader PID (the shell) from the TTY.
+        let sessionPid = tcgetsid(fd)
+        guard sessionPid > 0 else { return nil }
+
+        // Find the deepest child in the process tree rooted at the session leader.
+        let targetPid = deepestChildPid(of: sessionPid)
+
+        return processCWD(pid: targetPid)
+    }
+
+    /// Walk the process tree to find the deepest descendant of a given PID.
+    /// Uses sysctl to enumerate all processes, builds a parent→children map,
+    /// then follows the chain to the leaf.
+    private nonisolated static func deepestChildPid(of rootPid: pid_t) -> pid_t {
+        // Get all processes via sysctl.
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
+        var size: Int = 0
+        guard sysctl(&mib, 4, nil, &size, nil, 0) == 0, size > 0 else { return rootPid }
+
+        let count = size / MemoryLayout<kinfo_proc>.stride
+        var procs = [kinfo_proc](repeating: kinfo_proc(), count: count)
+        guard sysctl(&mib, 4, &procs, &size, nil, 0) == 0 else { return rootPid }
+        let actualCount = size / MemoryLayout<kinfo_proc>.stride
+
+        // Build parent → children map.
+        var children: [pid_t: [pid_t]] = [:]
+        for i in 0..<actualCount {
+            let pid = procs[i].kp_proc.p_pid
+            let ppid = procs[i].kp_eproc.e_ppid
+            children[ppid, default: []].append(pid)
+        }
+
+        // Walk down to the deepest child (follow first child at each level).
+        var current = rootPid
+        while let kids = children[current], !kids.isEmpty {
+            // If multiple children, prefer the one with the highest PID (most recent).
+            current = kids.max() ?? kids[0]
+        }
+        return current
+    }
+
+    /// Get the CWD of a process via proc_pidinfo.
+    private nonisolated static func processCWD(pid: pid_t) -> String? {
+        var vnodeInfo = proc_vnodepathinfo()
+        let size = MemoryLayout<proc_vnodepathinfo>.size
+        let result = proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &vnodeInfo, Int32(size))
+        guard result == size else { return nil }
+
+        return withUnsafePointer(to: vnodeInfo.pvi_cdir.vip_path) {
+            $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXPATHLEN)) {
+                String(cString: $0)
+            }
+        }
+    }
+
+    /// Collect the CWDs of all descendant processes of this app.
+    /// Used to find subprocess CWDs (e.g., Claude Code working in a worktree)
+    /// that the shell itself doesn't report.
+    private nonisolated static func allDescendantCWDs() -> Set<String> {
+        let myPid = ProcessInfo.processInfo.processIdentifier
+
+        // Get all processes.
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
+        var size: Int = 0
+        guard sysctl(&mib, 4, nil, &size, nil, 0) == 0, size > 0 else { return [] }
+        let count = size / MemoryLayout<kinfo_proc>.stride
+        var procs = [kinfo_proc](repeating: kinfo_proc(), count: count)
+        guard sysctl(&mib, 4, &procs, &size, nil, 0) == 0 else { return [] }
+        let actualCount = size / MemoryLayout<kinfo_proc>.stride
+
+        // Build parent → children map and collect all descendant PIDs.
+        var children: [pid_t: [pid_t]] = [:]
+        for i in 0..<actualCount {
+            let pid = procs[i].kp_proc.p_pid
+            let ppid = procs[i].kp_eproc.e_ppid
+            children[ppid, default: []].append(pid)
+        }
+
+        // BFS to find all descendants of myPid.
+        var queue: [pid_t] = children[myPid] ?? []
+        var descendants: [pid_t] = []
+        while !queue.isEmpty {
+            let pid = queue.removeFirst()
+            descendants.append(pid)
+            if let kids = children[pid] {
+                queue.append(contentsOf: kids)
+            }
+        }
+
+        // Get CWDs of all descendants.
+        var cwds = Set<String>()
+        for pid in descendants {
+            if let cwd = processCWD(pid: pid) {
+                cwds.insert(cwd)
+            }
+        }
+        return cwds
+    }
+
+    /// Find a descendant CWD that's a worktree of the same git repo as the
+    /// panel's known directory. Returns the worktree CWD if found.
+    private nonisolated static func findWorktreeCWD(
+        forRepoAt panelDir: String?,
+        gitRoot: String?,
+        candidateCWDs: Set<String>
+    ) -> String? {
+        guard let panelDir else { return nil }
+        let repoDir = gitRoot ?? panelDir
+
+        // Get the git common-dir for the panel's repo. For a main worktree
+        // this is the .git dir; for a linked worktree it's the main repo's .git.
+        guard let panelCommonDir = runGitCommand(
+            directory: repoDir,
+            arguments: ["rev-parse", "--git-common-dir"]
+        )?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
+
+        // Resolve to absolute path.
+        let absolutePanelCommonDir: String
+        if panelCommonDir.hasPrefix("/") {
+            absolutePanelCommonDir = panelCommonDir
+        } else {
+            absolutePanelCommonDir = (repoDir as NSString).appendingPathComponent(panelCommonDir)
+        }
+
+        // Check each candidate CWD: if it's in the same repo (same common-dir)
+        // but different from the panel's known directory, it's a worktree.
+        for cwd in candidateCWDs {
+            guard cwd != panelDir, cwd != repoDir else { continue }
+            guard let candidateCommonDir = runGitCommand(
+                directory: cwd,
+                arguments: ["rev-parse", "--git-common-dir"]
+            )?.trimmingCharacters(in: .whitespacesAndNewlines) else { continue }
+
+            let absoluteCandidateCommonDir: String
+            if candidateCommonDir.hasPrefix("/") {
+                absoluteCandidateCommonDir = candidateCommonDir
+            } else {
+                absoluteCandidateCommonDir = (cwd as NSString).appendingPathComponent(candidateCommonDir)
+            }
+
+            if absoluteCandidateCommonDir == absolutePanelCommonDir {
+                return cwd
+            }
+        }
+        return nil
     }
 
     private func wireClosedBrowserTracking(for workspace: Workspace) {

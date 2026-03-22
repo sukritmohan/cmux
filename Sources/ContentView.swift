@@ -10614,6 +10614,7 @@ private struct SidebarProjectSection: View {
                     ForEach(branch.linkedTerminals) { entry in
                         SidebarLinkedTerminalRow(entry: entry) {
                             tabManager.selectedTabId = entry.owningWorkspaceId
+                            tabManager.focusSurface(tabId: entry.owningWorkspaceId, surfaceId: entry.panelId)
                         }
                         .padding(.leading, 40)
                     }
