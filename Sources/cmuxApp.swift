@@ -210,8 +210,7 @@ struct cmuxApp: App {
 #endif
                     // Start the Unix socket controller for programmatic access
                     updateSocketController()
-                    sidebarProjectManager.attach(to: tabManager)
-                    appDelegate.configure(tabManager: tabManager, notificationStore: notificationStore, sidebarState: sidebarState)
+                    appDelegate.configure(tabManager: tabManager, notificationStore: notificationStore, sidebarState: sidebarState, sidebarProjectManager: sidebarProjectManager)
                     applyAppearance()
                     if ProcessInfo.processInfo.environment["CMUX_UI_TEST_SHOW_SETTINGS"] == "1" {
                         DispatchQueue.main.async {

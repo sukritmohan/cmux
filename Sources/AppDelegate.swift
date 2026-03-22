@@ -2410,10 +2410,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         _ = saveSessionSnapshot(includeScrollback: true, removeWhenEmpty: false)
     }
 
-    func configure(tabManager: TabManager, notificationStore: TerminalNotificationStore, sidebarState: SidebarState) {
+    func configure(tabManager: TabManager, notificationStore: TerminalNotificationStore, sidebarState: SidebarState, sidebarProjectManager: SidebarProjectManager? = nil) {
         self.tabManager = tabManager
         self.notificationStore = notificationStore
         self.sidebarState = sidebarState
+        // Attach project manager if provided (SwiftUI primary window path).
+        if let sidebarProjectManager, sidebarProjectManager !== self.sidebarProjectManager {
+            self.sidebarProjectManager = sidebarProjectManager
+            sidebarProjectManager.attach(to: tabManager)
+        }
         disableSuddenTerminationIfNeeded()
         installLifecycleSnapshotObserversIfNeeded()
         prepareStartupSessionSnapshotIfNeeded()

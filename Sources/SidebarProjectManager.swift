@@ -35,10 +35,16 @@ final class SidebarProjectManager: ObservableObject {
     /// Begin observing workspace state. Call once after TabManager is created.
     func attach(to tabManager: TabManager) {
         self.tabManager = tabManager
+        #if DEBUG
+        dlog("SidebarProjectManager.attach tabManager=\(ObjectIdentifier(tabManager)) tabs=\(tabManager.tabs.count)")
+        #endif
 
         // Observe workspace list changes (add/remove/reorder).
         tabsSubscription = tabManager.$tabs
             .sink { [weak self] _ in
+                #if DEBUG
+                dlog("SidebarProjectManager.tabs.changed")
+                #endif
                 self?.scheduleRebuild()
             }
 
@@ -69,6 +75,9 @@ final class SidebarProjectManager: ObservableObject {
     /// Preserves existing expand/collapse state and project ordering.
     private func rebuild() {
         guard let tabManager else { return }
+        #if DEBUG
+        dlog("rebuild START tabs=\(tabManager.tabs.count)")
+        #endif
 
         // Snapshot existing state for preservation.
         let existingProjects = Dictionary(
@@ -167,17 +176,48 @@ final class SidebarProjectManager: ObservableObject {
             // Creates linked entries for panels in other repos. Uses git branch if
             // available, falls back to workspace branch for panels that haven't
             // reported their own branch yet.
+            #if DEBUG
+            dlog("rebuild.linked workspace=\(workspace.customTitle ?? workspace.title) root=\(root) panelDirs=\(workspace.panelDirectories) panelGitRoots=\(workspace.panelGitRoots) panelBranches=\(workspace.panelGitBranches.mapValues { $0.branch }) checkedPanelIds=\(checkedPanelIds)")
+            #endif
             for (panelId, panelDir) in workspace.panelDirectories {
-                guard !checkedPanelIds.contains(panelId) else { continue }
-                guard panelDir != root else { continue }
+                guard !checkedPanelIds.contains(panelId) else {
+                    #if DEBUG
+                    dlog("rebuild.linked.skip panel=\(panelId) reason=alreadyChecked")
+                    #endif
+                    continue
+                }
+                guard panelDir != root else {
+                    #if DEBUG
+                    dlog("rebuild.linked.skip panel=\(panelId) reason=sameAsRoot dir=\(panelDir) root=\(root)")
+                    #endif
+                    continue
+                }
                 // Skip subdirectories of the same repo
-                guard !panelDir.hasPrefix(root + "/") else { continue }
-                guard !root.hasPrefix(panelDir + "/") else { continue }
+                guard !panelDir.hasPrefix(root + "/") else {
+                    #if DEBUG
+                    dlog("rebuild.linked.skip panel=\(panelId) reason=subdirOfRoot dir=\(panelDir)")
+                    #endif
+                    continue
+                }
+                guard !root.hasPrefix(panelDir + "/") else {
+                    #if DEBUG
+                    dlog("rebuild.linked.skip panel=\(panelId) reason=rootIsSubdirOfPanel dir=\(panelDir)")
+                    #endif
+                    continue
+                }
                 let panelBranch = workspace.panelGitBranches[panelId]
                 // Only create linked entry if the panel has a git branch
                 // (either its own or inherited from workspace)
                 let branchName = panelBranch?.branch ?? workspace.gitBranch?.branch
-                guard let branchName else { continue }
+                guard let branchName else {
+                    #if DEBUG
+                    dlog("rebuild.linked.skip panel=\(panelId) reason=noBranch dir=\(panelDir)")
+                    #endif
+                    continue
+                }
+                #if DEBUG
+                dlog("rebuild.linked.CREATE panel=\(panelId) dir=\(panelDir) branch=\(branchName)")
+                #endif
                 linkedEntries.append(LinkedEntry(
                     repoPath: panelDir,
                     branch: branchName,
@@ -190,6 +230,9 @@ final class SidebarProjectManager: ObservableObject {
             }
         }
 
+        #if DEBUG
+        dlog("rebuild projectGroups=\(projectGroups.keys.sorted()) linkedEntries=\(linkedEntries.count) otherWorkspaces=\(otherWorkspaceIds.count)")
+        #endif
         // Build project list.
         var newProjects: [SidebarProject] = []
 
