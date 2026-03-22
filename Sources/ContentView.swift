@@ -7921,6 +7921,7 @@ struct VerticalTabsSidebar: View {
     let onSendFeedback: () -> Void
     @EnvironmentObject var tabManager: TabManager
     @EnvironmentObject var notificationStore: TerminalNotificationStore
+    @EnvironmentObject var sidebarProjectManager: SidebarProjectManager
     @Binding var selection: SidebarSelection
     @Binding var selectedTabIds: Set<UUID>
     @Binding var lastSidebarSelectionIndex: Int?
@@ -7946,8 +7947,18 @@ struct VerticalTabsSidebar: View {
     }
 
     var body: some View {
-        let workspaceCount = tabManager.tabs.count
-        let canCloseWorkspace = workspaceCount > 1
+        // Use flat workspace order from project tree for ⌘+number shortcuts.
+        let flatOrder = sidebarProjectManager.flatWorkspaceOrder()
+        let workspaceCount = flatOrder.count
+        let canCloseWorkspace = tabManager.tabs.count > 1
+        // Build a lookup from workspace UUID to its flat index for shortcut digits.
+        let flatIndexMap: [UUID: Int] = {
+            var map = [UUID: Int]()
+            for (index, wsId) in flatOrder.enumerated() {
+                map[wsId] = index
+            }
+            return map
+        }()
 
         VStack(spacing: 0) {
             GeometryReader { proxy in
@@ -7958,49 +7969,78 @@ struct VerticalTabsSidebar: View {
                             .frame(height: trafficLightPadding)
 
                         LazyVStack(spacing: tabRowSpacing) {
-                            ForEach(Array(tabManager.tabs.enumerated()), id: \.element.id) { index, tab in
-                                let selectedContextIds: Set<UUID> = selectedTabIds.contains(tab.id) ? selectedTabIds : [tab.id]
-                                let contextTargetIds = tabManager.tabs.compactMap { workspace in
-                                    selectedContextIds.contains(workspace.id) ? workspace.id : nil
-                                }
-                                let remoteContextMenuTargets = tabManager.tabs.filter { workspace in
-                                    contextTargetIds.contains(workspace.id) && workspace.isRemoteWorkspace
-                                }
-                                TabItemView(
-                                    tabManager: tabManager,
-                                    notificationStore: notificationStore,
-                                    tab: tab,
-                                    index: index,
-                                    isActive: tabManager.selectedTabId == tab.id,
-                                    workspaceShortcutDigit: WorkspaceShortcutMapper.commandDigitForWorkspace(
-                                        at: index,
-                                        workspaceCount: workspaceCount
-                                    ),
-                                    canCloseWorkspace: canCloseWorkspace,
-                                    accessibilityWorkspaceCount: workspaceCount,
-                                    unreadCount: notificationStore.unreadCount(forTabId: tab.id),
-                                    latestNotificationText: {
-                                        guard showsSidebarNotificationMessage,
-                                              let notification = notificationStore.latestNotification(forTabId: tab.id) else {
-                                            return nil
-                                        }
-                                        let text = notification.body.isEmpty ? notification.title : notification.body
-                                        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                                        return trimmed.isEmpty ? nil : trimmed
-                                    }(),
-                                    rowSpacing: tabRowSpacing,
-                                    setSelectionToTabs: { selection = .tabs },
-                                    selectedTabIds: $selectedTabIds,
-                                    lastSidebarSelectionIndex: $lastSidebarSelectionIndex,
-                                    showsModifierShortcutHints: modifierKeyMonitor.isModifierPressed,
-                                    dragAutoScrollController: dragAutoScrollController,
-                                    draggedTabId: $draggedTabId,
-                                    dropIndicator: $dropIndicator,
-                                    remoteContextMenuWorkspaceIds: remoteContextMenuTargets.map(\.id),
-                                    allRemoteContextMenuTargetsConnecting: !remoteContextMenuTargets.isEmpty && remoteContextMenuTargets.allSatisfy { $0.remoteConnectionState == .connecting },
-                                    allRemoteContextMenuTargetsDisconnected: !remoteContextMenuTargets.isEmpty && remoteContextMenuTargets.allSatisfy { $0.remoteConnectionState == .disconnected }
+                            // Project tree: iterate over git-rooted projects.
+                            ForEach(sidebarProjectManager.projects) { project in
+                                SidebarProjectRow(
+                                    project: project,
+                                    hasUnreadChildren: projectHasUnread(project)
                                 )
-                                .equatable()
+                                if project.isExpanded {
+                                    ForEach(project.branches, id: \.id) { branch in
+                                        SidebarBranchRow(
+                                            branch: branch,
+                                            project: project,
+                                            hasUnreadChildren: branchHasUnread(branch)
+                                        )
+                                        if branch.isExpanded {
+                                            ForEach(branch.workspaceIds, id: \.self) { workspaceId in
+                                                if let tab = tabManager.tab(for: workspaceId) {
+                                                    let flatIndex = flatIndexMap[workspaceId] ?? 0
+                                                    sidebarTabItemView(
+                                                        tab: tab,
+                                                        flatIndex: flatIndex,
+                                                        workspaceCount: workspaceCount,
+                                                        canCloseWorkspace: canCloseWorkspace,
+                                                        treeIndentLevel: 2
+                                                    )
+                                                }
+                                            }
+                                            ForEach(branch.linkedTerminals) { entry in
+                                                SidebarLinkedTerminalRow(entry: entry) {
+                                                    tabManager.selectedTabId = entry.owningWorkspaceId
+                                                }
+                                                .padding(.leading, 40)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // "Other" section for workspaces without git info.
+                            if let otherProject = sidebarProjectManager.otherProject {
+                                SidebarProjectRow(
+                                    project: otherProject,
+                                    hasUnreadChildren: projectHasUnread(otherProject)
+                                )
+                                if otherProject.isExpanded {
+                                    ForEach(otherProject.branches.first?.workspaceIds ?? [], id: \.self) { workspaceId in
+                                        if let tab = tabManager.tab(for: workspaceId) {
+                                            let flatIndex = flatIndexMap[workspaceId] ?? 0
+                                            sidebarTabItemView(
+                                                tab: tab,
+                                                flatIndex: flatIndex,
+                                                workspaceCount: workspaceCount,
+                                                canCloseWorkspace: canCloseWorkspace,
+                                                treeIndentLevel: 1
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Fallback: show flat list when project manager has
+                            // no projects and no "Other" section (e.g. initial
+                            // launch before shell integration reports git info).
+                            if sidebarProjectManager.projects.isEmpty && sidebarProjectManager.otherProject == nil {
+                                ForEach(Array(tabManager.tabs.enumerated()), id: \.element.id) { index, tab in
+                                    sidebarTabItemView(
+                                        tab: tab,
+                                        flatIndex: index,
+                                        workspaceCount: tabManager.tabs.count,
+                                        canCloseWorkspace: canCloseWorkspace,
+                                        treeIndentLevel: 0
+                                    )
+                                }
                             }
                         }
                         .padding(.vertical, 8)
@@ -8101,6 +8141,80 @@ struct VerticalTabsSidebar: View {
     private func debugShortSidebarTabId(_ id: UUID?) -> String {
         guard let id else { return "nil" }
         return String(id.uuidString.prefix(5))
+    }
+
+    // MARK: - Project Tree Helpers
+
+    /// Builds a TabItemView for a workspace within the project tree.
+    /// Factored out to avoid duplicating the TabItemView construction across
+    /// the project/branch ForEach loops, the "Other" section, and the fallback.
+    @ViewBuilder
+    private func sidebarTabItemView(
+        tab: Workspace,
+        flatIndex: Int,
+        workspaceCount: Int,
+        canCloseWorkspace: Bool,
+        treeIndentLevel: Int
+    ) -> some View {
+        let selectedContextIds: Set<UUID> = selectedTabIds.contains(tab.id) ? selectedTabIds : [tab.id]
+        let contextTargetIds = tabManager.tabs.compactMap { workspace in
+            selectedContextIds.contains(workspace.id) ? workspace.id : nil
+        }
+        let remoteContextMenuTargets = tabManager.tabs.filter { workspace in
+            contextTargetIds.contains(workspace.id) && workspace.isRemoteWorkspace
+        }
+        TabItemView(
+            tabManager: tabManager,
+            notificationStore: notificationStore,
+            tab: tab,
+            index: flatIndex,
+            isActive: tabManager.selectedTabId == tab.id,
+            workspaceShortcutDigit: WorkspaceShortcutMapper.commandDigitForWorkspace(
+                at: flatIndex,
+                workspaceCount: workspaceCount
+            ),
+            canCloseWorkspace: canCloseWorkspace,
+            accessibilityWorkspaceCount: workspaceCount,
+            unreadCount: notificationStore.unreadCount(forTabId: tab.id),
+            latestNotificationText: {
+                guard showsSidebarNotificationMessage,
+                      let notification = notificationStore.latestNotification(forTabId: tab.id) else {
+                    return nil
+                }
+                let text = notification.body.isEmpty ? notification.title : notification.body
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? nil : trimmed
+            }(),
+            rowSpacing: tabRowSpacing,
+            setSelectionToTabs: { selection = .tabs },
+            selectedTabIds: $selectedTabIds,
+            lastSidebarSelectionIndex: $lastSidebarSelectionIndex,
+            showsModifierShortcutHints: modifierKeyMonitor.isModifierPressed,
+            dragAutoScrollController: dragAutoScrollController,
+            draggedTabId: $draggedTabId,
+            dropIndicator: $dropIndicator,
+            remoteContextMenuWorkspaceIds: remoteContextMenuTargets.map(\.id),
+            allRemoteContextMenuTargetsConnecting: !remoteContextMenuTargets.isEmpty && remoteContextMenuTargets.allSatisfy { $0.remoteConnectionState == .connecting },
+            allRemoteContextMenuTargetsDisconnected: !remoteContextMenuTargets.isEmpty && remoteContextMenuTargets.allSatisfy { $0.remoteConnectionState == .disconnected }
+        )
+        .equatable()
+        .padding(.leading, CGFloat(treeIndentLevel) * 12)
+    }
+
+    /// Whether any workspace under a project has unread notifications.
+    private func projectHasUnread(_ project: SidebarProject) -> Bool {
+        for branch in project.branches {
+            if branchHasUnread(branch) { return true }
+        }
+        return false
+    }
+
+    /// Whether any workspace under a branch has unread notifications.
+    private func branchHasUnread(_ branch: SidebarBranch) -> Bool {
+        for wsId in branch.workspaceIds {
+            if notificationStore.unreadCount(forTabId: wsId) > 0 { return true }
+        }
+        return false
     }
 }
 
@@ -10271,6 +10385,182 @@ enum SidebarWorkspaceShortcutHintMetrics {
         return count
     }
     #endif
+}
+
+// MARK: - Sidebar Project Tree Row Views
+//
+// Renders the Project → Branch hierarchy in the sidebar.
+// These are lightweight view structs that wrap the expand/collapse
+// toggles and header labels. Workspace rows still use TabItemView.
+
+/// Renders a project header row with a disclosure chevron.
+/// Clicking the row toggles `project.isExpanded`.
+/// Shows a notification dot when collapsed and children have unread notifications.
+private struct SidebarProjectRow: View {
+    @ObservedObject var project: SidebarProject
+    let hasUnreadChildren: Bool
+
+    /// Chevron rotation: 90° when expanded, 0° when collapsed.
+    private var chevronRotation: Angle {
+        project.isExpanded ? .degrees(90) : .degrees(0)
+    }
+
+    var body: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                project.isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .rotationEffect(chevronRotation)
+                    .foregroundColor(.secondary)
+                    .frame(width: 12)
+
+                Text(project.name)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                Spacer()
+
+                // Notification dot when collapsed and children have unread activity.
+                if !project.isExpanded && hasUnreadChildren {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(project.name))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(Text(
+            project.isExpanded
+                ? String(localized: "sidebar.project.collapse.hint", defaultValue: "Double-tap to collapse")
+                : String(localized: "sidebar.project.expand.hint", defaultValue: "Double-tap to expand")
+        ))
+    }
+}
+
+/// Renders a branch row under a project, indented to show hierarchy.
+/// Clicking toggles `branch.isExpanded`. Shows a yellow dirty dot when
+/// the branch has uncommitted changes.
+private struct SidebarBranchRow: View {
+    let branch: SidebarBranch
+    @ObservedObject var project: SidebarProject
+    let hasUnreadChildren: Bool
+    @State private var isHovering = false
+
+    /// Chevron rotation: 90° when expanded, 0° when collapsed.
+    private var chevronRotation: Angle {
+        branch.isExpanded ? .degrees(90) : .degrees(0)
+    }
+
+    var body: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                // Branch is a value type — mutate via the parent project.
+                if let idx = project.branches.firstIndex(where: { $0.id == branch.id }) {
+                    project.branches[idx].isExpanded.toggle()
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 8, weight: .semibold))
+                    .rotationEffect(chevronRotation)
+                    .foregroundColor(.secondary)
+                    .frame(width: 10)
+
+                Image(systemName: "arrow.triangle.branch")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+
+                Text(branch.name)
+                    .font(.system(size: 11))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+
+                // Yellow dot for uncommitted changes on this branch.
+                if branch.isDirty {
+                    Circle()
+                        .fill(Color.yellow)
+                        .frame(width: 5, height: 5)
+                }
+
+                Spacer()
+
+                // Notification dot when collapsed and children have unread activity.
+                if !branch.isExpanded && hasUnreadChildren {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 5, height: 5)
+                }
+            }
+            .padding(.leading, 24)
+            .padding(.trailing, 12)
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovering = hovering
+        }
+        .accessibilityLabel(Text(branch.name))
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// Renders a linked terminal reference row.
+/// Clicking navigates to the workspace that owns the terminal.
+private struct SidebarLinkedTerminalRow: View {
+    let entry: SidebarLinkedTerminalEntry
+    let onNavigate: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: onNavigate) {
+            HStack(spacing: 6) {
+                Image(systemName: "link")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+
+                Text(String(
+                    localized: "sidebar.linkedTerminal.label",
+                    defaultValue: "shared from \(entry.owningProjectName) / \(entry.owningWorkspaceName)"
+                ))
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+                Spacer()
+            }
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovering = hovering
+        }
+        .opacity(isHovering ? 1.0 : 0.7)
+        .accessibilityLabel(Text(String(
+            localized: "sidebar.linkedTerminal.accessibility",
+            defaultValue: "Shared terminal from \(entry.owningProjectName), \(entry.owningWorkspaceName)"
+        )))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(Text(String(
+            localized: "sidebar.linkedTerminal.accessibility.hint",
+            defaultValue: "Double-tap to navigate to owning workspace"
+        )))
+    }
 }
 
 // PERF: TabItemView is Equatable so SwiftUI skips body re-evaluation when

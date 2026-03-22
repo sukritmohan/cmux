@@ -2760,6 +2760,12 @@ class TabManager: ObservableObject {
     }
 #endif
 
+    /// Look up a workspace by UUID. Used by the sidebar project tree
+    /// to resolve workspace IDs from the branch model into Tab objects.
+    func tab(for workspaceId: UUID) -> Workspace? {
+        tabs.first { $0.id == workspaceId }
+    }
+
     func selectTab(at index: Int) {
         guard index >= 0 && index < tabs.count else { return }
 #if DEBUG
