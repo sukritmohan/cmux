@@ -11981,10 +11981,10 @@ private struct TabItemView: View, Equatable {
         }
 
         return filtered.compactMap { entry in
-            // When under a project, don't show branch (already in tree).
-            // Show directory with "+" prefix for non-parent panes.
+            // Parent-matching entries are already filtered out above,
+            // so all remaining entries are non-parent panes. Show their branch.
             let branchText: String? = {
-                guard parentPath == nil, sidebarShowGitBranch, let branch = entry.branch else { return nil }
+                guard sidebarShowGitBranch, let branch = entry.branch else { return nil }
                 return "\(branch)\(entry.isDirty ? "*" : "")"
             }()
 
