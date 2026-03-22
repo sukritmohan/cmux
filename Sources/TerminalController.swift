@@ -14639,6 +14639,9 @@ class TerminalController {
     }
 
     private func reportGitBranch(_ args: String) -> String {
+#if DEBUG
+        dlog("report_git_branch args=\(args)")
+#endif
         let parsed = parseOptions(args)
         guard let branch = parsed.positional.first else {
             return "ERROR: Missing branch name — usage: report_git_branch <branch> [--status=dirty] [--tab=X]"
