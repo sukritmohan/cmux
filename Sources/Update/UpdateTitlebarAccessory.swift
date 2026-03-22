@@ -719,7 +719,19 @@ final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewCont
         self.notificationStore = notificationStore
         let toggleSidebar = { _ = AppDelegate.shared?.sidebarState?.toggle() }
         let toggleNotifications: () -> Void = { _ = AppDelegate.shared?.toggleNotificationsPopover(animated: true) }
-        let newTab = { _ = AppDelegate.shared?.tabManager?.addTab() }
+        let newTab = {
+            let panel = NSOpenPanel()
+            panel.canChooseFiles = false
+            panel.canChooseDirectories = true
+            panel.allowsMultipleSelection = false
+            panel.title = String(localized: "panel.openFolder.title", defaultValue: "Open Folder")
+            panel.prompt = String(localized: "panel.openFolder.prompt", defaultValue: "Open")
+            panel.message = String(localized: "panel.openFolder.message", defaultValue: "Select a project folder to open")
+            if panel.runModal() == .OK, let url = panel.url {
+                SidebarProjectManager.addRecentProjectPath(url.path)
+                _ = AppDelegate.shared?.tabManager?.addWorkspace(workingDirectory: url.path, select: true)
+            }
+        }
 
         hostingView = NonDraggableHostingView(
             rootView: TitlebarControlsView(

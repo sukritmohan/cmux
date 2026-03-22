@@ -24,6 +24,12 @@ final class SidebarProjectManager: ObservableObject {
     private var workspaceSubscriptions: [UUID: [AnyCancellable]] = [:]
     private var rebuildScheduled = false
 
+    /// Sticky project assignment: once a workspace is placed under a project,
+    /// it stays there even if git info temporarily becomes nil (e.g., new pane
+    /// opening before shell integration reports). Key: workspace UUID,
+    /// Value: (repoPath, branchName).
+    private var stickyAssignments: [UUID: (repoPath: String, branch: String)] = [:]
+
     // MARK: - Attach to TabManager
 
     /// Begin observing workspace state. Call once after TabManager is created.
@@ -100,12 +106,27 @@ final class SidebarProjectManager: ObservableObject {
             subscribeToWorkspace(workspace)
 
             // Determine primary git root and branch.
-            let primaryRoot = workspace.gitRoot
+            // gitRoot comes from --root= in report_git_branch (new shell integration).
+            // Fall back to currentDirectory when gitRoot is nil but gitBranch exists
+            // (old shell integration that doesn't send --root=).
             let primaryBranch = workspace.gitBranch?.branch
             let primaryDirty = workspace.gitBranch?.isDirty ?? false
+            let primaryRoot = workspace.gitRoot ?? (primaryBranch != nil ? workspace.currentDirectory : nil)
 
-            guard let root = primaryRoot, let branch = primaryBranch else {
-                // No git info — goes to "Other" section.
+            // Resolve root and branch, using sticky assignment as fallback.
+            // Once a workspace is placed under a project, it stays there even
+            // when git info temporarily goes nil (e.g., new pane opening).
+            let root: String
+            let branch: String
+            if let r = primaryRoot, let b = primaryBranch {
+                root = r
+                branch = b
+                stickyAssignments[workspace.id] = (repoPath: r, branch: b)
+            } else if let sticky = stickyAssignments[workspace.id] {
+                root = sticky.repoPath
+                branch = primaryBranch ?? sticky.branch
+            } else {
+                // Never had git info — goes to "Other" section.
                 otherWorkspaceIds.append(workspace.id)
                 continue
             }
@@ -265,10 +286,11 @@ final class SidebarProjectManager: ObservableObject {
 
         projects = newProjects
 
-        // Prune subscriptions for removed workspaces.
+        // Prune subscriptions and sticky assignments for removed workspaces.
         let removedIds = Set(workspaceSubscriptions.keys).subtracting(seenWorkspaceIds)
         for id in removedIds {
             workspaceSubscriptions.removeValue(forKey: id)
+            stickyAssignments.removeValue(forKey: id)
         }
     }
 
