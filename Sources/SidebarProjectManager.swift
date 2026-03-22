@@ -163,16 +163,25 @@ final class SidebarProjectManager: ObservableObject {
                 ))
             }
 
-            // Second pass: panels with git branches but no explicit root.
-            // Use panelDirectories as the repo path if it differs from the workspace root.
-            for (panelId, panelBranch) in workspace.panelGitBranches {
+            // Second pass: panels with directories different from the workspace root.
+            // Creates linked entries for panels in other repos. Uses git branch if
+            // available, falls back to workspace branch for panels that haven't
+            // reported their own branch yet.
+            for (panelId, panelDir) in workspace.panelDirectories {
                 guard !checkedPanelIds.contains(panelId) else { continue }
-                guard let panelDir = workspace.panelDirectories[panelId] else { continue }
                 guard panelDir != root else { continue }
+                // Skip subdirectories of the same repo
+                guard !panelDir.hasPrefix(root + "/") else { continue }
+                guard !root.hasPrefix(panelDir + "/") else { continue }
+                let panelBranch = workspace.panelGitBranches[panelId]
+                // Only create linked entry if the panel has a git branch
+                // (either its own or inherited from workspace)
+                let branchName = panelBranch?.branch ?? workspace.gitBranch?.branch
+                guard let branchName else { continue }
                 linkedEntries.append(LinkedEntry(
                     repoPath: panelDir,
-                    branch: panelBranch.branch,
-                    isDirty: panelBranch.isDirty,
+                    branch: branchName,
+                    isDirty: panelBranch?.isDirty ?? false,
                     owningWorkspaceId: workspace.id,
                     owningProjectRepoPath: root,
                     owningWorkspaceName: workspace.customTitle ?? workspace.title,
