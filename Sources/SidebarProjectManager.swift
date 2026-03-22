@@ -212,15 +212,23 @@ final class SidebarProjectManager: ObservableObject {
                 ))
             }
 
-            let project = SidebarProject(
-                id: existing?.id ?? UUID(),
-                name: projectName,
-                repoPath: repoPath,
-                isExpanded: existing?.isExpanded ?? true,
-                branches: branches,
-                order: existing?.order ?? newProjects.count
-            )
-            newProjects.append(project)
+            // Reuse existing project instance to preserve @ObservedObject identity.
+            // Creating a new instance would invalidate SwiftUI's observation.
+            if let existing {
+                existing.name = projectName
+                existing.branches = branches
+                // Preserve order and isExpanded — don't overwrite.
+                newProjects.append(existing)
+            } else {
+                let project = SidebarProject(
+                    id: UUID(),
+                    name: projectName,
+                    repoPath: repoPath,
+                    branches: branches,
+                    order: newProjects.count
+                )
+                newProjects.append(project)
+            }
         }
 
         // Process linked terminal entries — add to auto-created projects.
@@ -230,16 +238,20 @@ final class SidebarProjectManager: ObservableObject {
             // Find or create the auto-project for this repo.
             var project = newProjects.first(where: { $0.repoPath == linked.repoPath })
             if project == nil {
-                let existing = existingProjects[linked.repoPath]
-                project = SidebarProject(
-                    id: existing?.id ?? UUID(),
-                    name: projectNameFromPath(linked.repoPath),
-                    repoPath: linked.repoPath,
-                    isExpanded: existing?.isExpanded ?? true,
-                    branches: [],
-                    order: existing?.order ?? newProjects.count,
-                    isAutoCreated: true
-                )
+                if let existing = existingProjects[linked.repoPath] {
+                    existing.branches = []
+                    existing.isAutoCreated = true
+                    project = existing
+                } else {
+                    project = SidebarProject(
+                        id: UUID(),
+                        name: projectNameFromPath(linked.repoPath),
+                        repoPath: linked.repoPath,
+                        branches: [],
+                        order: newProjects.count,
+                        isAutoCreated: true
+                    )
+                }
                 newProjects.append(project!)
             }
 
