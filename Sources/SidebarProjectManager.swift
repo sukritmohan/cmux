@@ -139,13 +139,36 @@ final class SidebarProjectManager: ObservableObject {
             projectGroups[root, default: []].append(entry)
 
             // Check for multi-repo panels.
+            // Use panelGitRoots when available (new shell integration with --root=),
+            // fall back to panelDirectories + panelGitBranches (old integration).
+            var checkedPanelIds = Set<UUID>()
+
+            // First pass: panels with explicit git roots.
             for (panelId, panelRoot) in workspace.panelGitRoots {
+                checkedPanelIds.insert(panelId)
                 guard panelRoot != root else { continue }
                 let panelBranch = workspace.panelGitBranches[panelId]
                 linkedEntries.append(LinkedEntry(
                     repoPath: panelRoot,
                     branch: panelBranch?.branch ?? "unknown",
                     isDirty: panelBranch?.isDirty ?? false,
+                    owningWorkspaceId: workspace.id,
+                    owningProjectRepoPath: root,
+                    owningWorkspaceName: workspace.customTitle ?? workspace.title,
+                    panelId: panelId
+                ))
+            }
+
+            // Second pass: panels with git branches but no explicit root.
+            // Use panelDirectories as the repo path if it differs from the workspace root.
+            for (panelId, panelBranch) in workspace.panelGitBranches {
+                guard !checkedPanelIds.contains(panelId) else { continue }
+                guard let panelDir = workspace.panelDirectories[panelId] else { continue }
+                guard panelDir != root else { continue }
+                linkedEntries.append(LinkedEntry(
+                    repoPath: panelDir,
+                    branch: panelBranch.branch,
+                    isDirty: panelBranch.isDirty,
                     owningWorkspaceId: workspace.id,
                     owningProjectRepoPath: root,
                     owningWorkspaceName: workspace.customTitle ?? workspace.title,
@@ -328,6 +351,12 @@ final class SidebarProjectManager: ObservableObject {
 
         // Rebuild when current directory changes (may affect "Other" grouping).
         workspace.$currentDirectory
+            .dropFirst()
+            .sink { [weak self] _ in self?.scheduleRebuild() }
+            .store(in: &subs)
+
+        // Rebuild when panel directories change (multi-repo detection fallback).
+        workspace.$panelDirectories
             .dropFirst()
             .sink { [weak self] _ in self?.scheduleRebuild() }
             .store(in: &subs)
