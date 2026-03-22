@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beethoven Sidebar Redesign — Visual Concepts</title>
+<link href="https://fonts.googleapis.com/css2?family=SF+Pro+Text:wght@400;500;600&family=SF+Pro+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-page: #1a1a1e;
+    --bg-sidebar: #252528;
+    --bg-sidebar-header: #2a2a2e;
+    --text-primary: rgba(255,255,255,0.92);
+    --text-secondary: rgba(255,255,255,0.62);
+    --text-tertiary: rgba(255,255,255,0.42);
+    --text-quaternary: rgba(255,255,255,0.26);
+    --accent: #0091FF;
+    --accent-dim: rgba(0,145,255,0.15);
+    --accent-bar: rgba(0,145,255,0.85);
+    --separator: rgba(255,255,255,0.08);
+    --hover-fill: rgba(255,255,255,0.06);
+    --amber: rgb(235, 184, 64);
+    --sidebar-width: 280px;
+    --radius: 5px;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    padding: 48px 40px 80px;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+
+  .page-header h1 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+
+  .page-header p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  .concepts-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .concept {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .concept-label {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding: 0 4px;
+  }
+
+  .concept-label .letter {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(0,145,255,0.12);
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    flex-shrink: 0;
+  }
+
+  .concept-label .title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .concept-label .subtitle {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-left: auto;
+  }
+
+  /* ── Sidebar frame ── */
+  .sidebar-frame {
+    background: var(--bg-sidebar);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    box-shadow:
+      0 1px 3px rgba(0,0,0,0.3),
+      0 8px 24px rgba(0,0,0,0.25),
+      inset 0 0.5px 0 rgba(255,255,255,0.06);
+  }
+
+  .sidebar-titlebar {
+    height: 38px;
+    background: var(--bg-sidebar-header);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--separator);
+    flex-shrink: 0;
+  }
+
+  .traffic-lights {
+    display: flex;
+    gap: 7px;
+  }
+
+  .traffic-light {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+  }
+  .traffic-light.red { background: #FF5F57; }
+  .traffic-light.yellow { background: #FEBC2E; }
+  .traffic-light.green { background: #28C840; }
+
+  .sidebar-content {
+    padding: 8px 0;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  /* ── Shared row primitives ── */
+  .row {
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    min-height: 24px;
+    cursor: default;
+    position: relative;
+    transition: background 0.15s ease;
+  }
+
+  .row:hover {
+    background: var(--hover-fill);
+  }
+
+  .row .chevron {
+    width: 16px;
+    flex-shrink: 0;
+    font-size: 9px;
+    color: var(--text-tertiary);
+    transition: transform 0.15s ease;
+    text-align: center;
+  }
+
+  .row .chevron.open {
+    transform: rotate(90deg);
+  }
+
+  .row .icon {
+    flex-shrink: 0;
+    margin-right: 5px;
+    font-size: 11px;
+  }
+
+  /* ── Selection highlight ── */
+  .row.selected {
+    background: var(--accent-dim);
+    border-radius: var(--radius);
+    margin: 0 6px;
+    padding: 0 4px;
+  }
+
+  .row.selected::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 2.5px;
+    background: var(--accent-bar);
+    border-radius: 2px;
+  }
+
+  /* ============================================
+     APPROACH A — Structural Strata
+     ============================================ */
+
+  .a-project {
+    margin-top: 4px;
+  }
+
+  .a-project:first-child {
+    margin-top: 0;
+  }
+
+  .a-project-row {
+    padding: 6px 12px 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .a-project-row .chevron {
+    font-size: 8px;
+    color: var(--text-quaternary);
+    width: 12px;
+    text-align: center;
+    transition: transform 0.15s ease;
+  }
+
+  .a-project-row .chevron.open {
+    transform: rotate(90deg);
+  }
+
+  .a-project-name {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .a-branch-row {
+    display: flex;
+    align-items: center;
+    padding: 3px 12px 3px 20px;
+    gap: 4px;
+    min-height: 22px;
+  }
+
+  .a-branch-row .chevron {
+    font-size: 7px;
+    color: var(--text-quaternary);
+    width: 10px;
+  }
+
+  .a-branch-icon {
+    font-size: 11px;
+    color: rgba(0,145,255,0.55);
+    margin-right: 3px;
+  }
+
+  .a-branch-name {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-secondary);
+  }
+
+  .a-branch-name.dirty::after {
+    content: '*';
+    color: var(--accent);
+    margin-left: 1px;
+  }
+
+  .a-workspace-row {
+    display: flex;
+    align-items: center;
+    padding: 4px 10px 4px 36px;
+    min-height: 26px;
+    cursor: default;
+    position: relative;
+    transition: background 0.15s ease;
+    border-radius: var(--radius);
+    margin: 0 6px;
+  }
+
+  .a-workspace-row:hover {
+    background: var(--hover-fill);
+  }
+
+  .a-workspace-row.selected {
+    background: var(--accent-dim);
+  }
+
+  .a-workspace-row.selected::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 2.5px;
+    background: var(--accent-bar);
+    border-radius: 2px;
+  }
+
+  .a-workspace-path {
+    font-size: 11px;
+    color: var(--text-primary);
+  }
+
+  .a-linked-row {
+    display: flex;
+    align-items: center;
+    padding: 2px 10px 2px 44px;
+    min-height: 20px;
+    gap: 4px;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+  }
+
+  .a-linked-row:hover {
+    opacity: 1;
+  }
+
+  .a-linked-icon {
+    font-size: 9px;
+    color: var(--text-tertiary);
+  }
+
+  .a-linked-text {
+    font-size: 10px;
+    font-style: italic;
+    color: var(--text-tertiary);
+  }
+
+  .a-linked-text strong {
+    font-weight: 500;
+    font-style: normal;
+  }
+
+  .a-separator {
+    height: 1px;
+    background: var(--separator);
+    margin: 6px 12px;
+  }
+
+  /* ============================================
+     APPROACH B — Indent Ladder
+     ============================================ */
+
+  .b-project {
+    position: relative;
+    margin-bottom: 4px;
+  }
+
+  .b-project-row {
+    display: flex;
+    align-items: center;
+    padding: 5px 12px;
+    gap: 6px;
+    min-height: 26px;
+  }
+
+  .b-project-row .chevron {
+    font-size: 8px;
+    color: var(--text-quaternary);
+    width: 12px;
+  }
+
+  .b-project-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .b-project-dot.blue { background: #5B9CF5; }
+  .b-project-dot.purple { background: #B07CDB; }
+  .b-project-dot.orange { background: #E8935A; }
+  .b-project-dot.teal { background: #5BBFB5; }
+
+  .b-project-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .b-tree-container {
+    position: relative;
+    padding-left: 22px;
+  }
+
+  .b-guide-line {
+    position: absolute;
+    left: 22px;
+    top: 0;
+    bottom: 8px;
+    width: 1px;
+    opacity: 0.18;
+  }
+
+  .b-guide-line.blue { background: #5B9CF5; }
+  .b-guide-line.purple { background: #B07CDB; }
+  .b-guide-line.orange { background: #E8935A; }
+  .b-guide-line.teal { background: #5BBFB5; }
+
+  .b-branch-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 4px;
+    margin: 2px 0 2px 12px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+  }
+
+  .b-branch-pill::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    width: 12px;
+    height: 1px;
+    opacity: 0.2;
+  }
+
+  .b-branch-pill.blue::before { background: #5B9CF5; }
+  .b-branch-pill.purple::before { background: #B07CDB; }
+  .b-branch-pill.orange::before { background: #E8935A; }
+  .b-branch-pill.teal::before { background: #5BBFB5; }
+
+  .b-workspace-row {
+    display: flex;
+    align-items: center;
+    padding: 4px 10px 4px 38px;
+    min-height: 26px;
+    position: relative;
+    transition: background 0.15s ease;
+    border-radius: var(--radius);
+    margin: 0 6px;
+  }
+
+  .b-workspace-row:hover {
+    background: var(--hover-fill);
+  }
+
+  .b-workspace-row.selected {
+    background: var(--accent-dim);
+  }
+
+  .b-workspace-row.selected::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 2.5px;
+    background: var(--accent-bar);
+    border-radius: 2px;
+  }
+
+  .b-workspace-path {
+    font-size: 11px;
+    color: var(--text-primary);
+  }
+
+  .b-linked-row {
+    display: flex;
+    align-items: center;
+    padding: 2px 10px 2px 50px;
+    min-height: 20px;
+    gap: 4px;
+    position: relative;
+  }
+
+  .b-linked-icon {
+    font-size: 9px;
+    color: var(--text-quaternary);
+  }
+
+  .b-linked-text {
+    font-size: 10px;
+    color: var(--text-quaternary);
+  }
+
+  .b-linked-text strong {
+    font-weight: 500;
+    color: var(--text-tertiary);
+  }
+
+  /* ============================================
+     APPROACH C — Typographic Rhythm
+     ============================================ */
+
+  .c-project {
+    margin-top: 0;
+  }
+
+  .c-project + .c-project {
+    margin-top: 10px;
+  }
+
+  .c-project-row {
+    display: flex;
+    align-items: center;
+    padding: 4px 12px 1px;
+    gap: 3px;
+    min-height: 22px;
+  }
+
+  .c-project-row .chevron {
+    font-size: 7px;
+    color: var(--text-quaternary);
+    width: 12px;
+    text-align: center;
+  }
+
+  .c-project-name {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .c-project-count {
+    margin-left: auto;
+    font-size: 9px;
+    color: var(--text-quaternary);
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 3px;
+    min-width: 16px;
+    text-align: center;
+  }
+
+  .c-branch-row {
+    display: flex;
+    align-items: center;
+    padding: 1px 12px 2px 24px;
+    min-height: 18px;
+  }
+
+  .c-branch-prefix {
+    font-size: 10px;
+    color: var(--text-quaternary);
+    margin-right: 3px;
+  }
+
+  .c-branch-name {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+  }
+
+  .c-branch-name.dirty {
+    color: var(--amber);
+  }
+
+  .c-workspace-row {
+    display: flex;
+    align-items: center;
+    padding: 5px 10px 5px 24px;
+    min-height: 30px;
+    position: relative;
+    transition: background 0.15s ease;
+    border-radius: var(--radius);
+    margin: 1px 6px;
+  }
+
+  .c-workspace-row:hover {
+    background: var(--hover-fill);
+  }
+
+  .c-workspace-row.selected {
+    background: var(--accent-dim);
+  }
+
+  .c-workspace-row.selected::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 5px;
+    bottom: 5px;
+    width: 2.5px;
+    background: var(--accent-bar);
+    border-radius: 2px;
+  }
+
+  .c-workspace-path {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-primary);
+    letter-spacing: -0.1px;
+  }
+
+  .c-linked-row {
+    display: flex;
+    align-items: center;
+    padding: 2px 10px 2px 34px;
+    min-height: 18px;
+    gap: 3px;
+    transition: color 0.15s ease;
+  }
+
+  .c-linked-row:hover .c-linked-glyph,
+  .c-linked-row:hover .c-linked-text {
+    color: var(--text-secondary);
+  }
+
+  .c-linked-glyph {
+    font-size: 10px;
+    color: var(--text-quaternary);
+    font-weight: 500;
+    transition: color 0.15s ease;
+  }
+
+  .c-linked-text {
+    font-size: 10px;
+    color: var(--text-quaternary);
+    transition: color 0.15s ease;
+  }
+
+  /* ── Annotation callouts ── */
+  .annotation {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 20px 0 0;
+    padding: 10px 12px;
+    background: rgba(0,145,255,0.06);
+    border-radius: 6px;
+    border: 1px solid rgba(0,145,255,0.12);
+  }
+
+  .annotation-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .annotation-text {
+    font-size: 10px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .annotation-text strong {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  /* ── Recommended badge ── */
+  .recommended {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #28C840;
+    background: rgba(40,200,64,0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(40,200,64,0.15);
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Sidebar Hierarchy Redesign</h1>
+  <p>Three visual approaches for improving hierarchy readability in the Beethoven sidebar. Project → Branch → Workspace → Linked Pane.</p>
+</div>
+
+<div class="concepts-grid">
+
+  <!-- ════════════════════════════════════════
+       APPROACH A — Structural Strata
+       ════════════════════════════════════════ -->
+  <div class="concept">
+    <div class="concept-label">
+      <span class="letter">A</span>
+      <span class="title">Structural Strata</span>
+    </div>
+
+    <div class="sidebar-frame">
+      <div class="sidebar-titlebar">
+        <div class="traffic-lights">
+          <div class="traffic-light red"></div>
+          <div class="traffic-light yellow"></div>
+          <div class="traffic-light green"></div>
+        </div>
+      </div>
+      <div class="sidebar-content">
+
+        <!-- Project: code -->
+        <div class="a-project">
+          <div class="a-project-row">
+            <span class="chevron open">›</span>
+            <span class="a-project-name">Code</span>
+          </div>
+          <div class="a-branch-row">
+            <span class="chevron open" style="font-size:7px">›</span>
+            <span class="a-branch-icon">⑂</span>
+            <span class="a-branch-name">main</span>
+          </div>
+          <div class="a-workspace-row selected">
+            <span class="a-workspace-path">~/code</span>
+          </div>
+          <div class="a-linked-row">
+            <span class="a-linked-icon">↱</span>
+            <span class="a-linked-text">from <strong>Aly</strong></span>
+          </div>
+          <div class="a-linked-row">
+            <span class="a-linked-icon">↱</span>
+            <span class="a-linked-text">from <strong>Harness</strong></span>
+          </div>
+        </div>
+
+        <div class="a-separator"></div>
+
+        <!-- Project: Aly -->
+        <div class="a-project">
+          <div class="a-project-row">
+            <span class="chevron open">›</span>
+            <span class="a-project-name">Aly</span>
+          </div>
+          <div class="a-branch-row">
+            <span class="chevron open" style="font-size:7px">›</span>
+            <span class="a-branch-icon">⑂</span>
+            <span class="a-branch-name">main</span>
+          </div>
+          <div class="a-workspace-row">
+            <span class="a-workspace-path">~/code/Aly</span>
+          </div>
+          <div class="a-linked-row">
+            <span class="a-linked-icon">↱</span>
+            <span class="a-linked-text">from <strong>code</strong></span>
+          </div>
+        </div>
+
+        <div class="a-separator"></div>
+
+        <!-- Project: Harness -->
+        <div class="a-project">
+          <div class="a-project-row">
+            <span class="chevron open">›</span>
+            <span class="a-project-name">Harness</span>
+          </div>
+          <div class="a-branch-row">
+            <span class="chevron" style="font-size:7px">›</span>
+            <span class="a-branch-icon">⑂</span>
+            <span class="a-branch-name">main</span>
+          </div>
+          <div class="a-branch-row">
+            <span class="chevron" style="font-size:7px">›</span>
+            <span class="a-branch-icon">⑂</span>
+            <span class="a-branch-name dirty">feature/auth</span>
+          </div>
+        </div>
+
+        <div class="a-separator"></div>
+
+        <!-- Project: Other -->
+        <div class="a-project">
+          <div class="a-project-row">
+            <span class="chevron open">›</span>
+            <span class="a-project-name">Other</span>
+          </div>
+          <div class="a-workspace-row">
+            <span class="a-workspace-path">~</span>
+          </div>
+          <div class="a-workspace-row">
+            <span class="a-workspace-path">~</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="annotation">
+      <div class="annotation-dot"></div>
+      <div class="annotation-text">
+        <strong>Uppercase headers</strong> act as section anchors. Tinted <strong>⑂ branch icons</strong> add color identity. Linked panes use <strong>↱ directional arrow</strong> + italic + dimmer color for clear separation.
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════
+       APPROACH B — Indent Ladder
+       ════════════════════════════════════════ -->
+  <div class="concept">
+    <div class="concept-label">
+      <span class="letter">B</span>
+      <span class="title">Indent Ladder</span>
+    </div>
+
+    <div class="sidebar-frame">
+      <div class="sidebar-titlebar">
+        <div class="traffic-lights">
+          <div class="traffic-light red"></div>
+          <div class="traffic-light yellow"></div>
+          <div class="traffic-light green"></div>
+        </div>
+      </div>
+      <div class="sidebar-content">
+
+        <!-- Project: code -->
+        <div class="b-project">
+          <div class="b-project-row">
+            <span class="chevron open" style="font-size:8px">›</span>
+            <div class="b-project-dot blue"></div>
+            <span class="b-project-name">code</span>
+          </div>
+          <div class="b-tree-container">
+            <div class="b-guide-line blue"></div>
+            <div class="b-branch-pill blue">main</div>
+            <div class="b-workspace-row selected">
+              <span class="b-workspace-path">~/code</span>
+            </div>
+            <div class="b-linked-row">
+              <span class="b-linked-icon">⤷</span>
+              <span class="b-linked-text"><strong>Aly</strong></span>
+            </div>
+            <div class="b-linked-row">
+              <span class="b-linked-icon">⤷</span>
+              <span class="b-linked-text"><strong>Harness</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project: Aly -->
+        <div class="b-project">
+          <div class="b-project-row">
+            <span class="chevron open" style="font-size:8px">›</span>
+            <div class="b-project-dot purple"></div>
+            <span class="b-project-name">Aly</span>
+          </div>
+          <div class="b-tree-container">
+            <div class="b-guide-line purple"></div>
+            <div class="b-branch-pill purple">main</div>
+            <div class="b-workspace-row">
+              <span class="b-workspace-path">~/code/Aly</span>
+            </div>
+            <div class="b-linked-row">
+              <span class="b-linked-icon">⤷</span>
+              <span class="b-linked-text"><strong>code</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project: Harness -->
+        <div class="b-project">
+          <div class="b-project-row">
+            <span class="chevron open" style="font-size:8px">›</span>
+            <div class="b-project-dot orange"></div>
+            <span class="b-project-name">Harness</span>
+          </div>
+          <div class="b-tree-container">
+            <div class="b-guide-line orange"></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <div class="b-branch-pill orange">main</div>
+              <div class="b-branch-pill orange">feature/auth</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project: Other -->
+        <div class="b-project">
+          <div class="b-project-row">
+            <span class="chevron open" style="font-size:8px">›</span>
+            <div class="b-project-dot teal"></div>
+            <span class="b-project-name">Other</span>
+          </div>
+          <div class="b-tree-container">
+            <div class="b-guide-line teal"></div>
+            <div class="b-workspace-row">
+              <span class="b-workspace-path">~</span>
+            </div>
+            <div class="b-workspace-row">
+              <span class="b-workspace-path">~</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="annotation">
+      <div class="annotation-dot"></div>
+      <div class="annotation-text">
+        <strong>Colored dots</strong> per project with matching <strong>guide lines</strong>. Branch names in <strong>pill badges</strong>. Linked panes use <strong>⤷ redirect arrows</strong>. Most explicit hierarchy but more visual weight.
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════
+       APPROACH C — Typographic Rhythm
+       ════════════════════════════════════════ -->
+  <div class="concept">
+    <div class="concept-label">
+      <span class="letter">C</span>
+      <span class="title">Typographic Rhythm</span>
+      <span class="recommended">Recommended</span>
+    </div>
+
+    <div class="sidebar-frame">
+      <div class="sidebar-titlebar">
+        <div class="traffic-lights">
+          <div class="traffic-light red"></div>
+          <div class="traffic-light yellow"></div>
+          <div class="traffic-light green"></div>
+        </div>
+      </div>
+      <div class="sidebar-content">
+
+        <!-- Project: code -->
+        <div class="c-project">
+          <div class="c-project-row">
+            <span class="chevron open" style="font-size:7px">›</span>
+            <span class="c-project-name">code</span>
+            <span class="c-project-count">3</span>
+          </div>
+          <div class="c-branch-row">
+            <span class="c-branch-prefix">on</span>
+            <span class="c-branch-name">main</span>
+          </div>
+          <div class="c-workspace-row selected">
+            <span class="c-workspace-path">~/code</span>
+          </div>
+          <div class="c-linked-row">
+            <span class="c-linked-glyph">~›</span>
+            <span class="c-linked-text">Aly</span>
+          </div>
+          <div class="c-linked-row">
+            <span class="c-linked-glyph">~›</span>
+            <span class="c-linked-text">Harness</span>
+          </div>
+        </div>
+
+        <!-- Project: Aly -->
+        <div class="c-project">
+          <div class="c-project-row">
+            <span class="chevron open" style="font-size:7px">›</span>
+            <span class="c-project-name">Aly</span>
+            <span class="c-project-count">2</span>
+          </div>
+          <div class="c-branch-row">
+            <span class="c-branch-prefix">on</span>
+            <span class="c-branch-name">main</span>
+          </div>
+          <div class="c-workspace-row">
+            <span class="c-workspace-path">~/code/Aly</span>
+          </div>
+          <div class="c-linked-row">
+            <span class="c-linked-glyph">~›</span>
+            <span class="c-linked-text">code</span>
+          </div>
+        </div>
+
+        <!-- Project: Harness -->
+        <div class="c-project">
+          <div class="c-project-row">
+            <span class="chevron open" style="font-size:7px">›</span>
+            <span class="c-project-name">Harness</span>
+          </div>
+          <div class="c-branch-row">
+            <span class="c-branch-prefix">on</span>
+            <span class="c-branch-name">main</span>
+          </div>
+          <div class="c-branch-row">
+            <span class="c-branch-prefix">on</span>
+            <span class="c-branch-name dirty">feature/auth</span>
+          </div>
+        </div>
+
+        <!-- Project: Other -->
+        <div class="c-project">
+          <div class="c-project-row">
+            <span class="chevron open" style="font-size:7px">›</span>
+            <span class="c-project-name">Other</span>
+            <span class="c-project-count">2</span>
+          </div>
+          <div class="c-workspace-row" style="padding-left:24px">
+            <span class="c-workspace-path">~</span>
+          </div>
+          <div class="c-workspace-row" style="padding-left:24px">
+            <span class="c-workspace-path">~</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="annotation">
+      <div class="annotation-dot"></div>
+      <div class="annotation-text">
+        <strong>Zero icons.</strong> Workspace paths at <strong>12pt</strong> (largest element). Branches read as natural language <strong>"on main"</strong>. Linked panes via <strong>~› glyph</strong>. Spacing rhythm creates hierarchy. Dirty branches in <strong style="color:var(--amber)">amber</strong>.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
