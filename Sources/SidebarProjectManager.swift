@@ -127,9 +127,13 @@ final class SidebarProjectManager: ObservableObject {
                 branch = primaryBranch ?? sticky.branch
             } else {
                 // Never had git info — goes to "Other" section.
+                workspace.sidebarParentProjectPath = nil
                 otherWorkspaceIds.append(workspace.id)
                 continue
             }
+
+            // Set parent project path so TabItemView can filter redundant metadata.
+            workspace.sidebarParentProjectPath = root
 
             let entry = WorkspaceEntry(
                 workspaceId: workspace.id,

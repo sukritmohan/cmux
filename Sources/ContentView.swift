@@ -11942,6 +11942,8 @@ private struct TabItemView: View, Equatable {
     }
 
     private func gitBranchSummaryText(orderedPanelIds: [UUID]) -> String? {
+        // When under a project, branch info is already in the tree — don't repeat it.
+        guard tab.sidebarParentProjectPath == nil else { return nil }
         let lines = gitBranchSummaryLines(orderedPanelIds: orderedPanelIds)
         guard !lines.isEmpty else { return nil }
         return lines.joined(separator: " | ")
@@ -11961,16 +11963,37 @@ private struct TabItemView: View, Equatable {
     private func verticalBranchDirectoryLines(orderedPanelIds: [UUID]) -> [VerticalBranchDirectoryLine] {
         let entries = tab.sidebarBranchDirectoryEntriesInDisplayOrder(orderedPanelIds: orderedPanelIds)
         let home = SidebarPathFormatter.homeDirectoryPath
-        return entries.compactMap { entry in
+        let parentPath = tab.sidebarParentProjectPath
+
+        // When the workspace is under a project in the sidebar tree,
+        // filter out entries whose directory matches the parent project path
+        // — that info is already visible from the project→branch hierarchy.
+        // Only show non-parent directories with "+" prefix.
+        let filtered: [SidebarBranchOrdering.BranchDirectoryEntry]
+        if let parentPath {
+            filtered = entries.filter { entry in
+                guard let dir = entry.directory else { return true }
+                // Keep entries whose directory is NOT the parent project path
+                return dir != parentPath
+            }
+        } else {
+            filtered = entries
+        }
+
+        return filtered.compactMap { entry in
+            // When under a project, don't show branch (already in tree).
+            // Show directory with "+" prefix for non-parent panes.
             let branchText: String? = {
-                guard sidebarShowGitBranch, let branch = entry.branch else { return nil }
+                guard parentPath == nil, sidebarShowGitBranch, let branch = entry.branch else { return nil }
                 return "\(branch)\(entry.isDirty ? "*" : "")"
             }()
 
             let directoryText: String? = {
                 guard let directory = entry.directory else { return nil }
                 let shortened = SidebarPathFormatter.shortenedPath(directory, homeDirectoryPath: home)
-                return shortened.isEmpty ? nil : shortened
+                guard !shortened.isEmpty else { return nil }
+                // Prefix with "+" when under a project to indicate non-parent pane
+                return parentPath != nil ? "+ \(shortened)" : shortened
             }()
 
             switch (branchText, directoryText) {
@@ -11989,14 +12012,18 @@ private struct TabItemView: View, Equatable {
     private func directorySummaryText(orderedPanelIds: [UUID]) -> String? {
         guard !tab.panels.isEmpty else { return nil }
         let home = SidebarPathFormatter.homeDirectoryPath
+        let parentPath = tab.sidebarParentProjectPath
         var seen: Set<String> = []
         var entries: [String] = []
         for panelId in orderedPanelIds {
             let directory = tab.panelDirectories[panelId] ?? tab.currentDirectory
+            // Skip directories that match the parent project path — already visible in tree.
+            if let parentPath, directory == parentPath { continue }
             let shortened = SidebarPathFormatter.shortenedPath(directory, homeDirectoryPath: home)
             guard !shortened.isEmpty else { continue }
             if seen.insert(shortened).inserted {
-                entries.append(shortened)
+                // Prefix with "+" when under a project to indicate non-parent pane
+                entries.append(parentPath != nil ? "+ \(shortened)" : shortened)
             }
         }
         return entries.isEmpty ? nil : entries.joined(separator: " | ")

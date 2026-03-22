@@ -4861,6 +4861,12 @@ final class Workspace: Identifiable, ObservableObject {
     @Published var progress: SidebarProgressState?
     @Published var gitBranch: SidebarGitBranchState?
     @Published var panelGitBranches: [UUID: SidebarGitBranchState] = [:]
+
+    /// Set by SidebarProjectManager when placing this workspace under a project.
+    /// Used by TabItemView to filter redundant branch/directory info that's
+    /// already visible from the project→branch hierarchy in the sidebar.
+    var sidebarParentProjectPath: String?
+
     /// Absolute path to the git repository root for this workspace's primary panel.
     /// Reported by shell integration via report_git_branch --root=<path>.
     @Published var gitRoot: String?
