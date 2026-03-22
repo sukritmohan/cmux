@@ -48,7 +48,7 @@ fi
 TAG="$1"
 SIGN_HASH="A050CC7E193C8221BDBA204E731B046CDCCC1B30"
 ENTITLEMENTS="cmux.entitlements"
-APP_PATH="build/Build/Products/Release/cmux.app"
+APP_PATH="build/Build/Products/Release/Beethoven.app"
 
 # --- Pre-flight ---
 source ~/.secrets/cmuxterm.env
@@ -185,8 +185,8 @@ cask "cmux" do
 
   depends_on macos: ">= :ventura"
 
-  app "cmux.app"
-  binary "#{appdir}/cmux.app/Contents/Resources/bin/cmux"
+  app "Beethoven.app"
+  binary "#{appdir}/Beethoven.app/Contents/Resources/bin/cmux"
 
   zap trash: [
     "~/Library/Application Support/cmux",

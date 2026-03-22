@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_NAME="cmux STAGING"
+APP_NAME="Beethoven STAGING"
 BUNDLE_ID="com.cmuxterm.app.staging"
-BASE_APP_NAME="cmux"
+BASE_APP_NAME="Beethoven"
 DERIVED_DATA=""
 NAME_SET=0
 BUNDLE_SET=0
@@ -109,7 +109,7 @@ if [[ -n "$TAG" ]]; then
   TAG_ID="$(sanitize_bundle "$TAG")"
   TAG_SLUG="$(sanitize_path "$TAG")"
   if [[ "$NAME_SET" -eq 0 ]]; then
-    APP_NAME="cmux STAGING ${TAG}"
+    APP_NAME="Beethoven STAGING ${TAG}"
   fi
   if [[ "$BUNDLE_SET" -eq 0 ]]; then
     BUNDLE_ID="com.cmuxterm.app.staging.${TAG_ID}"

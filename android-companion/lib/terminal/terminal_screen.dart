@@ -52,6 +52,7 @@ import 'top_bar.dart';
 import 'voice_protocol.dart';
 import 'voice_service.dart';
 import 'voice_strip.dart';
+import '../debug_log_overlay.dart';
 
 class TerminalScreen extends ConsumerStatefulWidget {
   const TerminalScreen({super.key});
@@ -235,13 +236,21 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
         .toList();
 
     // Use the pending surface focus from a linked terminal tap if set,
-    // otherwise fall back to the desktop's focused panel.
+    // otherwise fall back to the desktop's focused panel — but only if it
+    // actually refers to a terminal panel. Browser/other panel types don't
+    // have Ghostty surfaces, so subscribing to their ID would fail.
     final focusOverride = _pendingSurfaceFocus;
     _pendingSurfaceFocus = null;
+    final terminalIds = surfaces.map((s) => s.id).toSet();
+    final workspaceFocus = activeWs.focusedPanelId;
+    final effectiveFocus = focusOverride ??
+        (workspaceFocus != null && terminalIds.contains(workspaceFocus)
+            ? workspaceFocus
+            : null);
 
     ref.read(surfaceProvider.notifier).setSurfaces(
       surfaces,
-      focusedId: focusOverride ?? activeWs.focusedPanelId,
+      focusedId: effectiveFocus,
     );
 
     // Sync browser surfaces
@@ -1099,6 +1108,9 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
                 workspaceName: wsState.activeWorkspace?.title,
                 workspaceBranch: wsState.activeWorkspace?.branch,
               ),
+
+            // Debug log overlay
+            const DebugLogOverlay(),
 
             // Connection overlay (shown on top when not connected)
             if (connectionStatus != ConnectionStatus.connected)

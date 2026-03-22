@@ -34,6 +34,7 @@ import '../app/colors.dart';
 import '../app/providers.dart';
 import '../native/ghostty_vt.dart';
 import '../state/surface_provider.dart';
+import '../debug_log_overlay.dart';
 import 'cell_frame_parser.dart';
 import 'terminal_snapshot_painter.dart';
 
@@ -233,7 +234,6 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
       }
 
       // Subscribe to cell-based screen output for this surface.
-      debugPrint('[TerminalView] Subscribing to cell stream: ${widget.surfaceId}');
       final response = await manager.sendRequest(
         'surface.cells.subscribe',
         params: {'surface_id': widget.surfaceId},
@@ -241,7 +241,6 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
 
       if (!response.ok || response.result == null) {
         final errorMsg = response.error ?? 'Unknown error';
-        debugPrint('[TerminalView] Cell subscribe failed: $errorMsg');
         if (mounted) {
           setState(() {
             _subscribing = false;

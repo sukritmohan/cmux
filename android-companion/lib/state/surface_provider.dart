@@ -205,6 +205,12 @@ class SurfaceNotifier extends StateNotifier<SurfaceState> {
     final surfaceId = data['surface_id'] as String?;
     if (surfaceId == null) return;
 
+    // Ignore focus events for surfaces not in our list (e.g. browser panels).
+    // The surface provider only tracks terminal surfaces, so accepting a
+    // browser panel ID here would cause TerminalView to try subscribing to
+    // a non-terminal surface.
+    if (!state.surfaces.any((s) => s.id == surfaceId)) return;
+
     final updated = state.surfaces.map((s) {
       if (s.id == surfaceId) return s.copyWith(hasUnreadNotification: false);
       return s;
