@@ -67,6 +67,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
   bool _showMinimap = false;
   PaneType _activePaneType = PaneType.terminal;
 
+  /// Surface ID to focus after the next workspace switch completes.
+  /// Set by linked terminal taps; consumed by [_syncSurfacesFromWorkspace].
+  String? _pendingSurfaceFocus;
+
   /// Fractional scroll remainder for smooth sub-line accumulation.
   double _scrollRemainder = 0.0;
 
@@ -238,9 +242,14 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
             ))
         .toList();
 
+    // Use the pending surface focus from a linked terminal tap if set,
+    // otherwise fall back to the desktop's focused panel.
+    final focusOverride = _pendingSurfaceFocus;
+    _pendingSurfaceFocus = null;
+
     ref.read(surfaceProvider.notifier).setSurfaces(
       surfaces,
-      focusedId: activeWs.focusedPanelId,
+      focusedId: focusOverride ?? activeWs.focusedPanelId,
     );
 
     // Sync browser surfaces
@@ -280,6 +289,13 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     ).then((_) => _syncSurfacesFromWorkspace());
 
     _scaffoldKey.currentState?.closeDrawer();
+  }
+
+  /// Handles linked terminal taps — switches workspace then focuses the
+  /// specific panel after the surface sync completes.
+  void _onLinkedTerminalSelected(String workspaceId, String panelId) {
+    _pendingSurfaceFocus = panelId;
+    _onWorkspaceSelected(workspaceId);
   }
 
   void _openDrawer() {
@@ -978,6 +994,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
       backgroundColor: c.terminalDefaultBg,
       drawer: WorkspaceDrawer(
         onWorkspaceSelected: _onWorkspaceSelected,
+        onLinkedTerminalSelected: _onLinkedTerminalSelected,
         onSettings: () {
           _scaffoldKey.currentState?.closeDrawer();
           context.go('/pair?rescan=true');

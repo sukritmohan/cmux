@@ -29,7 +29,6 @@ import '../app/colors.dart';
 import '../app/providers.dart';
 import '../app/theme.dart';
 import '../state/project_hierarchy_provider.dart';
-import '../state/surface_provider.dart';
 import '../state/workspace_provider.dart';
 import 'branch_row.dart';
 import 'linked_terminal_row.dart';
@@ -40,12 +39,19 @@ class WorkspaceDrawer extends ConsumerStatefulWidget {
   /// Called when the user selects a workspace from the drawer.
   final ValueChanged<String> onWorkspaceSelected;
 
+  /// Called when the user taps a linked terminal entry. The first argument
+  /// is the owning workspace ID and the second is the panel ID to focus
+  /// after the workspace switch completes.
+  final void Function(String workspaceId, String panelId)?
+      onLinkedTerminalSelected;
+
   /// Called when the user taps the settings button.
   final VoidCallback? onSettings;
 
   const WorkspaceDrawer({
     super.key,
     required this.onWorkspaceSelected,
+    this.onLinkedTerminalSelected,
     this.onSettings,
   });
 
@@ -468,11 +474,12 @@ class _WorkspaceDrawerState extends ConsumerState<WorkspaceDrawer> {
             LinkedTerminalRow(
               entry: lt,
               onTap: () {
-                widget.onWorkspaceSelected(lt.owningWorkspaceId);
-                // Focus the specific panel/surface referenced by the linked entry
-                // so the correct tab is selected after switching workspaces.
-                if (lt.panelId.isNotEmpty) {
-                  ref.read(surfaceProvider.notifier).focusSurface(lt.panelId);
+                if (widget.onLinkedTerminalSelected != null &&
+                    lt.panelId.isNotEmpty) {
+                  widget.onLinkedTerminalSelected!(
+                      lt.owningWorkspaceId, lt.panelId);
+                } else {
+                  widget.onWorkspaceSelected(lt.owningWorkspaceId);
                 }
               },
             ),
