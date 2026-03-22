@@ -194,6 +194,8 @@ final class SidebarProjectManager: ObservableObject {
             // First pass: panels with explicit git roots.
             for (panelId, panelRoot) in workspace.panelGitRoots {
                 checkedPanelIds.insert(panelId)
+                // Only terminal panels should appear as linked sidebar entries.
+                guard workspace.panels[panelId]?.panelType == .terminal else { continue }
                 guard panelRoot != root else { continue }
                 let panelBranch = workspace.panelGitBranches[panelId]
                 linkedEntries.append(LinkedEntry(
@@ -215,6 +217,8 @@ final class SidebarProjectManager: ObservableObject {
             dlog("rebuild.linked workspace=\(workspace.customTitle ?? workspace.title) root=\(root) panelDirs=\(workspace.panelDirectories) panelGitRoots=\(workspace.panelGitRoots) panelBranches=\(workspace.panelGitBranches.mapValues { $0.branch }) checkedPanelIds=\(checkedPanelIds)")
             #endif
             for (panelId, panelDir) in workspace.panelDirectories {
+                // Only terminal panels should appear as linked sidebar entries.
+                guard workspace.panels[panelId]?.panelType == .terminal else { continue }
                 guard !checkedPanelIds.contains(panelId) else {
                     #if DEBUG
                     dlog("rebuild.linked.skip panel=\(panelId) reason=alreadyChecked")

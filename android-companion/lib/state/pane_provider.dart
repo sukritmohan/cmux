@@ -48,6 +48,7 @@ class Pane {
     // panel_id, not surface_id. Find the selected surface's panel_id.
     final surfaces = json['surfaces'] as List?;
     String? surfaceId;
+    String? surfaceType;
     if (surfaces != null && surfaces.isNotEmpty) {
       // Prefer the selected surface's panel_id.
       final surfaceMaps = surfaces.cast<Map<String, dynamic>>();
@@ -58,6 +59,8 @@ class Pane {
       surfaceId = selected['panel_id'] as String?;
       // Fall back to surface_id if panel_id not present.
       surfaceId ??= selected['surface_id'] as String?;
+      // Use the selected surface's type (from layout API) if available.
+      surfaceType = selected['type'] as String?;
     }
     // Legacy fallback for older API responses.
     surfaceId ??= json['selected_surface_id'] as String?;
@@ -65,10 +68,13 @@ class Pane {
 
     final surfaceCount = surfaces?.length ?? (json['surface_count'] as int?) ?? 1;
 
+    // Prefer surface-level type, then pane-level, then default to terminal.
+    final type = surfaceType ?? (json['type'] as String?) ?? 'terminal';
+
     return Pane(
       id: id,
       surfaceId: surfaceId,
-      type: json['type'] as String? ?? 'terminal',
+      type: type,
       x: (json['x'] as num?)?.toDouble() ?? 0,
       y: (json['y'] as num?)?.toDouble() ?? 0,
       width: (json['width'] as num?)?.toDouble() ?? 1,

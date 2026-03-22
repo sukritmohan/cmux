@@ -4082,6 +4082,7 @@ class TerminalController {
                     }
                     if let panelId {
                         entry["panel_id"] = panelId.uuidString
+                        entry["type"] = workspace.panels[panelId]?.panelType.rawValue
                     }
                     entry["is_selected"] = (tabIdStr == pane.selectedTabId)
                     return entry

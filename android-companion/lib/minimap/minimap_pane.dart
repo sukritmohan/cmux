@@ -259,7 +259,22 @@ class _MinimapPaneState extends ConsumerState<MinimapPane> {
       );
     }
 
-    // Placeholder with debug status for diagnostics.
+    // For non-terminal panes (browser, markdown, etc.), show the type label.
+    if (widget.pane.type != 'terminal') {
+      return Center(
+        child: Text(
+          _typeLabel.toUpperCase(),
+          style: GoogleFonts.ibmPlexMono(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: c.textMuted.withAlpha(100),
+            letterSpacing: 1.5,
+          ),
+        ),
+      );
+    }
+
+    // Placeholder with debug status for diagnostics (terminal panes only).
     final status = consumer?.debugStatus ?? (widget.pane.surfaceId == null ? 'no surfaceId' : 'no consumer');
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
