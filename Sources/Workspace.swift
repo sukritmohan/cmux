@@ -207,7 +207,8 @@ extension Workspace {
             statusEntries: statusSnapshots,
             logEntries: logSnapshots,
             progress: progressSnapshot,
-            gitBranch: gitBranchSnapshot
+            gitBranch: gitBranchSnapshot,
+            gitRoot: gitRoot
         )
     }
 
@@ -255,6 +256,9 @@ extension Workspace {
         }
         progress = snapshot.progress.map { SidebarProgressState(value: $0.value, label: $0.label) }
         gitBranch = snapshot.gitBranch.map { SidebarGitBranchState(branch: $0.branch, isDirty: $0.isDirty) }
+        if let root = snapshot.gitRoot?.trimmingCharacters(in: .whitespacesAndNewlines), !root.isEmpty {
+            gitRoot = root
+        }
 
         recomputeListeningPorts()
 
@@ -397,6 +401,7 @@ extension Workspace {
             isPinned: isPinned,
             isManuallyUnread: isManuallyUnread,
             gitBranch: branchSnapshot,
+            gitRoot: panelGitRoots[panelId],
             listeningPorts: listeningPorts,
             ttyName: ttyName,
             terminal: terminalSnapshot,
@@ -602,6 +607,10 @@ extension Workspace {
             panelGitBranches[panelId] = SidebarGitBranchState(branch: branch.branch, isDirty: branch.isDirty)
         } else {
             panelGitBranches.removeValue(forKey: panelId)
+        }
+
+        if let root = snapshot.gitRoot?.trimmingCharacters(in: .whitespacesAndNewlines), !root.isEmpty {
+            panelGitRoots[panelId] = root
         }
 
         surfaceListeningPorts[panelId] = Array(Set(snapshot.listeningPorts)).sorted()
@@ -7448,6 +7457,8 @@ final class Workspace: Identifiable, ObservableObject {
         ) else {
             panels.removeValue(forKey: detached.panelId)
             panelDirectories.removeValue(forKey: detached.panelId)
+            panelGitBranches.removeValue(forKey: detached.panelId)
+            panelGitRoots.removeValue(forKey: detached.panelId)
             panelTitles.removeValue(forKey: detached.panelId)
             panelCustomTitles.removeValue(forKey: detached.panelId)
             pinnedPanelIds.remove(detached.panelId)
@@ -9222,6 +9233,7 @@ extension Workspace: BonsplitDelegate {
         surfaceIdToPanelId.removeValue(forKey: tabId)
         panelDirectories.removeValue(forKey: panelId)
         panelGitBranches.removeValue(forKey: panelId)
+        panelGitRoots.removeValue(forKey: panelId)
         panelPullRequests.removeValue(forKey: panelId)
         panelTitles.removeValue(forKey: panelId)
         panelCustomTitles.removeValue(forKey: panelId)
@@ -9412,6 +9424,7 @@ extension Workspace: BonsplitDelegate {
                 untrackRemoteTerminalSurface(panelId)
                 panelDirectories.removeValue(forKey: panelId)
                 panelGitBranches.removeValue(forKey: panelId)
+                panelGitRoots.removeValue(forKey: panelId)
                 panelPullRequests.removeValue(forKey: panelId)
                 panelTitles.removeValue(forKey: panelId)
                 panelCustomTitles.removeValue(forKey: panelId)
