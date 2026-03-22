@@ -75,7 +75,8 @@ class BranchRow extends StatelessWidget {
             const SizedBox(width: 2),
             _buildForkIcon(isDark),
             const SizedBox(width: 4),
-            Expanded(child: _buildName(isDark)),
+            Flexible(child: _buildName(isDark)),
+            const Spacer(),
             if (branch.isDirty) ...[
               const SizedBox(width: 5),
               _buildDirtyDot(),
@@ -139,6 +140,10 @@ class BranchRow extends StatelessWidget {
         ? const Color(0x7AE8E8EE) // rgba(232,232,238,0.48)
         : const Color(0x7A1A1A1F); // rgba(26,26,31,0.48)
 
+    final pillColor = isDark
+        ? const Color(0x26FFFFFF) // ~15% white
+        : const Color(0x14000000); // ~8% black
+
     final baseStyle = GoogleFonts.ibmPlexMono(
       fontSize: 11.5,
       fontWeight: FontWeight.w500,
@@ -146,29 +151,39 @@ class BranchRow extends StatelessWidget {
     );
 
     final query = highlightQuery ?? '';
+    Widget nameWidget;
     if (query.isEmpty) {
-      return Text(
+      nameWidget = Text(
         branch.name,
         style: baseStyle,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       );
+    } else {
+      // Highlight matching segments in accent color.
+      final highlightColor = isDark
+          ? const Color(0xFFE0A030)
+          : const Color(0xFFB07810);
+
+      nameWidget = RichText(
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        text: buildHighlightedText(
+          text: branch.name,
+          query: query,
+          baseStyle: baseStyle,
+          highlightColor: highlightColor,
+        ),
+      );
     }
 
-    // Highlight matching segments in accent color.
-    final highlightColor = isDark
-        ? const Color(0xFFE0A030)
-        : const Color(0xFFB07810);
-
-    return RichText(
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      text: buildHighlightedText(
-        text: branch.name,
-        query: query,
-        baseStyle: baseStyle,
-        highlightColor: highlightColor,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: pillColor,
+        borderRadius: BorderRadius.circular(4),
       ),
+      child: nameWidget,
     );
   }
 
