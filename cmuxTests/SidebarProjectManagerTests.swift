@@ -468,4 +468,144 @@ final class SidebarProjectManagerTests: XCTestCase {
         XCTAssertEqual(manager.projects.count, 1)
         XCTAssertEqual(manager.projects[0].name, "cmux")
     }
+
+    // MARK: - 12. Sticky Project Assignment (Focus Stability)
+
+    func testFocusSwitchBetweenReposDoesNotMoveWorkspace() {
+        let tabManager = TabManager()
+        let manager = makeManager(with: tabManager)
+
+        let workspace = tabManager.addWorkspace(select: true)
+        let panelA = UUID()
+        let panelB = UUID()
+
+        // Initial state: workspace in repoA with panel A.
+        workspace.gitRoot = "/Users/sm/code/repoA"
+        workspace.gitBranch = SidebarGitBranchState(branch: "main", isDirty: false)
+        workspace.panelGitRoots[panelA] = "/Users/sm/code/repoA"
+        workspace.panelGitBranches[panelA] = SidebarGitBranchState(branch: "main", isDirty: false)
+
+        manager.rebuildNow()
+        XCTAssertEqual(manager.projects.count, 1)
+        XCTAssertEqual(manager.projects[0].repoPath, "/Users/sm/code/repoA")
+
+        // Panel B cd's to repoB and becomes focused (shell integration reports new root).
+        workspace.panelGitRoots[panelB] = "/Users/sm/code/repoB"
+        workspace.panelGitBranches[panelB] = SidebarGitBranchState(branch: "develop", isDirty: false)
+        workspace.gitRoot = "/Users/sm/code/repoB"
+        workspace.gitBranch = SidebarGitBranchState(branch: "develop", isDirty: false)
+
+        manager.rebuildNow()
+
+        // Workspace should STILL be under repoA (sticky holds).
+        let repoAProject = manager.projects.first(where: { $0.repoPath == "/Users/sm/code/repoA" })
+        XCTAssertNotNil(repoAProject, "Workspace should remain under its original project")
+        XCTAssertTrue(repoAProject!.branches.contains(where: { $0.workspaceIds.contains(workspace.id) }))
+
+        // repoB should appear as auto-created project with linked terminal.
+        let repoBProject = manager.projects.first(where: { $0.repoPath == "/Users/sm/code/repoB" })
+        XCTAssertNotNil(repoBProject, "Linked repo should appear as auto-created project")
+        XCTAssertTrue(repoBProject!.isAutoCreated)
+        let linkedTerminals = repoBProject!.branches.flatMap(\.linkedTerminals)
+        XCTAssertEqual(linkedTerminals.count, 1)
+        XCTAssertEqual(linkedTerminals[0].owningWorkspaceId, workspace.id)
+    }
+
+    func testWorkspaceMovesWhenAllPanelsLeaveOriginalRepo() {
+        let tabManager = TabManager()
+        let manager = makeManager(with: tabManager)
+
+        let workspace = tabManager.addWorkspace(select: true)
+        let panelA = UUID()
+
+        // Start in repoA.
+        workspace.gitRoot = "/Users/sm/code/repoA"
+        workspace.gitBranch = SidebarGitBranchState(branch: "main", isDirty: false)
+        workspace.panelGitRoots[panelA] = "/Users/sm/code/repoA"
+        workspace.panelGitBranches[panelA] = SidebarGitBranchState(branch: "main", isDirty: false)
+
+        manager.rebuildNow()
+        XCTAssertEqual(manager.projects[0].repoPath, "/Users/sm/code/repoA")
+
+        // Panel A cd's to repoB (no panels left in repoA).
+        workspace.panelGitRoots[panelA] = "/Users/sm/code/repoB"
+        workspace.panelGitBranches[panelA] = SidebarGitBranchState(branch: "develop", isDirty: false)
+        workspace.gitRoot = "/Users/sm/code/repoB"
+        workspace.gitBranch = SidebarGitBranchState(branch: "develop", isDirty: false)
+
+        manager.rebuildNow()
+
+        // Workspace should move to repoB since no panels remain in repoA.
+        XCTAssertEqual(manager.projects.count, 1)
+        XCTAssertEqual(manager.projects[0].repoPath, "/Users/sm/code/repoB")
+    }
+
+    func testStickyHoldUsesBranchFromOriginalRepoPanel() {
+        let tabManager = TabManager()
+        let manager = makeManager(with: tabManager)
+
+        let workspace = tabManager.addWorkspace(select: true)
+        let panelA = UUID()
+        let panelB = UUID()
+
+        // Panel A is in repoA on feature/x (dirty).
+        workspace.panelGitRoots[panelA] = "/Users/sm/code/repoA"
+        workspace.panelGitBranches[panelA] = SidebarGitBranchState(branch: "feature/x", isDirty: true)
+        // Panel B is in repoB on develop (clean).
+        workspace.panelGitRoots[panelB] = "/Users/sm/code/repoB"
+        workspace.panelGitBranches[panelB] = SidebarGitBranchState(branch: "develop", isDirty: false)
+
+        // Initial assignment to repoA (focus on A first).
+        workspace.gitRoot = "/Users/sm/code/repoA"
+        workspace.gitBranch = SidebarGitBranchState(branch: "feature/x", isDirty: true)
+        manager.rebuildNow()
+
+        // Now simulate focus on panel B.
+        workspace.gitRoot = "/Users/sm/code/repoB"
+        workspace.gitBranch = SidebarGitBranchState(branch: "develop", isDirty: false)
+
+        manager.rebuildNow()
+
+        // Workspace should be under repoA with panel A's branch info.
+        let repoAProject = manager.projects.first(where: { $0.repoPath == "/Users/sm/code/repoA" })
+        XCTAssertNotNil(repoAProject)
+        let branch = repoAProject?.branches.first(where: { $0.workspaceIds.contains(workspace.id) })
+        XCTAssertEqual(branch?.name, "feature/x")
+        XCTAssertEqual(branch?.isDirty, true)
+    }
+
+    func testThreePanelsThreeReposStaysUnderOriginal() {
+        let tabManager = TabManager()
+        let manager = makeManager(with: tabManager)
+
+        let workspace = tabManager.addWorkspace(select: true)
+        let panelA = UUID(), panelB = UUID(), panelC = UUID()
+
+        // Initial assignment to repoA.
+        workspace.gitRoot = "/Users/sm/code/repoA"
+        workspace.gitBranch = SidebarGitBranchState(branch: "main", isDirty: false)
+        workspace.panelGitRoots[panelA] = "/Users/sm/code/repoA"
+        workspace.panelGitBranches[panelA] = SidebarGitBranchState(branch: "main", isDirty: false)
+
+        manager.rebuildNow()
+
+        // Add panels B and C in different repos, focus on C.
+        workspace.panelGitRoots[panelB] = "/Users/sm/code/repoB"
+        workspace.panelGitBranches[panelB] = SidebarGitBranchState(branch: "develop", isDirty: false)
+        workspace.panelGitRoots[panelC] = "/Users/sm/code/repoC"
+        workspace.panelGitBranches[panelC] = SidebarGitBranchState(branch: "feature/z", isDirty: false)
+        workspace.gitRoot = "/Users/sm/code/repoC"
+        workspace.gitBranch = SidebarGitBranchState(branch: "feature/z", isDirty: false)
+
+        manager.rebuildNow()
+
+        // Workspace stays under repoA.
+        let repoAProject = manager.projects.first(where: { $0.repoPath == "/Users/sm/code/repoA" })
+        XCTAssertNotNil(repoAProject)
+        XCTAssertTrue(repoAProject!.branches.contains(where: { $0.workspaceIds.contains(workspace.id) }))
+
+        // repoB and repoC are auto-created with linked terminals.
+        let autoProjects = manager.projects.filter { $0.isAutoCreated }
+        XCTAssertEqual(autoProjects.count, 2)
+    }
 }

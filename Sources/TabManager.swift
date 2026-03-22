@@ -636,6 +636,7 @@ class TabManager: ObservableObject {
     private struct InitialWorkspaceGitMetadataSnapshot: Equatable {
         let branch: String?
         let isDirty: Bool
+        let gitRoot: String?
         let pullRequest: SidebarPullRequestState?
     }
 
@@ -1243,6 +1244,15 @@ class TabManager: ObservableObject {
             workspace.clearPanelGitBranch(panelId: panelId)
         }
 
+        // Populate panelGitRoots so multi-repo detection works even before
+        // shell integration reports report_git_branch --root=.
+        if let gitRoot = snapshot.gitRoot, !gitRoot.isEmpty {
+            workspace.panelGitRoots[panelId] = gitRoot
+            if panelId == workspace.focusedPanelId {
+                workspace.gitRoot = gitRoot
+            }
+        }
+
         if let pullRequest = snapshot.pullRequest {
             workspace.updatePanelPullRequest(
                 panelId: panelId,
@@ -1271,13 +1281,15 @@ class TabManager: ObservableObject {
     ) -> InitialWorkspaceGitMetadataSnapshot {
         let branch = normalizedBranchName(runGitCommand(directory: directory, arguments: ["branch", "--show-current"]))
         guard let branch else {
-            return InitialWorkspaceGitMetadataSnapshot(branch: nil, isDirty: false, pullRequest: nil)
+            return InitialWorkspaceGitMetadataSnapshot(branch: nil, isDirty: false, gitRoot: nil, pullRequest: nil)
         }
 
         let statusOutput = runGitCommand(directory: directory, arguments: ["status", "--porcelain", "-uno"])
         let isDirty = !(statusOutput?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        let gitRoot = runGitCommand(directory: directory, arguments: ["rev-parse", "--show-toplevel"])?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         let pullRequest = initialWorkspacePullRequestSnapshot(directory: directory, branch: branch)
-        return InitialWorkspaceGitMetadataSnapshot(branch: branch, isDirty: isDirty, pullRequest: pullRequest)
+        return InitialWorkspaceGitMetadataSnapshot(branch: branch, isDirty: isDirty, gitRoot: gitRoot, pullRequest: pullRequest)
     }
 
     private nonisolated static func runGitCommand(directory: String, arguments: [String]) -> String? {
@@ -1759,7 +1771,20 @@ class TabManager: ObservableObject {
     func updateSurfaceDirectory(tabId: UUID, surfaceId: UUID, directory: String) {
         guard let tab = tabs.first(where: { $0.id == tabId }) else { return }
         let normalized = normalizeDirectory(directory)
+        let previousDir = tab.panelDirectories[surfaceId]
         tab.updatePanelDirectory(panelId: surfaceId, directory: normalized)
+
+        // When a panel cd's to a new directory that differs from its previous
+        // directory, schedule a git probe so panelGitRoots gets populated for
+        // multi-repo detection. This handles the case where shell integration
+        // doesn't send report_git_branch --root= (or arrives late).
+        if normalized != previousDir, tab.panelGitRoots[surfaceId] == nil || tab.panelGitRoots[surfaceId] != normalized {
+            scheduleInitialWorkspaceGitMetadataRefresh(
+                workspaceId: tabId,
+                panelId: surfaceId,
+                directory: normalized
+            )
+        }
     }
 
     func updateSurfaceShellActivity(

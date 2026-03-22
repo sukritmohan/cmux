@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import Bonsplit
 
 // MARK: - SidebarProjectManager
 //
@@ -118,22 +119,56 @@ final class SidebarProjectManager: ObservableObject {
             // gitRoot comes from --root= in report_git_branch (new shell integration).
             // Fall back to currentDirectory when gitRoot is nil but gitBranch exists
             // (old shell integration that doesn't send --root=).
-            let primaryBranch = workspace.gitBranch?.branch
-            let primaryDirty = workspace.gitBranch?.isDirty ?? false
-            let primaryRoot = workspace.gitRoot ?? (primaryBranch != nil ? workspace.currentDirectory : nil)
+            // Note: workspace.gitRoot follows the focused panel, so it may point
+            // to a different repo when the user focuses a split in another project.
+            let reportedBranch = workspace.gitBranch?.branch
+            let reportedDirty = workspace.gitBranch?.isDirty ?? false
+            let reportedRoot = workspace.gitRoot ?? (reportedBranch != nil ? workspace.currentDirectory : nil)
 
-            // Resolve root and branch, using sticky assignment as fallback.
-            // Once a workspace is placed under a project, it stays there even
-            // when git info temporarily goes nil (e.g., new pane opening).
+            // Resolve the workspace's owning project root.
+            // Once assigned via stickyAssignment, a workspace stays under its
+            // original project as long as at least one panel remains in that repo.
+            // This prevents focus-switching between panels in different repos
+            // from flipping the workspace between projects.
             let root: String
             let branch: String
-            if let r = primaryRoot, let b = primaryBranch {
-                root = r
-                branch = b
-                stickyAssignments[workspace.id] = (repoPath: r, branch: b)
+            let isDirty: Bool
+            if let r = reportedRoot, let b = reportedBranch {
+                if let sticky = stickyAssignments[workspace.id],
+                   r != sticky.repoPath,
+                   workspaceHasPanelInRepo(workspace, repoPath: sticky.repoPath) {
+                    // Focused panel moved to a different repo, but there are still
+                    // panels in the original repo. Keep the workspace under its
+                    // original project and derive branch/dirty from a panel there.
+                    root = sticky.repoPath
+                    if let stickyBranch = branchForPanelInRepo(workspace, repoPath: sticky.repoPath) {
+                        branch = stickyBranch.branch
+                        isDirty = stickyBranch.isDirty
+                    } else {
+                        branch = sticky.branch
+                        isDirty = false
+                    }
+                    #if DEBUG
+                    dlog("rebuild.stickyHold workspace=\(workspace.customTitle ?? workspace.title) reported=\(r) sticky=\(sticky.repoPath) branch=\(branch)")
+                    #endif
+                } else {
+                    // Either first assignment, same repo as sticky, or no panels
+                    // left in the old repo. Accept the reported root.
+                    root = r
+                    branch = b
+                    isDirty = reportedDirty
+                    stickyAssignments[workspace.id] = (repoPath: r, branch: b)
+                }
             } else if let sticky = stickyAssignments[workspace.id] {
+                // Git info temporarily nil (new pane opening). Keep sticky.
                 root = sticky.repoPath
-                branch = primaryBranch ?? sticky.branch
+                if let stickyBranch = branchForPanelInRepo(workspace, repoPath: sticky.repoPath) {
+                    branch = stickyBranch.branch
+                    isDirty = stickyBranch.isDirty
+                } else {
+                    branch = reportedBranch ?? sticky.branch
+                    isDirty = reportedDirty
+                }
             } else {
                 // Never had git info — goes to "Other" section.
                 workspace.sidebarParentProjectPath = nil
@@ -147,7 +182,7 @@ final class SidebarProjectManager: ObservableObject {
             let entry = WorkspaceEntry(
                 workspaceId: workspace.id,
                 branch: branch,
-                isDirty: primaryDirty
+                isDirty: isDirty
             )
             projectGroups[root, default: []].append(entry)
 
@@ -568,5 +603,42 @@ final class SidebarProjectManager: ObservableObject {
     /// Extract the folder name from a git root path for display.
     private func projectNameFromPath(_ path: String) -> String {
         (path as NSString).lastPathComponent
+    }
+
+    /// Returns true if any panel in the workspace has a git root or directory
+    /// matching the given repo path (exact match or subdirectory).
+    private func workspaceHasPanelInRepo(_ workspace: Workspace, repoPath: String) -> Bool {
+        // Check explicit git roots first (most reliable signal).
+        for (_, panelRoot) in workspace.panelGitRoots {
+            if panelRoot == repoPath { return true }
+        }
+        // Fall back to panel directories for old shell integration.
+        for (panelId, panelDir) in workspace.panelDirectories {
+            guard workspace.panelGitRoots[panelId] == nil else { continue }
+            if panelDir == repoPath || panelDir.hasPrefix(repoPath + "/") {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Returns the git branch state reported by a panel in the given repo,
+    /// or nil if no panel in the workspace has branch info for that repo.
+    private func branchForPanelInRepo(_ workspace: Workspace, repoPath: String) -> SidebarGitBranchState? {
+        // Prefer panels with explicit git roots.
+        for (panelId, panelRoot) in workspace.panelGitRoots {
+            if panelRoot == repoPath, let branchState = workspace.panelGitBranches[panelId] {
+                return branchState
+            }
+        }
+        // Fall back to panel directories.
+        for (panelId, panelDir) in workspace.panelDirectories {
+            guard workspace.panelGitRoots[panelId] == nil else { continue }
+            if (panelDir == repoPath || panelDir.hasPrefix(repoPath + "/")),
+               let branchState = workspace.panelGitBranches[panelId] {
+                return branchState
+            }
+        }
+        return nil
     }
 }
