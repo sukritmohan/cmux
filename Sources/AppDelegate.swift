@@ -1902,6 +1902,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         let tabManager: TabManager
         let sidebarState: SidebarState
         let sidebarSelectionState: SidebarSelectionState
+        let sidebarProjectManager: SidebarProjectManager
         weak var window: NSWindow?
 
         init(
@@ -1909,12 +1910,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             tabManager: TabManager,
             sidebarState: SidebarState,
             sidebarSelectionState: SidebarSelectionState,
+            sidebarProjectManager: SidebarProjectManager,
             window: NSWindow?
         ) {
             self.windowId = windowId
             self.tabManager = tabManager
             self.sidebarState = sidebarState
             self.sidebarSelectionState = sidebarSelectionState
+            self.sidebarProjectManager = sidebarProjectManager
             self.window = window
         }
     }
@@ -1951,6 +1954,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     weak var sidebarState: SidebarState?
     weak var fullscreenControlsViewModel: TitlebarControlsViewModel?
     weak var sidebarSelectionState: SidebarSelectionState?
+    weak var sidebarProjectManager: SidebarProjectManager?
     var shortcutLayoutCharacterProvider: (UInt16, NSEvent.ModifierFlags) -> String? = KeyboardLayout.character(forKeyCode:modifierFlags:)
     private var workspaceObserver: NSObjectProtocol?
     private var lifecycleSnapshotObservers: [NSObjectProtocol] = []
@@ -3410,7 +3414,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         windowId: UUID,
         tabManager: TabManager,
         sidebarState: SidebarState,
-        sidebarSelectionState: SidebarSelectionState
+        sidebarSelectionState: SidebarSelectionState,
+        sidebarProjectManager: SidebarProjectManager
     ) {
         tabManager.window = window
 
@@ -3429,6 +3434,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 tabManager: tabManager,
                 sidebarState: sidebarState,
                 sidebarSelectionState: sidebarSelectionState,
+                sidebarProjectManager: sidebarProjectManager,
                 window: window
             )
             NotificationCenter.default.addObserver(
@@ -4681,11 +4687,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 tabManager = nextContext.tabManager
                 sidebarState = nextContext.sidebarState
                 sidebarSelectionState = nextContext.sidebarSelectionState
+                sidebarProjectManager = nextContext.sidebarProjectManager
                 TerminalController.shared.setActiveTabManager(nextContext.tabManager)
             } else {
                 tabManager = nil
                 sidebarState = nil
                 sidebarSelectionState = nil
+                sidebarProjectManager = nil
                 TerminalController.shared.setActiveTabManager(nil)
             }
         }
@@ -4911,6 +4919,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             tabManager = context.tabManager
             sidebarState = context.sidebarState
             sidebarSelectionState = context.sidebarSelectionState
+            sidebarProjectManager = context.sidebarProjectManager
             TerminalController.shared.setActiveTabManager(context.tabManager)
         }
 #if DEBUG
@@ -5428,6 +5437,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             tabManager = context.tabManager
             sidebarState = context.sidebarState
             sidebarSelectionState = context.sidebarSelectionState
+            sidebarProjectManager = context.sidebarProjectManager
             TerminalController.shared.setActiveTabManager(context.tabManager)
         }
 
@@ -5462,11 +5472,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         )
         let notificationStore = TerminalNotificationStore.shared
 
+        // SidebarProjectManager is per-window, like TabManager.
+        // Attach before any workspaces are created/restored so the
+        // initial workspace list is observed from the start.
+        let sidebarProjectManager = SidebarProjectManager()
+        sidebarProjectManager.attach(to: tabManager)
+
         let root = ContentView(updateViewModel: updateViewModel, windowId: windowId)
             .environmentObject(tabManager)
             .environmentObject(notificationStore)
             .environmentObject(sidebarState)
             .environmentObject(sidebarSelectionState)
+            .environmentObject(sidebarProjectManager)
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 460, height: 360),
@@ -5505,7 +5522,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             windowId: windowId,
             tabManager: tabManager,
             sidebarState: sidebarState,
-            sidebarSelectionState: sidebarSelectionState
+            sidebarSelectionState: sidebarSelectionState,
+            sidebarProjectManager: sidebarProjectManager
         )
         installFileDropOverlay(on: window, tabManager: tabManager)
         if TerminalController.shouldSuppressSocketCommandActivation() {
@@ -10436,6 +10454,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         tabManager = context.tabManager
         sidebarState = context.sidebarState
         sidebarSelectionState = context.sidebarSelectionState
+        sidebarProjectManager = context.sidebarProjectManager
         TerminalController.shared.setActiveTabManager(context.tabManager)
 #if DEBUG
         dlog(
@@ -10478,11 +10497,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 tabManager = nextContext.tabManager
                 sidebarState = nextContext.sidebarState
                 sidebarSelectionState = nextContext.sidebarSelectionState
+                sidebarProjectManager = nextContext.sidebarProjectManager
                 TerminalController.shared.setActiveTabManager(nextContext.tabManager)
             } else {
                 tabManager = nil
                 sidebarState = nil
                 sidebarSelectionState = nil
+                sidebarProjectManager = nil
                 TerminalController.shared.setActiveTabManager(nil)
             }
         }

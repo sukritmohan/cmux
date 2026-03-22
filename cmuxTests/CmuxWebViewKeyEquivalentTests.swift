@@ -1063,14 +1063,16 @@ final class AppDelegateWindowContextRoutingTests: XCTestCase {
             windowId: windowAId,
             tabManager: managerA,
             sidebarState: SidebarState(),
-            sidebarSelectionState: SidebarSelectionState()
+            sidebarSelectionState: SidebarSelectionState(),
+            sidebarProjectManager: SidebarProjectManager()
         )
         app.registerMainWindow(
             windowB,
             windowId: windowBId,
             tabManager: managerB,
             sidebarState: SidebarState(),
-            sidebarSelectionState: SidebarSelectionState()
+            sidebarSelectionState: SidebarSelectionState(),
+            sidebarProjectManager: SidebarProjectManager()
         )
 
         windowB.makeKeyAndOrderFront(nil)
@@ -1103,14 +1105,16 @@ final class AppDelegateWindowContextRoutingTests: XCTestCase {
             windowId: windowAId,
             tabManager: managerA,
             sidebarState: SidebarState(),
-            sidebarSelectionState: SidebarSelectionState()
+            sidebarSelectionState: SidebarSelectionState(),
+            sidebarProjectManager: SidebarProjectManager()
         )
         app.registerMainWindow(
             windowB,
             windowId: windowBId,
             tabManager: managerB,
             sidebarState: SidebarState(),
-            sidebarSelectionState: SidebarSelectionState()
+            sidebarSelectionState: SidebarSelectionState(),
+            sidebarProjectManager: SidebarProjectManager()
         )
 
         // Seed active manager and clear focus windows to force fallback routing.
@@ -1139,7 +1143,8 @@ final class AppDelegateWindowContextRoutingTests: XCTestCase {
             windowId: windowId,
             tabManager: manager,
             sidebarState: SidebarState(),
-            sidebarSelectionState: SidebarSelectionState()
+            sidebarSelectionState: SidebarSelectionState(),
+            sidebarProjectManager: SidebarProjectManager()
         )
 
         // SwiftUI can replace the NSWindow identifier string at runtime.
@@ -1170,14 +1175,16 @@ final class AppDelegateWindowContextRoutingTests: XCTestCase {
             windowId: windowAId,
             tabManager: managerA,
             sidebarState: SidebarState(),
-            sidebarSelectionState: SidebarSelectionState()
+            sidebarSelectionState: SidebarSelectionState(),
+            sidebarProjectManager: SidebarProjectManager()
         )
         app.registerMainWindow(
             windowB,
             windowId: windowBId,
             tabManager: managerB,
             sidebarState: SidebarState(),
-            sidebarSelectionState: SidebarSelectionState()
+            sidebarSelectionState: SidebarSelectionState(),
+            sidebarProjectManager: SidebarProjectManager()
         )
 
         windowA.makeKeyAndOrderFront(nil)
@@ -1212,7 +1219,8 @@ final class AppDelegateWindowContextRoutingTests: XCTestCase {
             windowId: windowId,
             tabManager: manager,
             sidebarState: SidebarState(),
-            sidebarSelectionState: SidebarSelectionState()
+            sidebarSelectionState: SidebarSelectionState(),
+            sidebarProjectManager: SidebarProjectManager()
         )
 
         window.makeKeyAndOrderFront(nil)

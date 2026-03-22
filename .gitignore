@@ -53,3 +53,5 @@ logs/
 # Local scratch (screenshots, etc.)
 tmp/
 tmp-*/
+.claude/worktrees/
+daemon/remote/cmuxd-remote
