@@ -7980,7 +7980,15 @@ struct VerticalTabsSidebar: View {
                                         SidebarBranchRow(
                                             branch: branch,
                                             project: project,
-                                            hasUnreadChildren: branchHasUnread(branch)
+                                            hasUnreadChildren: branchHasUnread(branch),
+                                            onAddWorkspace: {
+                                                // Create a workspace in the project's repo directory.
+                                                let workDir = project.repoPath.isEmpty ? nil : project.repoPath
+                                                tabManager.addWorkspace(
+                                                    workingDirectory: workDir,
+                                                    select: true
+                                                )
+                                            }
                                         )
                                         if branch.isExpanded {
                                             ForEach(branch.workspaceIds, id: \.self) { workspaceId in
@@ -9059,6 +9067,8 @@ private struct SidebarFooterButtons: View {
         HStack(spacing: 4) {
             SidebarHelpMenuButton(onSendFeedback: onSendFeedback)
             UpdatePill(model: updateViewModel)
+            Spacer()
+            SidebarAddWorkspaceButton()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -10136,6 +10146,196 @@ private struct ArrowlessPopoverAnchor<PopoverContent: View>: NSViewRepresentable
     }
 }
 
+// MARK: - Sidebar Add Workspace Button + Project Picker Popover
+
+/// Button in the sidebar footer that opens a project picker popover.
+/// Users can search recent projects, browse for a folder, or create
+/// a plain workspace without a project directory.
+private struct SidebarAddWorkspaceButton: View {
+    @EnvironmentObject var tabManager: TabManager
+    private let buttonSize: CGFloat = 22
+    private let iconSize: CGFloat = 11
+    @State private var isPopoverPresented = false
+
+    var body: some View {
+        Button {
+            isPopoverPresented.toggle()
+        } label: {
+            Image(systemName: "plus")
+                .symbolRenderingMode(.monochrome)
+                .font(.system(size: iconSize, weight: .medium))
+                .foregroundStyle(Color(nsColor: .secondaryLabelColor))
+                .frame(width: buttonSize, height: buttonSize, alignment: .center)
+        }
+        .buttonStyle(SidebarFooterIconButtonStyle())
+        .frame(width: buttonSize, height: buttonSize, alignment: .center)
+        .background(ArrowlessPopoverAnchor(
+            isPresented: $isPopoverPresented,
+            preferredEdge: .maxY,
+            detachedGap: 4
+        ) {
+            SidebarNewProjectPopover(
+                isPresented: $isPopoverPresented,
+                tabManager: tabManager
+            )
+        })
+        .safeHelp(String(localized: "sidebar.addWorkspace.tooltip", defaultValue: "New Workspace"))
+        .accessibilityLabel(String(localized: "sidebar.addWorkspace.accessibility", defaultValue: "New Workspace"))
+        .accessibilityIdentifier("SidebarAddWorkspaceButton")
+    }
+}
+
+/// Popover content for the (+) button: search/filter recent projects,
+/// browse for a folder, or create a plain workspace.
+private struct SidebarNewProjectPopover: View {
+    @Binding var isPresented: Bool
+    let tabManager: TabManager
+    @State private var searchText = ""
+
+    /// Recent project paths filtered by the search query.
+    private var filteredPaths: [String] {
+        let recent = SidebarProjectManager.recentProjectPaths()
+        guard !searchText.isEmpty else { return recent }
+        let query = searchText.lowercased()
+        return recent.filter { path in
+            let name = (path as NSString).lastPathComponent.lowercased()
+            return name.contains(query)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Search field at the top.
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                TextField(
+                    String(localized: "sidebar.projectPicker.searchPlaceholder",
+                           defaultValue: "Search or add project..."),
+                    text: $searchText
+                )
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+                .accessibilityIdentifier("SidebarNewProjectPopoverSearch")
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+
+            Divider()
+
+            // Recent projects list (scrollable if many).
+            if filteredPaths.isEmpty && !searchText.isEmpty {
+                Text(String(localized: "sidebar.projectPicker.noResults",
+                            defaultValue: "No matching projects"))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+            } else if !filteredPaths.isEmpty {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(filteredPaths, id: \.self) { path in
+                            projectRow(for: path)
+                        }
+                    }
+                }
+                .frame(maxHeight: 200)
+            }
+
+            Divider()
+
+            // Browse for folder button.
+            Button {
+                browseForFolder()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "folder")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    Text(String(localized: "sidebar.projectPicker.browse",
+                                defaultValue: "Browse for folder..."))
+                        .font(.system(size: 12))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("SidebarNewProjectPopoverBrowse")
+
+            Divider()
+
+            // Plain workspace (no project directory).
+            Button {
+                tabManager.addWorkspace()
+                isPresented = false
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "terminal")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    Text(String(localized: "sidebar.projectPicker.newPlainWorkspace",
+                                defaultValue: "New empty workspace"))
+                        .font(.system(size: 12))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("SidebarNewProjectPopoverPlainWorkspace")
+        }
+        .frame(width: 240)
+    }
+
+    /// A single row for a recent project path.
+    private func projectRow(for path: String) -> some View {
+        Button {
+            SidebarProjectManager.addRecentProjectPath(path)
+            tabManager.addWorkspace(workingDirectory: path, select: true)
+            isPresented = false
+        } label: {
+            VStack(alignment: .leading, spacing: 1) {
+                Text((path as NSString).lastPathComponent)
+                    .font(.system(size: 12))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Text(SidebarPathFormatter.shortenedPath(path))
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Open an NSOpenPanel to browse for a directory.
+    private func browseForFolder() {
+        // Dismiss popover first so the panel doesn't fight with it.
+        isPresented = false
+        DispatchQueue.main.async {
+            let panel = NSOpenPanel()
+            panel.canChooseFiles = false
+            panel.canChooseDirectories = true
+            panel.allowsMultipleSelection = false
+            panel.title = String(localized: "panel.openFolder.title", defaultValue: "Open Folder")
+            panel.prompt = String(localized: "panel.openFolder.prompt", defaultValue: "Open")
+            if panel.runModal() == .OK, let url = panel.url {
+                SidebarProjectManager.addRecentProjectPath(url.path)
+                tabManager.addWorkspace(workingDirectory: url.path, select: true)
+            }
+        }
+    }
+}
+
 private struct SidebarFooterIconButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         SidebarFooterIconButtonStyleBody(configuration: configuration)
@@ -10415,6 +10615,7 @@ private struct SidebarProjectRow: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 9, weight: .bold))
                     .rotationEffect(chevronRotation)
+                    .animation(.easeInOut(duration: 0.15), value: project.isExpanded)
                     .foregroundColor(.secondary)
                     .frame(width: 12)
 
@@ -10450,11 +10651,13 @@ private struct SidebarProjectRow: View {
 
 /// Renders a branch row under a project, indented to show hierarchy.
 /// Clicking toggles `branch.isExpanded`. Shows a yellow dirty dot when
-/// the branch has uncommitted changes.
+/// the branch has uncommitted changes. On hover, shows a (+) button to
+/// create a new workspace under this branch's project directory.
 private struct SidebarBranchRow: View {
     let branch: SidebarBranch
     @ObservedObject var project: SidebarProject
     let hasUnreadChildren: Bool
+    let onAddWorkspace: () -> Void
     @State private var isHovering = false
 
     /// Chevron rotation: 90° when expanded, 0° when collapsed.
@@ -10475,6 +10678,7 @@ private struct SidebarBranchRow: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 8, weight: .semibold))
                     .rotationEffect(chevronRotation)
+                    .animation(.easeInOut(duration: 0.15), value: branch.isExpanded)
                     .foregroundColor(.secondary)
                     .frame(width: 10)
 
@@ -10496,6 +10700,25 @@ private struct SidebarBranchRow: View {
                 }
 
                 Spacer()
+
+                // Hover (+) button to create a workspace under this project.
+                if isHovering {
+                    Button {
+                        onAddWorkspace()
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .frame(width: 16, height: 16)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(String(
+                        localized: "sidebar.branch.addWorkspace.accessibility",
+                        defaultValue: "Add workspace for \(branch.name)"
+                    ))
+                    .transition(.opacity)
+                }
 
                 // Notification dot when collapsed and children have unread activity.
                 if !branch.isExpanded && hasUnreadChildren {

@@ -352,6 +352,9 @@ struct SessionWindowSnapshot: Codable, Sendable {
     var display: SessionDisplaySnapshot?
     var tabManager: SessionTabManagerSnapshot
     var sidebar: SessionSidebarSnapshot
+    /// Project hierarchy state for the sidebar tree view.
+    /// Optional for backward compatibility with sessions saved before project tree support.
+    var projectHierarchy: [SessionProjectSnapshot]?
 }
 
 struct AppSessionSnapshot: Codable, Sendable {

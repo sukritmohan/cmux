@@ -62376,6 +62376,23 @@
         }
       }
     },
+    "sidebar.linked.shared_from": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "shared from %@ / %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ / %@ から共有"
+          }
+        }
+      }
+    },
     "sidebar.metadata.showLess": {
       "extractionState": "manual",
       "localizations": {
@@ -63389,6 +63406,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "açık"
+          }
+        }
+      }
+    },
+    "sidebar.project.browse": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Browse for folder..."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダを参照..."
+          }
+        }
+      }
+    },
+    "sidebar.project.other": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他"
+          }
+        }
+      }
+    },
+    "sidebar.project.search": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search or add project..."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロジェクトを検索または追加..."
           }
         }
       }

@@ -2592,6 +2592,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         )
 #endif
         context.tabManager.restoreSessionSnapshot(snapshot.tabManager)
+        context.sidebarProjectManager.restoreFromSnapshot(
+            snapshot.projectHierarchy,
+            tabManager: context.tabManager
+        )
         context.sidebarState.isVisible = snapshot.sidebar.isVisible
         context.sidebarState.persistedWidth = CGFloat(
             SessionPersistencePolicy.sanitizedSidebarWidth(snapshot.sidebar.width)
@@ -3343,7 +3347,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                         isVisible: context.sidebarState.isVisible,
                         selection: SessionSidebarSelection(selection: context.sidebarSelectionState.selection),
                         width: SessionPersistencePolicy.sanitizedSidebarWidth(Double(context.sidebarState.persistedWidth))
-                    )
+                    ),
+                    projectHierarchy: context.sidebarProjectManager.sessionSnapshot(tabManager: context.tabManager)
                 )
             }
 
@@ -5477,6 +5482,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         // initial workspace list is observed from the start.
         let sidebarProjectManager = SidebarProjectManager()
         sidebarProjectManager.attach(to: tabManager)
+        if let projectHierarchy = sessionWindowSnapshot?.projectHierarchy {
+            sidebarProjectManager.restoreFromSnapshot(projectHierarchy, tabManager: tabManager)
+        }
 
         let root = ContentView(updateViewModel: updateViewModel, windowId: windowId)
             .environmentObject(tabManager)
