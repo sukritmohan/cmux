@@ -42,9 +42,9 @@
 	<key>NSMainStoryboardFile</key>
 	<string></string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>A program running within cmux would like to use your microphone.</string>
+	<string>A program running within Beethoven would like to use your microphone.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>A program running within cmux would like to use your camera.</string>
+	<string>A program running within Beethoven would like to use your camera.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -124,7 +124,7 @@
 			<key>UTTypeIdentifier</key>
 			<string>com.cmux.sidebar-tab-reorder</string>
 			<key>UTTypeDescription</key>
-			<string>cmux Sidebar Tab Reorder</string>
+			<string>Beethoven Sidebar Tab Reorder</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
@@ -134,7 +134,7 @@
 			<key>UTTypeIdentifier</key>
 			<string>com.cmux.sidebar-project-reorder</string>
 			<key>UTTypeDescription</key>
-			<string>cmux Sidebar Project Reorder</string>
+			<string>Beethoven Sidebar Project Reorder</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
