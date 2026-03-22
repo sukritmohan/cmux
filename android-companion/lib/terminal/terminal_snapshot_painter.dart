@@ -39,6 +39,16 @@ import '../native/ghostty_vt.dart';
 ///   - fitCols is derived from the paint size at render time, matching the
 ///     same wrapping behaviour as [TerminalPainter].
 class TerminalSnapshotPainter extends CustomPainter {
+  // ── Shared snapshot cell-sizing constants ────────────────────────────────
+  // Mirror the values from terminal_view.dart (_targetFontSize, _lineHeightFactor,
+  // _monoAdvanceRatio, _termPadH, _termPadV) so the snapshot painter produces
+  // the same grid geometry as the live TerminalPainter.
+  static const defaultFontSize = 11.5;
+  static const defaultCellWidth = defaultFontSize * 0.6;   // 6.9
+  static const defaultCellHeight = defaultFontSize * 1.55; // 17.825
+  static const defaultPaddingH = 14.0;
+  static const defaultPaddingV = 12.0;
+
   final List<CellData> cells;
   final int cols;
   final int rows;

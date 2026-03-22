@@ -35,6 +35,7 @@ import '../app/providers.dart';
 import '../native/ghostty_vt.dart';
 import '../state/surface_provider.dart';
 import 'cell_frame_parser.dart';
+import 'terminal_snapshot_painter.dart';
 
 /// Target font size matching the design spec (font-size: 11.5px).
 const _targetFontSize = 11.5;
@@ -820,19 +821,30 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
     final c = AppColors.of(context);
 
     if (_subscribing) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(color: c.accent),
-            const SizedBox(height: 16),
-            Text(
-              'Connecting to terminal...',
-              style: TextStyle(color: c.textSecondary),
-            ),
-          ],
-        ),
-      );
+      // Show the cached cell snapshot (used during swipe preview) so the user
+      // sees real terminal content while the subscription handshake completes,
+      // instead of a jarring "Connecting to terminal..." spinner.
+      final snapshot =
+          ref.read(surfaceProvider.notifier).getSnapshot(widget.surfaceId);
+      if (snapshot != null) {
+        return CustomPaint(
+          size: Size.infinite,
+          painter: TerminalSnapshotPainter(
+            cells: snapshot.cells,
+            cols: snapshot.cols,
+            rows: snapshot.rows,
+            cellWidth: TerminalSnapshotPainter.defaultCellWidth,
+            cellHeight: TerminalSnapshotPainter.defaultCellHeight,
+            fontSize: TerminalSnapshotPainter.defaultFontSize,
+            paddingH: TerminalSnapshotPainter.defaultPaddingH,
+            paddingV: TerminalSnapshotPainter.defaultPaddingV,
+            defaultBg: c.terminalDefaultBg,
+            defaultFg: c.terminalDefaultFg,
+          ),
+        );
+      }
+      // No snapshot available (first-ever connection) — plain background.
+      return ColoredBox(color: c.terminalDefaultBg, child: const SizedBox.expand());
     }
 
     if (_error != null) {

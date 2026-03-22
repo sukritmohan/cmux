@@ -115,26 +115,18 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
   /// programmatic soft keyboard toggle.
   final _keyboardFocusNode = FocusNode();
 
-  // ── Snapshot cell-sizing constants ──────────────────────────────────────
-  // Mirror the values from terminal_view.dart (_targetFontSize, _lineHeightFactor,
-  // _monoAdvanceRatio, _termPadH, _termPadV) so the snapshot painter produces
-  // the same grid geometry as the live TerminalPainter.
-
-  static const _snapshotFontSize = 11.5;
-  static const _snapshotCellWidth = _snapshotFontSize * 0.6;   // 6.9
-  static const _snapshotCellHeight = _snapshotFontSize * 1.55; // 17.825
-  static const _snapshotPaddingH = 14.0;
-  static const _snapshotPaddingV = 12.0;
+  // Snapshot cell-sizing constants — delegated to TerminalSnapshotPainter.
+  static const _snapshotFontSize = TerminalSnapshotPainter.defaultFontSize;
+  static const _snapshotCellWidth = TerminalSnapshotPainter.defaultCellWidth;
+  static const _snapshotCellHeight = TerminalSnapshotPainter.defaultCellHeight;
+  static const _snapshotPaddingH = TerminalSnapshotPainter.defaultPaddingH;
+  static const _snapshotPaddingV = TerminalSnapshotPainter.defaultPaddingV;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _swipeAnimController = AnimationController(
-      vsync: this,
-      // Duration is driven by SpringSimulation, but a ceiling prevents runaway.
-      duration: const Duration(milliseconds: 600),
-    );
+    _swipeAnimController = AnimationController.unbounded(vsync: this);
     _initConnection();
   }
 
