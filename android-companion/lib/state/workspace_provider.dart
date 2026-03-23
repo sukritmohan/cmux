@@ -176,12 +176,17 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
   }
 
   /// Handle a workspace.created event.
+  ///
+  /// The event payload doesn't include panel details, so we re-fetch the
+  /// full workspace list to populate panels. Without this, selecting the
+  /// new workspace would show an empty surface list.
   void onWorkspaceCreated(Map<String, dynamic> data) {
     final ws = Workspace.fromJson(data);
     if (ws.id.isEmpty) return;
 
     final updated = [...state.workspaces, ws];
     state = state.copyWith(workspaces: updated);
+    fetchWorkspaces();
   }
 
   /// Handle a workspace.closed event.
