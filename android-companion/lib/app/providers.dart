@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../connection/connection_manager.dart';
 import '../connection/connection_state.dart';
@@ -33,5 +34,37 @@ final isPairedProvider = FutureProvider<bool>((ref) async {
   return pairing.isPaired();
 });
 
-/// Current theme mode (dark/light/system). Defaults to dark.
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.dark);
+/// Current theme mode (dark/light/system). Persists across restarts via
+/// SharedPreferences. Defaults to dark until the saved preference is loaded.
+final themeModeProvider =
+    StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
+  return ThemeModeNotifier();
+});
+
+/// Notifier that persists the user's theme preference to SharedPreferences.
+class ThemeModeNotifier extends StateNotifier<ThemeMode> {
+  static const _key = 'theme_mode';
+
+  ThemeModeNotifier() : super(ThemeMode.dark) {
+    _loadSavedTheme();
+  }
+
+  Future<void> _loadSavedTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_key);
+    if (saved == 'light') {
+      state = ThemeMode.light;
+    }
+    // If null or 'dark', keep the default ThemeMode.dark.
+  }
+
+  /// Update the theme mode and persist the choice.
+  Future<void> setThemeMode(ThemeMode mode) async {
+    state = mode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _key,
+      mode == ThemeMode.light ? 'light' : 'dark',
+    );
+  }
+}

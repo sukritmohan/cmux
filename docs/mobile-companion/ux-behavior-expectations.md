@@ -246,7 +246,7 @@ Radii: xs=4, sm=6, md=10, lg=14, xl=20
 - Falls back to flat workspace.list if project.list unavailable (older desktop)
 
 - Bottom pinned section:
-  - Appearance toggle: segmented "Dark"/"Light" control dispatching to themeModeProvider
+  - Appearance toggle: segmented "Dark"/"Light" control dispatching to themeModeProvider. The user's choice is persisted to SharedPreferences and restored on app restart (default: dark).
   - Settings button
 
 ### Minimap Overlay

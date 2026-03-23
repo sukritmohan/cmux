@@ -157,8 +157,8 @@ class _WorkspaceDrawerState extends ConsumerState<WorkspaceDrawer> {
                       colors: c,
                       isDark: themeMode == ThemeMode.dark,
                       onToggle: (isDark) {
-                        ref.read(themeModeProvider.notifier).state =
-                            isDark ? ThemeMode.dark : ThemeMode.light;
+                        ref.read(themeModeProvider.notifier).setThemeMode(
+                            isDark ? ThemeMode.dark : ThemeMode.light);
                       },
                     ),
                   ),

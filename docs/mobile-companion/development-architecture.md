@@ -178,7 +178,7 @@ lib/
 │   ├── colors.dart         — Design tokens (AppColors)
 │   ├── theme.dart          — ThemeData + named text styles
 │   ├── router.dart         — GoRouter: /pair, /terminal
-│   └── providers.dart      — Connection-layer Riverpod providers
+│   └── providers.dart      — Riverpod providers (connection, theme persistence via ThemeModeNotifier)
 ├── connection/
 │   ├── connection_manager.dart  — WebSocket lifecycle + reconnection
 │   ├── connection_state.dart    — ConnectionStatus enum
