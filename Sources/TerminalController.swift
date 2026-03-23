@@ -2090,6 +2090,8 @@ class TerminalController {
         // Projects
         case "project.list":
             return v2Result(id: id, self.v2ProjectList(params: params))
+        case "directory.list":
+            return v2Result(id: id, self.v2DirectoryList(params: params))
 
         // Ports
         case "ports.list":
@@ -2463,6 +2465,7 @@ class TerminalController {
             "workspace.remote.terminal_session_end",
             "workspace.layout",
             "project.list",
+            "directory.list",
             "ports.list",
             "settings.open",
             "feedback.open",
@@ -3371,6 +3374,57 @@ class TerminalController {
             "projects": projectsPayload,
             "other_project": otherProjectPayload,
             "active_workspace_id": activeWorkspaceId
+        ])
+    }
+
+    /// Lists directory contents on the desktop filesystem. Used by the mobile
+    /// companion's directory browser to let users pick a project directory.
+    ///
+    /// Parameters:
+    /// - `path` (optional): Directory to list. Defaults to home directory.
+    /// - `directories_only` (optional): If true (default), only return directories.
+    private func v2DirectoryList(params: [String: Any]) -> V2CallResult {
+        let requestedPath = params["path"] as? String
+        let directoriesOnly = (params["directories_only"] as? Bool) ?? true
+
+        let resolvedPath: String
+        if let requestedPath, !requestedPath.isEmpty {
+            resolvedPath = NSString(string: requestedPath).expandingTildeInPath
+        } else {
+            resolvedPath = NSHomeDirectory()
+        }
+
+        let fm = FileManager.default
+        var isDir: ObjCBool = false
+        guard fm.fileExists(atPath: resolvedPath, isDirectory: &isDir), isDir.boolValue else {
+            return .err(code: "not_found", message: "Directory not found", data: ["path": resolvedPath])
+        }
+
+        guard let contents = try? fm.contentsOfDirectory(atPath: resolvedPath) else {
+            return .err(code: "permission_denied", message: "Cannot read directory", data: ["path": resolvedPath])
+        }
+
+        var entries: [[String: Any]] = []
+        for name in contents.sorted() {
+            // Skip hidden files/directories.
+            if name.hasPrefix(".") { continue }
+
+            let fullPath = (resolvedPath as NSString).appendingPathComponent(name)
+            var childIsDir: ObjCBool = false
+            guard fm.fileExists(atPath: fullPath, isDirectory: &childIsDir) else { continue }
+
+            if directoriesOnly && !childIsDir.boolValue { continue }
+
+            entries.append([
+                "name": name,
+                "path": fullPath,
+                "is_directory": childIsDir.boolValue
+            ])
+        }
+
+        return .ok([
+            "path": resolvedPath,
+            "entries": entries
         ])
     }
 

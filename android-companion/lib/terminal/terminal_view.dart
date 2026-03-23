@@ -368,83 +368,102 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
   bool _resettingBuffer = false;
 
   /// Handles soft keyboard IME input by diffing the hidden TextField's text.
+  ///
+  /// Uses content-aware diffing (common prefix) instead of length-based diffing
+  /// so that autocorrect replacements (e.g. "exan" → "example") correctly erase
+  /// the divergent old characters before sending the corrected new ones.
   void _onTextChanged() {
     if (_resettingBuffer) return;
 
     final newText = _textController.text;
-    if (newText.length > _lastText.length) {
-      // Characters were added — extract and send the new portion.
-      final added = newText.substring(_lastText.length);
 
-      // If Ctrl is active, convert letters to control codes (Ctrl+C → \x03).
-      // When Ctrl+Shift are both active, the Shift modifier is applied first
-      // (uppercasing), then Ctrl converts to the control code.
-      if (widget.ctrlActiveNotifier?.value == true && added.length == 1) {
-        final char = added.toLowerCase();
-        if (char.codeUnitAt(0) >= 0x61 && char.codeUnitAt(0) <= 0x7a) {
-          // a-z → control codes \x01-\x1a
-          final controlCode = String.fromCharCode(char.codeUnitAt(0) - 0x60);
-          _sendInput(controlCode);
-          // Auto-release sticky ctrl and shift
-          widget.ctrlActiveNotifier?.value = false;
-          widget.shiftActiveNotifier?.value = false;
-          _lastText = newText;
-          if (_textController.text.length > 100) {
-            _resettingBuffer = true;
-            _textController.text = '';
-            _lastText = '';
-            _resettingBuffer = false;
-          }
-          return;
-        }
-      }
+    // Find the longest common prefix between old and new text.
+    int commonLen = 0;
+    final minLen =
+        _lastText.length < newText.length ? _lastText.length : newText.length;
+    while (commonLen < minLen &&
+        _lastText[commonLen] == newText[commonLen]) {
+      commonLen++;
+    }
 
-      // If Shift is active (without Ctrl), uppercase the character.
-      if (widget.shiftActiveNotifier?.value == true && added.length == 1) {
-        _sendInput(added.toUpperCase());
+    final oldSuffix = _lastText.substring(commonLen); // chars to erase
+    final newSuffix = newText.substring(commonLen); // chars to send
+
+    // Nothing changed — early return.
+    if (oldSuffix.isEmpty && newSuffix.isEmpty) {
+      return;
+    }
+
+    // If Ctrl is active, convert letters to control codes (Ctrl+C → \x03).
+    // When Ctrl+Shift are both active, the Shift modifier is applied first
+    // (uppercasing), then Ctrl converts to the control code.
+    // Only applies to single-character additions (not autocorrect replacements).
+    if (widget.ctrlActiveNotifier?.value == true &&
+        oldSuffix.isEmpty &&
+        newSuffix.length == 1) {
+      final char = newSuffix.toLowerCase();
+      if (char.codeUnitAt(0) >= 0x61 && char.codeUnitAt(0) <= 0x7a) {
+        // a-z → control codes \x01-\x1a
+        final controlCode = String.fromCharCode(char.codeUnitAt(0) - 0x60);
+        _sendInput(controlCode);
+        // Auto-release sticky ctrl and shift
+        widget.ctrlActiveNotifier?.value = false;
         widget.shiftActiveNotifier?.value = false;
         _lastText = newText;
-        if (_textController.text.length > 100) {
-          _resettingBuffer = true;
-          _textController.text = '';
-          _lastText = '';
-          _resettingBuffer = false;
-        }
+        _resetBufferIfNeeded();
         return;
-      }
-
-      // If attachments are staged and the user typed a newline, invoke the
-      // submit override instead of sending '\r' to the terminal.
-      if (added.contains('\n') && widget.onSubmitOverride != null) {
-        // Send any non-newline chars first, then invoke submit.
-        final beforeNewline = added.replaceAll('\n', '');
-        if (beforeNewline.isNotEmpty) {
-          _sendInput(beforeNewline);
-        }
-        widget.onSubmitOverride!();
-        _lastText = newText;
-        if (_textController.text.length > 100) {
-          _resettingBuffer = true;
-          _textController.text = '';
-          _lastText = '';
-          _resettingBuffer = false;
-        }
-        return;
-      }
-
-      // Convert newlines to carriage returns for terminal.
-      _sendInput(added.replaceAll('\n', '\r'));
-    } else if (newText.length < _lastText.length) {
-      // Characters were deleted — send backspace for each deleted char.
-      final deletedCount = _lastText.length - newText.length;
-      for (int i = 0; i < deletedCount; i++) {
-        _sendInput('\x7f');
       }
     }
 
-    _lastText = newText;
+    // If Shift is active (without Ctrl), uppercase the character.
+    // Only applies to single-character additions (not autocorrect replacements).
+    if (widget.shiftActiveNotifier?.value == true &&
+        oldSuffix.isEmpty &&
+        newSuffix.length == 1) {
+      _sendInput(newSuffix.toUpperCase());
+      widget.shiftActiveNotifier?.value = false;
+      _lastText = newText;
+      _resetBufferIfNeeded();
+      return;
+    }
 
-    // Reset buffer if it gets too long to prevent memory bloat.
+    // If attachments are staged and the user typed a newline, invoke the
+    // submit override instead of sending '\r' to the terminal.
+    if (newSuffix.contains('\n') && widget.onSubmitOverride != null) {
+      // Send backspaces for any old divergent chars first.
+      for (int i = 0; i < oldSuffix.length; i++) {
+        _sendInput('\x7f');
+      }
+      // Send any non-newline chars, then invoke submit.
+      final beforeNewline = newSuffix.replaceAll('\n', '');
+      if (beforeNewline.isNotEmpty) {
+        _sendInput(beforeNewline);
+      }
+      widget.onSubmitOverride!();
+      _lastText = newText;
+      _resetBufferIfNeeded();
+      return;
+    }
+
+    // Send backspaces to erase old divergent characters, then send the new
+    // divergent characters. This handles both simple typing (oldSuffix empty,
+    // newSuffix is the new char), deletion (newSuffix empty, oldSuffix has
+    // deleted chars), and autocorrect/replacement (both non-empty).
+    for (int i = 0; i < oldSuffix.length; i++) {
+      _sendInput('\x7f');
+    }
+    if (newSuffix.isNotEmpty) {
+      // Convert newlines to carriage returns for terminal.
+      _sendInput(newSuffix.replaceAll('\n', '\r'));
+    }
+
+    _lastText = newText;
+    _resetBufferIfNeeded();
+  }
+
+  /// Resets the hidden TextField buffer if it gets too long to prevent memory
+  /// bloat. Extracted to avoid repetition across early-return paths.
+  void _resetBufferIfNeeded() {
     if (_textController.text.length > 100) {
       _resettingBuffer = true;
       _textController.text = '';
@@ -1058,45 +1077,51 @@ class _TerminalViewState extends ConsumerState<TerminalView> {
                     viewportHeight: constraints.maxHeight,
                   ),
 
-                // Inner shadow: 3px gradient at terminal top edge — feels recessed
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 3,
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withAlpha(38), // ~15%
-                            Colors.transparent,
-                          ],
+                // Inner shadow + vignette: dark-mode only depth effects.
+                // In light mode these tint the white background grey and the
+                // effect varies with viewport height (keyboard up vs down),
+                // creating an inconsistent terminal background color.
+                if (Theme.of(context).brightness == Brightness.dark) ...[
+                  // Inner shadow: 3px gradient at terminal top edge — feels recessed
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 3,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withAlpha(38), // ~15%
+                              Colors.transparent,
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
 
-                // Subtle vignette: radial gradient for depth
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                          center: Alignment.center,
-                          radius: 1.2,
-                          colors: [
-                            Colors.transparent,
-                            const Color(0xFF080B10).withAlpha(40),
-                          ],
+                  // Subtle vignette: radial gradient for depth
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            center: Alignment.center,
+                            radius: 1.2,
+                            colors: [
+                              Colors.transparent,
+                              const Color(0xFF080B10).withAlpha(40),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
 
               ],
             ),

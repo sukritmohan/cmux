@@ -31,6 +31,7 @@ import '../app/theme.dart';
 import '../state/project_hierarchy_provider.dart';
 import '../state/workspace_provider.dart';
 import 'branch_row.dart';
+import 'directory_browser.dart';
 import 'linked_terminal_row.dart';
 import 'project_row.dart';
 import 'workspace_tile.dart';
@@ -183,7 +184,7 @@ class _WorkspaceDrawerState extends ConsumerState<WorkspaceDrawer> {
   // Header
   // ---------------------------------------------------------------------------
 
-  /// "PROJECTS" label with a search icon toggle button on the right.
+  /// "PROJECTS" label with add-project and search toggle buttons on the right.
   Widget _buildHeader(AppColorScheme c) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 12, 12),
@@ -191,6 +192,25 @@ class _WorkspaceDrawerState extends ConsumerState<WorkspaceDrawer> {
         children: [
           Text('PROJECTS', style: AppTheme.sectionHeader(c)),
           const Spacer(),
+          GestureDetector(
+            onTap: _openProject,
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(AppColors.radiusXs),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.add,
+                size: 16,
+                color: c.textMuted,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
           GestureDetector(
             onTap: _toggleSearch,
             behavior: HitTestBehavior.opaque,
@@ -570,6 +590,16 @@ class _WorkspaceDrawerState extends ConsumerState<WorkspaceDrawer> {
     }
 
     return result;
+  }
+
+  /// Opens the directory browser to let the user pick a project folder
+  /// on the desktop filesystem.
+  void _openProject() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const DirectoryBrowser(),
+      ),
+    );
   }
 
   /// Creates a new workspace via the bridge, scoped to [repoPath].

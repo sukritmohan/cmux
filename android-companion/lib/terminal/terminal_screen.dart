@@ -518,7 +518,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     );
   }
 
-  /// Shows a rename dialog for a tab when long-pressed.
+  /// Shows a context menu with Rename and Close options when a tab is
+  /// long-pressed. Selecting "Rename" opens an inline rename dialog;
+  /// selecting "Close" closes the surface (or the workspace if it is the
+  /// last remaining tab).
   void _onSurfaceLongPressed(String surfaceId) {
     debugPrint('[TerminalScreen] _onSurfaceLongPressed: $surfaceId');
     final surface = ref.read(surfaceProvider).surfaces
@@ -528,7 +531,38 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
       return;
     }
 
-    final controller = TextEditingController(text: surface.title);
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Rename Tab'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showRenameDialog(surfaceId, surface.title);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.close, color: Colors.red),
+              title: const Text('Close Tab',
+                  style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _closeTerminalSurface(surfaceId);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Shows a rename dialog for a terminal surface.
+  void _showRenameDialog(String surfaceId, String currentTitle) {
+    final controller = TextEditingController(text: currentTitle);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -563,6 +597,33 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
         ],
       ),
     );
+  }
+
+  /// Closes a terminal surface. If this is the last surface in the workspace,
+  /// closes the entire workspace instead (since `surface.close` rejects
+  /// closing the last surface).
+  void _closeTerminalSurface(String surfaceId) {
+    final manager = ref.read(connectionManagerProvider);
+    final surfaces = ref.read(surfaceProvider).surfaces;
+
+    if (surfaces.length <= 1) {
+      // Last tab — close the entire workspace.
+      final wsId = ref.read(workspaceProvider).activeWorkspaceId;
+      if (wsId != null) {
+        manager.sendRequest('workspace.close', params: {
+          'workspace_id': wsId,
+        });
+      }
+    } else {
+      // Close just this surface.
+      manager.sendRequest('surface.close', params: {
+        'surface_id': surfaceId,
+      });
+      // Optimistically update local state.
+      ref.read(surfaceProvider.notifier).onSurfaceClosed({
+        'surface_id': surfaceId,
+      });
+    }
   }
 
   /// Sends a rename RPC to the desktop and optimistically updates local state.
