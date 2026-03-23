@@ -68,10 +68,6 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
   bool _showMinimap = false;
   PaneType _activePaneType = PaneType.terminal;
 
-  /// Surface ID to focus after the next workspace switch completes.
-  /// Set by linked terminal taps; consumed by [_syncSurfacesFromWorkspace].
-  String? _pendingSurfaceFocus;
-
   /// Fractional scroll remainder for smooth sub-line accumulation.
   double _scrollRemainder = 0.0;
 
@@ -220,10 +216,12 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
   }
 
   /// Syncs the surface list from the active workspace's panels.
-  void _syncSurfacesFromWorkspace() {
+  ///
+  /// [focusOverride] is an explicit surface ID to focus, used by linked
+  /// terminal taps to target a specific panel after workspace switch.
+  void _syncSurfacesFromWorkspace({String? focusOverride}) {
     final wsState = ref.read(workspaceProvider);
     final activeWs = wsState.activeWorkspace;
-    debugPrint('[TerminalScreen] _syncSurfacesFromWorkspace: activeWsId=${wsState.activeWorkspaceId} activeWs=${activeWs?.id} panels=${activeWs?.panels.length}');
     if (activeWs == null) return;
 
     // Sync terminal surfaces
@@ -235,14 +233,11 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
               workspaceId: activeWs.id,
             ))
         .toList();
-    debugPrint('[TerminalScreen]   terminal surfaces: ${surfaces.map((s) => '${s.id}:${s.title}').join(', ')}');
 
-    // Use the pending surface focus from a linked terminal tap if set,
-    // otherwise fall back to the desktop's focused panel — but only if it
-    // actually refers to a terminal panel. Browser/other panel types don't
-    // have Ghostty surfaces, so subscribing to their ID would fail.
-    final focusOverride = _pendingSurfaceFocus;
-    _pendingSurfaceFocus = null;
+    // Use the explicit focus override if provided, otherwise fall back to
+    // the desktop's focused panel — but only if it actually refers to a
+    // terminal panel. Browser/other panel types don't have Ghostty surfaces,
+    // so subscribing to their ID would fail.
     final terminalIds = surfaces.map((s) => s.id).toSet();
     final workspaceFocus = activeWs.focusedPanelId;
     final effectiveFocus = focusOverride ??
@@ -282,7 +277,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     }
   }
 
-  void _onWorkspaceSelected(String workspaceId) {
+  void _onWorkspaceSelected(String workspaceId, {String? focusSurfaceId}) {
     ref.read(workspaceProvider.notifier).selectWorkspace(workspaceId);
 
     final manager = ref.read(connectionManagerProvider);
@@ -296,7 +291,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
       return ref.read(workspaceProvider.notifier).fetchWorkspaces();
     }).then((_) {
       ref.read(workspaceProvider.notifier).selectWorkspace(workspaceId);
-      _syncSurfacesFromWorkspace();
+      _syncSurfacesFromWorkspace(focusOverride: focusSurfaceId);
     });
 
     _scaffoldKey.currentState?.closeDrawer();
@@ -305,8 +300,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
   /// Handles linked terminal taps — switches workspace then focuses the
   /// specific panel after the surface sync completes.
   void _onLinkedTerminalSelected(String workspaceId, String panelId) {
-    _pendingSurfaceFocus = panelId;
-    _onWorkspaceSelected(workspaceId);
+    _onWorkspaceSelected(workspaceId, focusSurfaceId: panelId);
   }
 
   void _openDrawer() {

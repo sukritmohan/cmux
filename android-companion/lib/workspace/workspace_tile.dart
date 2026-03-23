@@ -21,6 +21,9 @@ class WorkspaceTile extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
 
+  /// Called when the user long-presses the workspace tile.
+  final VoidCallback? onLongPress;
+
   /// Search query for substring highlighting. When non-null and non-empty,
   /// matching segments in the workspace title are rendered in accent color.
   final String? highlightQuery;
@@ -30,6 +33,7 @@ class WorkspaceTile extends StatelessWidget {
     required this.workspace,
     required this.isActive,
     required this.onTap,
+    this.onLongPress,
     this.highlightQuery,
   });
 
@@ -40,6 +44,7 @@ class WorkspaceTile extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       behavior: HitTestBehavior.opaque,
       child: Container(
         constraints: const BoxConstraints(minHeight: 36),

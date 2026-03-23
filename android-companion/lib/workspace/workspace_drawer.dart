@@ -482,6 +482,7 @@ class _WorkspaceDrawerState extends ConsumerState<WorkspaceDrawer> {
               workspace: ws,
               isActive: ws.id == activeId,
               onTap: () => widget.onWorkspaceSelected(ws.id),
+              onLongPress: () => _showWorkspaceRenameDialog(ws),
               highlightQuery: highlightQuery,
             ),
           );
@@ -590,6 +591,63 @@ class _WorkspaceDrawerState extends ConsumerState<WorkspaceDrawer> {
     }
 
     return result;
+  }
+
+  /// Shows a rename dialog for a workspace when long-pressed in the sidebar.
+  void _showWorkspaceRenameDialog(Workspace ws) {
+    final controller = TextEditingController(text: ws.title);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rename Workspace'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Workspace name'),
+          onSubmitted: (_) {
+            Navigator.pop(ctx);
+            final newTitle = controller.text.trim();
+            if (newTitle.isNotEmpty && newTitle != ws.title) {
+              _renameWorkspace(ws.id, newTitle);
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              final newTitle = controller.text.trim();
+              if (newTitle.isNotEmpty && newTitle != ws.title) {
+                _renameWorkspace(ws.id, newTitle);
+              }
+            },
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Sends a workspace rename command to the desktop via the bridge and
+  /// optimistically updates local state so the sidebar reflects the new
+  /// name immediately.
+  void _renameWorkspace(String workspaceId, String title) {
+    final manager = ref.read(connectionManagerProvider);
+    manager.sendRequest('workspace.rename', params: {
+      'workspace_id': workspaceId,
+      'title': title,
+    });
+    // Optimistically update both providers so the UI reflects the rename
+    // without waiting for the desktop event round-trip.
+    ref.read(workspaceProvider.notifier).onWorkspaceTitleChanged({
+      'workspace_id': workspaceId,
+      'title': title,
+    });
+    ref.read(projectHierarchyProvider.notifier).fetchProjectHierarchy();
   }
 
   /// Opens the directory browser to let the user pick a project folder
