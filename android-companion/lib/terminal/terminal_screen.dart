@@ -223,6 +223,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
   void _syncSurfacesFromWorkspace() {
     final wsState = ref.read(workspaceProvider);
     final activeWs = wsState.activeWorkspace;
+    debugPrint('[TerminalScreen] _syncSurfacesFromWorkspace: activeWsId=${wsState.activeWorkspaceId} activeWs=${activeWs?.id} panels=${activeWs?.panels.length}');
     if (activeWs == null) return;
 
     // Sync terminal surfaces
@@ -234,6 +235,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
               workspaceId: activeWs.id,
             ))
         .toList();
+    debugPrint('[TerminalScreen]   terminal surfaces: ${surfaces.map((s) => '${s.id}:${s.title}').join(', ')}');
 
     // Use the pending surface focus from a linked terminal tap if set,
     // otherwise fall back to the desktop's focused panel — but only if it
@@ -287,7 +289,15 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen>
     manager.sendRequest(
       'workspace.select',
       params: {'workspace_id': workspaceId},
-    ).then((_) => _syncSurfacesFromWorkspace());
+    ).then((_) {
+      // Re-fetch workspaces to ensure panel data is populated, then
+      // re-assert the active workspace ID (fetchWorkspaces may have
+      // overwritten it if the workspace wasn't in the list yet).
+      return ref.read(workspaceProvider.notifier).fetchWorkspaces();
+    }).then((_) {
+      ref.read(workspaceProvider.notifier).selectWorkspace(workspaceId);
+      _syncSurfacesFromWorkspace();
+    });
 
     _scaffoldKey.currentState?.closeDrawer();
   }

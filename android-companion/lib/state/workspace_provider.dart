@@ -182,11 +182,16 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
   /// new workspace would show an empty surface list.
   void onWorkspaceCreated(Map<String, dynamic> data) {
     final ws = Workspace.fromJson(data);
+    debugPrint('[WorkspaceNotifier] onWorkspaceCreated: id=${ws.id} title=${ws.title} panels=${ws.panels.length}');
     if (ws.id.isEmpty) return;
 
     final updated = [...state.workspaces, ws];
     state = state.copyWith(workspaces: updated);
-    fetchWorkspaces();
+    debugPrint('[WorkspaceNotifier] calling fetchWorkspaces to populate panels...');
+    fetchWorkspaces().then((_) {
+      final refreshed = state.workspaces.where((w) => w.id == ws.id).firstOrNull;
+      debugPrint('[WorkspaceNotifier] fetchWorkspaces done. ws=${ws.id} now has ${refreshed?.panels.length ?? "NOT FOUND"} panels');
+    });
   }
 
   /// Handle a workspace.closed event.
